@@ -1,6 +1,7 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
 import enum
+import datetime
 
 class EstadoIntercambio(str, enum.Enum):
     Pendiente = "Pendiente"
@@ -10,10 +11,8 @@ class EstadoIntercambio(str, enum.Enum):
 class Intercambio(Base):
     __tablename__ = "intercambios"
     id = Column(Integer, primary_key=True)
-    id_usuario_oferta = Column(Integer, ForeignKey("usuarios.id"))
-    id_usuario_solicita = Column(Integer, ForeignKey("usuarios.id"))
-    id_habilidad_oferta = Column(Integer, ForeignKey("habilidades.id"))
-    id_habilidad_solicita = Column(Integer, ForeignKey("habilidades.id"))
+    id_Perfil1 = Column(Integer, ForeignKey("perfiles.id"))
+    id_Perfil2 = Column(Integer, ForeignKey("perfiles.id"))
     estado = Column(Enum(EstadoIntercambio))
-    fecha_inicio = Column(DateTime)
+    fecha_inicio = Column(DateTime, default= datetime.now)
     fecha_fin = Column(DateTime)

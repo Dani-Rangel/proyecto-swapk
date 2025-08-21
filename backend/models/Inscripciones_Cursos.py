@@ -1,6 +1,7 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
 import enum
+import datetime
 
 class EstadoInscripcion(str, enum.Enum):
     Pendiente = "Pendiente"
@@ -8,9 +9,9 @@ class EstadoInscripcion(str, enum.Enum):
     Finalizado = "Finalizado"
 
 class InscripcionCurso(Base):
-    __tablename__ = "inscripciones_curso"
+    __tablename__ = "inscripciones_cursos"
     id = Column(Integer, primary_key=True)
-    id_curso = Column(Integer, ForeignKey("cursos.id"))
-    id_usuario = Column(Integer, ForeignKey("usuarios.id"))
-    fecha_Inscripcion = Column(DateTime)
+    curso_id = Column(Integer, ForeignKey("cursos.id"))
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"))
+    fecha_inscripcion = Column(DateTime, default= datetime.now)
     estado = Column(Enum(EstadoInscripcion))

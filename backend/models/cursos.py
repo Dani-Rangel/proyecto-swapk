@@ -1,5 +1,5 @@
 from backend.db import Base
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum, largeBinary
 import enum
 
 class Curso(Base):
@@ -8,5 +8,6 @@ class Curso(Base):
     titulo = Column(String(255))
     descripcion = Column(Text)
     objetivo = Column(String(255))
-    habilidad_Id = Column(Integer, ForeignKey("habilidades.id"))
-    Creador_Id = Column(Integer, ForeignKey("usuarios.id"))
+    habilidad_Id = Column(Integer, ForeignKey("habilidad.id"))
+    User_Id = Column(Integer, ForeignKey("usuarios.id"))
+    img_Cursos = Column(String(255), nullable= True)

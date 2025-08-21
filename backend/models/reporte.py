@@ -1,6 +1,7 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
 import enum
+import datetime
 
 class EstadoReporte(str, enum.Enum):
     Enviado = "Enviado"
@@ -15,5 +16,5 @@ class Reporte(Base):
     id_usuario = Column(Integer, ForeignKey("usuarios.id"))
     tipo = Column(String(255))
     estado = Column(Enum(EstadoReporte))
-    fecha_reporte = Column(DateTime)
+    fecha_reporte = Column(DateTime, default= datetime.now)
     motivo = Column(Text)
