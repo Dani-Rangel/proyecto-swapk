@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import {
   Search,
   Menu,
@@ -20,6 +20,8 @@ import {
 import Image from "next/image"
 import { AddSkillForm } from "../components/ui/AddSkillForm"
 import { CreateSkillForm } from "../components/ui/CreateSkillForm"
+import { fetchSkills, addSkill as saveSkill } from "../lib/api_course" // Ajusta la ruta si es diferente
+
 
 interface Skill {
   name: string
@@ -41,9 +43,50 @@ export default function SwapkDashboard() {
     console.log("Searching:", searchQuery)
   }
 
-  const handleAddSkill = (skill: Skill) => {
-    setSkills(prev => [...prev, skill])
+  useEffect(() => {
+  const loadSkills = async () => {
+    try {
+      const skillsFromAPI = await fetchSkills()
+      setSkills(skillsFromAPI)
+    } catch (error) {
+      console.error("Error al cargar habilidades:", error)
+    }
   }
+
+  loadSkills()
+}, [])
+
+
+  const handleAddSkill = async (skill: Skill) => {
+  try {
+    const newSkill = await saveSkill(skill)
+    setSkills(prev => [...prev, newSkill])
+  } catch (error) {
+    console.error("Error al guardar habilidad:", error)
+  }
+}
+
+
+  const [activeSkillIndex, setActiveSkillIndex] = useState<number | null>(null)
+
+const skillContainerRef = useRef(null)
+
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      skillContainerRef.current &&
+      !skillContainerRef.current.contains(event.target as Node)
+    ) {
+      setActiveSkillIndex(null)
+    }
+  }
+
+  document.addEventListener("mousedown", handleClickOutside)
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside)
+  }
+}, [])
+
 
   return (
     <div className="relative min-h-screen bg-[#141414] flex">
@@ -279,16 +322,31 @@ export default function SwapkDashboard() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3 mb-6">
+              <div ref={skillContainerRef} className="flex flex-wrap gap-3 mb-6 relative">
                 {skills.map((skill, index) => (
-                  <span
-                    key={index}
-                    className="bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:shadow-purple-500/25 hover:scale-105 transition-all duration-200 cursor-pointer"
-                  >
-                    #{skill.name}
-                  </span>
+                    <div key={index} className="relative">
+                    <span
+                        onClick={() =>
+                        setActiveSkillIndex(prev => (prev === index ? null : index))
+                        }
+                        className="bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:shadow-purple-500/25 hover:scale-105 transition-all duration-200 cursor-pointer"
+                    >
+                        #{skill.name}
+                    </span>
+
+                    {activeSkillIndex === index && (
+                        <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs p-3 rounded-lg shadow-lg z-10 w-max max-w-xs">
+                        <p className="mb-1">
+                            <span className="font-semibold">Tipo:</span> {skill.type}
+                        </p>
+                        <p>
+                            <span className="font-semibold">Nivel:</span> {skill.level}
+                        </p>
+                        </div>
+                    )}
+                    </div>
                 ))}
-              </div>
+                </div>
 
               {/* Forms for adding/creating skills */}
               {showAddForm && (
