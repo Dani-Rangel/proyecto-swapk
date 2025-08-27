@@ -1,22 +1,49 @@
-import { useState } from "react"
-import { X } from "lucide-react"
+import React, { useState } from "react";
+import { X } from "lucide-react";
+import { Skill, SkillAssociation } from "@/services/api_Skills";
 
 interface AddSkillFormProps {
-  onClose: () => void
-  onSave: (skill: { name: string; type: string; level: string }) => void
-  onCreateNew: () => void
+  perfilId: number;
+  habilidades: Skill[];
+  onClose: () => void;
+  onSave: (assoc: SkillAssociation) => Promise<void>;
 }
 
-export function AddSkillForm({ onClose, onSave, onCreateNew }: AddSkillFormProps) {
-  const [name, setName] = useState("")
-  const [type, setType] = useState("Oferta")
-  const [level, setLevel] = useState("Principiante")
+type Tipo = "Ofrece" | "Busca";
+type Nivel = "Principiante" | "Intermedio" | "Experto";
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSave({ name, type, level })
-    onClose()
-  }
+export function AddSkillForm({ perfilId, habilidades, onClose, onSave }: AddSkillFormProps) {
+  const [habilidadId, setHabilidadId] = useState<number>(habilidades.length > 0 ? habilidades[0].id : -1);
+  const [type, setType] = useState<Tipo>("Ofrece");
+  const [level, setLevel] = useState<Nivel>("Principiante");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (habilidadId <= 0) {
+      setError("Selecciona una habilidad válida.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await onSave({
+        Perfil_id: perfilId,
+        habilidad_id: habilidadId,
+        tipo: type,
+        nivel: level,
+      });
+      onClose();
+    } catch (err: any) {
+      setError(err.message || "Error al guardar la habilidad.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
@@ -28,52 +55,56 @@ export function AddSkillForm({ onClose, onSave, onCreateNew }: AddSkillFormProps
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <input
-            type="text"
-            placeholder="Nombre de la habilidad"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="bg-gray-800 text-white p-2 rounded border border-gray-600"
-            required
-          />
+        {habilidades.length === 0 ? (
+          <p className="text-red-400">No hay habilidades disponibles para seleccionar.</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <select
+              value={habilidadId}
+              onChange={(e) => setHabilidadId(Number(e.target.value))}
+              className="bg-gray-800 text-white p-2 rounded border border-gray-600"
+            >
+              <option value={-1} disabled>
+                Selecciona una habilidad
+              </option>
+              {habilidades.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.nombre}
+                </option>
+              ))}
+            </select>
 
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="bg-gray-800 text-white p-2 rounded border border-gray-600"
-          >
-            <option value="Oferta">Oferta</option>
-            <option value="Búsqueda">Búsqueda</option>
-          </select>
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as Tipo)}
+              className="bg-gray-800 text-white p-2 rounded border border-gray-600"
+            >
+              <option value="Ofrece">Ofrece</option>
+              <option value="Busca">Busca</option>
+            </select>
 
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-            className="bg-gray-800 text-white p-2 rounded border border-gray-600"
-          >
-            <option value="Principiante">Principiante</option>
-            <option value="Intermedio">Intermedio</option>
-            <option value="Experto">Experto</option>
-          </select>
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value as Nivel)}
+              className="bg-gray-800 text-white p-2 rounded border border-gray-600"
+            >
+              <option value="Principiante">Principiante</option>
+              <option value="Intermedio">Intermedio</option>
+              <option value="Experto">Experto</option>
+            </select>
 
-          <button
-            type="submit"
-            className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded shadow-lg"
-          >
-            Guardar habilidad
-          </button>
-        </form>
+            {error && <div className="text-red-400 text-sm">{error}</div>}
 
-        {/* Botón para abrir formulario completo de crear habilidad */}
-        <button
-          type="button"
-          onClick={onCreateNew}
-          className="mt-3 text-sm text-blue-400 hover:text-blue-200"
-        >
-          Crear habilidad
-        </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded shadow-lg"
+            >
+              {loading ? "Guardando..." : "Guardar habilidad"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
-  )
+  );
 }

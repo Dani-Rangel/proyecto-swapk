@@ -1,6 +1,5 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
-from sqlalchemy.orm import relationship
 import enum
 
 class Perfil(Base):
@@ -13,5 +12,4 @@ class Perfil(Base):
     ubicacion = Column(String(255))
     Tel = Column(Integer)
     foto_perfil = Column(String(255))
-    habilidad_Id = Column(Integer, ForeignKey("habilidad.id"))
 

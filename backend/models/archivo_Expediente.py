@@ -1,12 +1,13 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
 import enum 
-import datetime
+from datetime import datetime
+
 
 class Archivo_Expediente(Base):
     __tablename__ = "archivo"
     id = Column(Integer, primary_key=True)
     expediente_id = Column(Integer, ForeignKey("expediente.id"))
-    nombre = Column(String)
-    ruta = Column(String)
+    nombre = Column(String(255))
+    ruta = Column(String(255))
     fecha_subida = Column(DateTime, default= datetime.now)

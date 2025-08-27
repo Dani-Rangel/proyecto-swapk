@@ -1,5 +1,5 @@
 from backend.db import Base
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum, largeBinary
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
 import enum
 
 class CursoHabilidad(Base):

@@ -1,11 +1,12 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Float
-import datetime
+from datetime import datetime
 
-class Reseña(Base):
+
+class Resena(Base):
     __tablename__ = "resena"
     id = Column(Integer, primary_key=True)
-    intercambio_id = Column(Integer, ForeignKey("intercambio.id"))
+    intercambio_id = Column(Integer, ForeignKey("intercambios.id"))
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
     calificacion = Column(Float)
     comentario = Column(Text)

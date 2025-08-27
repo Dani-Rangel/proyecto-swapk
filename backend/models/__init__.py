@@ -11,4 +11,11 @@ from .cursos import Curso
 from .Inscripciones_Cursos import InscripcionCurso
 from .perfil import Perfil
 from .archivo_Expediente import Archivo_Expediente
-
+from .attachments import Attachment
+from .Chat import Chat
+from .condicion_Intercambio import CondicionIntercambio
+from .Curso_Habilidad import CursoHabilidad
+from .Expediente import Expediente
+from .Intercambio_Habilidad import IntercambioHabilidad
+from .llamadas import Llamada
+from .perfil_habilidad import perfilHabilidad

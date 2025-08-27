@@ -14,7 +14,11 @@ class TipoEnum(str, enum.Enum):
 class perfilHabilidad(Base):
     __tablename__ = "Perfil_Habilidad"
     id = Column(Integer, primary_key=True)
-    intercambio_id = Column(Integer, ForeignKey("intercambio.id"))
+    Perfil_id = Column(Integer, ForeignKey("perfiles.id"))
     habilidad_id = Column(Integer, ForeignKey("habilidad.id"))
     tipo = Column(Enum(TipoEnum))
     nivel = Column(Enum(NivelEnum))
+
+@property
+def habilidad_nombre(self):
+        return self.habilidad.nombre if self.habilidad else None

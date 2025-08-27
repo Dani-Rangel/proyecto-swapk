@@ -1,7 +1,8 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
 import enum
-import datetime
+from datetime import datetime
+
 
 class Chat(Base):
     __tablename__ = "chat"
