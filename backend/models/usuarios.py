@@ -17,3 +17,4 @@ class Usuario(Base):
     contrasena_hash = Column(String(255))  # sin ñ ni acento
     rol = Column(Enum(RolUsuario), default=RolUsuario.Usuario)
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
+

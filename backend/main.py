@@ -9,6 +9,9 @@ from backend.controllers.user_controller import router as user_router
 from backend.services.oauth2 import get_current_user
 from backend.controllers.profile_controller import router as perfil_router
 from backend.controllers.perfil_habilidad_controller import router as perfil_habilidad_router
+from backend.controllers import curso_controller
+from backend.controllers.attachments_controller import router as attachments_router
+
 
 app = FastAPI()
 
@@ -36,3 +39,5 @@ app.include_router(google_auth_controller.router, prefix="/auth/google", tags=["
 app.include_router(user_router)
 app.include_router(perfil_router)
 app.include_router(perfil_habilidad_router)
+app.include_router(curso_controller.router)
+app.include_router(attachments_router)

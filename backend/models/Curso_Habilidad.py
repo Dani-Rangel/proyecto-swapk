@@ -7,4 +7,3 @@ class CursoHabilidad(Base):
     id = Column(Integer, primary_key=True)
     curso_id = Column(Integer, ForeignKey("cursos.id"))
     habilidad_id = Column(Integer, ForeignKey("habilidad.id"))
-    tipo = Column(String(255))

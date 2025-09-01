@@ -67,14 +67,7 @@ const Login: React.FC = () => {
 
         console.log("✅ Token guardado:", userData.token);
         console.log("🔍 Longitud del token:", userData.token?.length);
-        if (!userData.token) {
-          throw new Error('No hay token en el usuario');
-        }
         console.log("📦 Usuario guardado en localStorage:", JSON.parse(localStorage.getItem("user")!));
-        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!storedUser.token) {
-        throw new Error('No hay token de autenticación');
-      }
 
         // 🍪 Opcional: también guardar en cookie (puedes usarlo en el backend)
         document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`;

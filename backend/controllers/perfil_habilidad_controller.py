@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.schemas.perfil_habilidad_schema import PerfilHabilidadCreate, PerfilHabilidadResponse
 from backend.services import perfil_habilidad_service
 from backend.models.habilidad import Habilidad
 from typing import List
+from backend.models.perfil_habilidad import perfilHabilidad
 
 router = APIRouter()
 
@@ -30,3 +31,14 @@ def create_perfil_habilidad(data: PerfilHabilidadCreate, db: Session = Depends(g
         "nivel": new_assoc.nivel,
         "habilidad_nombre": habilidad_nombre
     }
+
+@router.delete("/perfil_habilidad/{id}")
+def delete_perfil_habilidad(id: int, db: Session = Depends(get_db)):
+    asociacion = db.query(perfilHabilidad).filter(perfilHabilidad.id == id).first()
+    
+    if not asociacion:
+        raise HTTPException(status_code=404, detail="Asociación no encontrada")
+
+    db.delete(asociacion)
+    db.commit()
+    return {"msg": "Asociación eliminada correctamente"}   

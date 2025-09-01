@@ -43,7 +43,7 @@ export interface SkillAssociationResponse {
 }
 
 export const skillsAPI = {
-  // ✅ Obtener todas las habilidades
+  // Obtener todas las habilidades
   getSkills: async (): Promise<Skill[]> => {
     const response = await api.get('/habilidades');
     const data = response.data;
@@ -58,15 +58,21 @@ export const skillsAPI = {
     }
   },
 
-  // ✅ Obtener habilidades asociadas a un perfil
+  // Obtener habilidades asociadas a un perfil
   getPerfilSkills: async (perfilId: number): Promise<SkillAssociationResponse[]> => {
     const response = await api.get(`/perfil_habilidad/${perfilId}`);
     return response.data;
   },
 
-  // ✅ Asociar habilidad a un perfil
+  // Asociar habilidad a un perfil
   associateSkill: async (association: SkillAssociation): Promise<SkillAssociationResponse> => {
     const response = await api.post('/perfil_habilidad', association);
     return response.data;
+  },
+
+  // Eliminar asociación de habilidad
+  deleteSkillAssociation: async (id: number): Promise<void> => {
+    await api.delete(`/perfil_habilidad/${id}`);
   }
 };
+

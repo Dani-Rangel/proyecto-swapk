@@ -1,8 +1,8 @@
 """bd swapk
 
-Revision ID: 7e426321fa5c
+Revision ID: b4ef59fe708e
 Revises: 
-Create Date: 2025-08-25 21:02:54.382695
+Create Date: 2025-08-31 17:25:34.518706
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '7e426321fa5c'
+revision: str = 'b4ef59fe708e'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -146,7 +146,6 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('curso_id', sa.Integer(), nullable=True),
     sa.Column('habilidad_id', sa.Integer(), nullable=True),
-    sa.Column('tipo', sa.String(length=255), nullable=True),
     sa.ForeignKeyConstraint(['curso_id'], ['cursos.id'], ),
     sa.ForeignKeyConstraint(['habilidad_id'], ['habilidad.id'], ),
     sa.PrimaryKeyConstraint('id')

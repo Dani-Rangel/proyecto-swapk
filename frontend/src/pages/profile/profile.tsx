@@ -8,7 +8,7 @@ import {
 } from "lucide-react"
 
 // ✅ CORREGIDO: Importar correctamente
-import { skillsAPI, SkillAssociation, Skill } from "@/services/api_Skills";
+import { skillsAPI, SkillAssociation, Skill, SkillAssociationResponse } from "@/services/api_Skills";
 import { AddSkillForm } from "../../components/ui/AddSkillForm"
 import CreateSkillForm from "../../components/ui/CreateSkillForm"
 import Image from "next/image"
@@ -40,6 +40,7 @@ export default function ProfilePage() {
   const [user, setUser] = useState<any>(null); 
   const router = useRouter();
   const [habilidadesDisponibles, setHabilidadesDisponibles] = useState<Skill[]>([])
+  const [habilidadesPerfil, setHabilidadesPerfil] = useState<SkillAssociationResponse[]>([]);
 
 
    useEffect(() => {
@@ -100,49 +101,48 @@ export default function ProfilePage() {
       nivel: assoc.nivel
     });
 
-    // Buscar el nombre de la habilidad por ID
     const habilidadCompleta = habilidadesDisponibles.find(h => h.id === assoc.habilidad_id);
 
-    setPerfil(prev => ({
-      ...prev!,
-      habilidades: [
-        ...(prev?.habilidades ?? []),
-        {
-          ...nuevaAsociacion,
-          nombre: habilidadCompleta?.nombre // 🔥 añade el nombre directamente
-        }
-      ]
-    }));
-
+    // Añadir nombre en la propiedad correcta (ejemplo: habilidad_nombre)
+    setHabilidadesPerfil(prev => [
+  ...prev,
+  { ...nuevaAsociacion, habilidad_nombre: habilidadCompleta?.nombre || "" }
+]);
     setShowAddForm(false);
   } catch (error) {
-    console.error("Error al guardar:", error);
+    console.error(error);
   } finally {
     setLoading(false);
   }
 };
 
+useEffect(() => {
+  if (!perfil?.id) return;
+  skillsAPI.getPerfilSkills(perfil.id)
+    .then(setHabilidadesPerfil)
+    .catch(err => console.error(err));
+}, [perfil?.id]);
 
-  const handleRemoveSkill = async (index: number) => {
-    if (!perfil) return
-    
-    try {
-      setLoading(true)
-      const updatedHabilidades = perfil.habilidades.filter((_, i) => i !== index)
-      setPerfil(prev => ({ ...prev!, habilidades: updatedHabilidades }))
-    } catch (error) {
-      console.error("Error eliminando habilidad:", error)
-      alert("Error al eliminar la habilidad.")
-    } finally {
-      setLoading(false)
-    }
-  }
 
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("user")
-    window.location.href = "/login"
+  const handleRemoveSkill = async (idAsociacion: number) => {
+  if (!perfil) return;
+  try {
+    setLoading(true);
+    await skillsAPI.deleteSkillAssociation(idAsociacion); // Debes implementar este método en tu API
+    setHabilidadesPerfil(prev => prev.filter(h => h.id !== idAsociacion));
+  } catch (error) {
+    console.error(error);
+    alert("Error al eliminar la habilidad.");
+  } finally {
+    setLoading(false);
   }
+};
+
+ const handleLogout = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("token");
+  router.push("/login");
+};
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -303,7 +303,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="relative inline-block">
-                  <h2 className="text-white text-2xl font-bold mb-1 flex items-center justify-center gap-2">
+                  <h2 className="text-white text-2xl font-bold mb-1 flex items-center justify-center gap-2 w-100">
                       {perfil?.nombre || "Cargando..."}
                       <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center"></div>
                    </h2>
@@ -411,45 +411,38 @@ export default function ProfilePage() {
               </div>
 
               <div ref={skillContainerRef} className="flex flex-wrap gap-3 mb-6 relative">
-                {perfil?.habilidades?.map((skill, index) => (
-                  <div key={index} className="relative group">
-                    <span
-                      onClick={() => setActiveSkillIndex(prev => (prev === index ? null : index))}
-                      className="bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:shadow-purple-500/25 hover:scale-105 transition-all duration-200 cursor-pointer"
-                    >
-                      #{skill.nombre || `Habilidad ${index + 1}`}
-                    </span>
+  {habilidadesPerfil.length > 0 ? habilidadesPerfil.map((skill, index) => (
+    <div key={skill.id} className="relative group">
+      <span
+        onClick={() => setActiveSkillIndex(prev => (prev === index ? null : index))}
+        className="bg-gradient-to-r from-purple-600 to-purple-500 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:shadow-purple-500/25 hover:scale-105 transition-all duration-200 cursor-pointer"
+      >
+        #{skill.habilidad_nombre || `Habilidad ${index + 1}`}
+      </span>
 
-                    {/* Botón de eliminar */}
-                    <button
-                      onClick={() => handleRemoveSkill(index)}
-                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      ×
-                    </button>
+      <button
+        onClick={() => handleRemoveSkill(skill.id)}
+        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        ×
+      </button>
 
-                    {activeSkillIndex === index && (
-                      <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs p-3 rounded-lg shadow-lg z-10 w-max max-w-xs">
-                        <p className="mb-1">
-                          <span className="font-semibold">Tipo:</span> {skill.tipo || skill.type}
-                        </p>
-                        <p>
-                          <span className="font-semibold">Nivel:</span> {skill.nivel || skill.level}
-                        </p>
-                        {skill.descripcion && (
-                          <p className="mt-2">
-                            <span className="font-semibold">Descripción:</span> {skill.descripcion}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                
-                {(!perfil?.habilidades || perfil.habilidades.length === 0) && (
-                  <p className="text-gray-400 text-sm">No hay habilidades agregadas</p>
-                )}
-              </div>
+      {activeSkillIndex === index && (
+        <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs p-3 rounded-lg shadow-lg z-10 w-max max-w-xs">
+          <p className="mb-1">
+            <span className="font-semibold">Tipo:</span> {skill.tipo}
+          </p>
+          <p>
+            <span className="font-semibold">Nivel:</span> {skill.nivel}
+          </p>
+        </div>
+      )}
+    </div>
+  )) : (
+    <p className="text-gray-400 text-sm">No hay habilidades agregadas</p>
+  )}
+</div>
+
 
               {/* Formularios */}
 
