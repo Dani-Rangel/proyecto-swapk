@@ -154,7 +154,7 @@ export default function ActivityPrivacy() {
               </p>
               <RadioGroup
                 value={settings.onlineStatus}
-                onValueChange={(value) => handleSave("onlineStatus", value)}
+                onValueChange={(value: string) => handleSave("onlineStatus", value)}
                 className="mt-3 space-y-2"
               >
                 <div className="flex items-center space-x-2">
@@ -180,7 +180,7 @@ export default function ActivityPrivacy() {
               </p>
               <RadioGroup
                 value={settings.lastAccess}
-                onValueChange={(value) => handleSave("lastAccess", value)}
+                onValueChange={(value: string) => handleSave("onlineStatus", value)}
                 className="mt-3 space-y-2"
               >
                 <div className="flex items-center space-x-2">
