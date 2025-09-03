@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "./dialog"
+} from "../dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -67,7 +67,7 @@ export function UserDialog({ user, open, onOpenChange, onSave }: UserDialogProps
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 text white">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="nombre" className="text-right">
                 Nombre

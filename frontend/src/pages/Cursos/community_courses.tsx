@@ -27,15 +27,28 @@ import { type Curso, getCursos, createCurso, updateCurso, deleteCurso} from "@/s
 import { getCurrentUser } from "@/lib/auth"
 import { Card, CardContent } from "@/components/ui/card"
 import {uploadAttachments} from "@/services/attachments"
+import CreatableSelect from "react-select/creatable"
+import { MultiValue } from "react-select"
+import { skillsAPI } from "@/services/api_Skills";
+import { cursoHabilidadAPI } from '@/services/api_cursoHabilidad';
+
+
 
 interface NewCourseData {
   title: string
   description: string
   objective: string
-  skills: string
+  skills: HabilidadOption[]
   attachments: File[]
   courseImage: File | null
 }
+
+type HabilidadOption = {
+  id: number 
+  value: string
+  label: string
+}
+
 
 interface CourseDetailViewProps {
   course: Curso
@@ -51,7 +64,8 @@ interface UserData {
 const CursosComunidad: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<UserData | null>(null)
-
+  
+  const [habilidadesDisponibles, setHabilidadesDisponibles] = useState<HabilidadOption[]>([])
   const [cursos, setCursos] = useState<Curso[]>([])
   const [searchQuery, setSearchQuery] = useState<string>("")
 
@@ -61,7 +75,7 @@ const CursosComunidad: React.FC = () => {
     title: "",
     description: "",
     objective: "",
-    skills: "",
+    skills: [],
     attachments: [],
     courseImage: null,
   })
@@ -89,64 +103,117 @@ const CursosComunidad: React.FC = () => {
   }
 };
 
+const fetchHabilidades = async () => {
+  try {
+    const data = await skillsAPI.getSkills();
+
+    const opciones = data.map((habilidad: any) => ({
+      id: habilidad.id,
+      value: habilidad.id.toString(),
+      label: habilidad.nombre,
+    }));
+
+    setHabilidadesDisponibles(opciones);
+  } catch (error) {
+    console.error('Error fetching habilidades:', error);
+  }
+};
+
 
 useEffect(() => {
   const user = getCurrentUser();
   console.log("[v0] User loaded in main component:", user); // Asegúrate de que este usuario tiene un `id`
   setCurrentUser(user);
   loadCursos();
+  fetchHabilidades();
 }, []);
 
+useEffect(() => {
+  async function loadCursoHabilidades() {
+    if (!selectedCourse) return;
+    try {
+      const habilidades = await cursoHabilidadAPI.getCursoHabilidades(selectedCourse.id);
+      console.log("Habilidades asociadas:", habilidades);
+    } catch (err) {
+      console.error("Error cargando habilidades del curso", err);
+    }
+  }
 
-  useEffect(() => {
-    const user = getCurrentUser()
-    console.log("[v0] User loaded in main component:", user)
-    setCurrentUser(user)
-    loadCursos()
-  }, [])
+  loadCursoHabilidades();
+}, [selectedCourse]);
 
   // 🔹 Crear curso
-  const handleSubmitCourse = async (e: React.FormEvent) => {
+ const handleSubmitCourse = async (e: React.FormEvent) => {
   e.preventDefault();
   setFormSubmitting(true);
 
   const currentUserId = getCurrentUser()?.id;
   if (!currentUserId) {
-    alert("Debes iniciar sesión para crear un curso.");
+    alert("Debes iniciar sesión para crear o editar un curso.");
     setFormSubmitting(false);
     return;
   }
 
   try {
-    // Crear objeto para enviar a la API sin attachments
-    const newCurso = {
+    // 1. Preparo los datos comunes
+    const cursoPayload = {
       titulo: newCourse.title,
       descripcion: newCourse.description,
       objetivo: newCourse.objective,
-      img_Cursos: newCourse.courseImage ? await convertImageToBase64(newCourse.courseImage) : "",
-      User_Id: currentUserId,
+      img_Cursos: newCourse.courseImage
+        ? await convertImageToBase64(newCourse.courseImage)
+        : editingCourse?.img_Cursos || "",
+      user_id: currentUserId,
+      habilidades_ids: newCourse.skills.map((h) => h.id),
     };
 
-    // Crear el curso
-    const createdCurso = await createCurso(newCurso);
+    let cursoId: number;
 
-    if (newCourse.attachments.length > 0) {
-      await uploadAttachments(createdCurso.id, newCourse.attachments);
+    // 2. Crear o editar
+    if (editingCourse) {
+      // 🟢 EDITAR
+      const updatedCurso = await updateCurso(editingCourse.id, cursoPayload);
+      cursoId = updatedCurso.id;
+
+      // 🧹 Eliminar habilidades anteriores
+      await cursoHabilidadAPI.deleteAllForCurso(cursoId);
+
+      // Actualizar lista
+      setCursos((prev) =>
+        prev.map((c) => (c.id === cursoId ? updatedCurso : c))
+      );
+    } else {
+      // 🟢 CREAR
+      const createdCurso = await createCurso(cursoPayload);
+      cursoId = createdCurso.id;
+
+      // Agregar a la lista
+      setCursos((prev) => [createdCurso, ...prev]);
     }
 
-    // Actualizar estado con el nuevo curso
-    setCursos((prev) => [createdCurso, ...prev]);
+    // 3. Asociar habilidades seleccionadas
+    for (const habilidad of newCourse.skills) {
+      await cursoHabilidadAPI.associateHabilidad({
+        curso_id: cursoId,
+        habilidad_id: habilidad.id,
+      });
+    }
 
-    // Cerrar formulario y limpiar
+    // 4. Subir archivos si hay
+    if (newCourse.attachments.length > 0) {
+      await uploadAttachments(cursoId, newCourse.attachments);
+    }
+
+    // 5. Resetear formulario
     handleCloseForm();
-
   } catch (error) {
-    console.error("Error al crear curso:", error);
-    alert("Error al crear el curso. Por favor, intenta nuevamente.");
+    console.error("❌ Error al procesar el curso:", error);
+    alert("Ocurrió un error. Por favor, intenta nuevamente.");
   } finally {
     setFormSubmitting(false);
   }
 };
+
 
 
   // 🔹 Convertir imagen a base64 para enviar a la API
@@ -162,31 +229,55 @@ useEffect(() => {
 
 
   // 🔹 Actualizar curso
-  const handleUpdateCourse = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingCourse) return
-    setFormSubmitting(true)
-    try {
-      const updatedData = {
-        titulo: newCourse.title,
-        descripcion: newCourse.description,
-        objetivo: newCourse.objective,
-        img_Cursos: newCourse.courseImage
-          ? await convertImageToBase64(newCourse.courseImage)
-          : editingCourse.img_Cursos,
-      }
+ const handleUpdateCourse = async (e: React.FormEvent) => {
+  e.preventDefault()
+  if (!editingCourse) return
+  setFormSubmitting(true)
 
-      const updatedCurso = await updateCurso(editingCourse.id, updatedData)
-      setCursos(cursos.map((course) => (course.id === editingCourse.id ? updatedCurso : course)))
-      setShowCourseForm(false)
-      setEditingCourse(null)
-    } catch (error) {
-      console.error("Error al actualizar curso:", error)
-      alert("Error al actualizar el curso. Por favor, intenta nuevamente.")
-    } finally {
-      setFormSubmitting(false)
+  try {
+    const currentUserId = getCurrentUser()?.id
+    if (!currentUserId) throw new Error("Usuario no autenticado")
+
+    const updatedData = {
+      titulo: newCourse.title,
+      descripcion: newCourse.description,
+      objetivo: newCourse.objective,
+      img_Cursos: newCourse.courseImage
+        ? await convertImageToBase64(newCourse.courseImage)
+        : editingCourse.img_Cursos,
+      User_Id: currentUserId,
+      habilidades_ids: newCourse.skills.map((h) => h.id),
     }
+
+    // 🟢 Actualizar curso principal
+    const updatedCurso = await updateCurso(editingCourse.id, updatedData)
+
+    // 🟡 Eliminar habilidades anteriores y asociar nuevas
+    await cursoHabilidadAPI.deleteAllForCurso(editingCourse.id)
+    for (const habilidad of newCourse.skills) {
+      await cursoHabilidadAPI.associateHabilidad({
+        curso_id: editingCourse.id,
+        habilidad_id: habilidad.id,
+      })
+    }
+
+    // 🔵 Subir archivos si hay
+    if (newCourse.attachments.length > 0) {
+      await uploadAttachments(editingCourse.id, newCourse.attachments)
+    }
+
+    // 🧹 Actualizar en estado
+    setCursos(cursos.map((course) => (course.id === editingCourse.id ? updatedCurso : course)))
+    setShowCourseForm(false)
+    setEditingCourse(null)
+  } catch (error) {
+    console.error("Error al actualizar curso:", error)
+    alert("Error al actualizar el curso. Por favor, intenta nuevamente.")
+  } finally {
+    setFormSubmitting(false)
   }
+}
+
 
   // 🔹 Eliminar curso
   const handleDeleteCourse = async (courseId: number) => {
@@ -214,7 +305,7 @@ useEffect(() => {
       title: "",
       description: "",
       objective: "",
-      skills: "",
+      skills: [],
       attachments: [],
       courseImage: null,
     })
@@ -252,7 +343,13 @@ useEffect(() => {
       title: course.titulo,
       description: course.descripcion || "",
       objective: course.objetivo || "",
-      skills: skillsString,
+       skills: course.habilidades
+    ? course.habilidades.map((h) => ({
+        id: h.id,
+        value: h.habilidad_nombre,
+        label: h.habilidad_nombre,
+      }))
+    : [],
       attachments: [],
       courseImage: null,
     })
@@ -314,12 +411,12 @@ useEffect(() => {
     useEffect(() => {
       const user = getCurrentUser()
       console.log("[v0] Current user loaded:", user)
-      console.log("[v0] Course User_Id:", course.User_Id)
+      console.log("[v0] Course User_Id:", course.user_id)
       console.log("[v0] Course object:", course)
 
-      if (user && course.User_Id !== undefined && course.User_Id !== null) {
+      if (user && course.user_id !== undefined && course.user_id !== null) {
         const userIdNum = Number(user.id)
-        const courseUserIdNum = Number(course.User_Id)
+        const courseUserIdNum = Number(course.user_id)
         const creatorCheck = userIdNum === courseUserIdNum
 
         console.log("[v0] Creator verification:", {
@@ -332,13 +429,12 @@ useEffect(() => {
       } else {
         console.log("[v0] Cannot verify creator - missing data:", {
           hasUser: !!user,
-          courseUserId: course.User_Id,
-          userType: typeof course.User_Id,
+          courseUserId: course. user_id,
+          userType: typeof course.user_id,
         })
         setIsCreator(false)
       }
     }, [course]) // Updated dependency array to include the entire course object
-
 
 
     return (
@@ -366,29 +462,6 @@ useEffect(() => {
                 <h1 className="text-3xl font-bold text-foreground mb-2">{course.titulo}</h1>
                 <p className="text-muted-foreground">Por: {course.usuario?.nombre || "Usuario desconocido"}</p>
               </div>
-
-              {isCreator && (
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => onEdit(course)}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Editar
-                  </Button>
-                  <Button
-                    onClick={() => onDelete(course.id)}
-                    variant="destructive"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Eliminar
-                  </Button>
-                </div>
-              )}
             </div>
 
             {course.descripcion && (
@@ -463,6 +536,28 @@ useEffect(() => {
                 <Button className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300">
                   Enviar mensaje
                 </Button>
+                {isCreator && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => onEdit(course)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Editar
+                  </Button>
+                  <Button
+                    onClick={() => onDelete(course.id)}
+                    variant="destructive"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Eliminar
+                  </Button>
+                </div>
+              )}
               </div>
             </section>
           </div>
@@ -737,22 +832,26 @@ useEffect(() => {
                     </div>
 
                     <div>
-                      <label
-                        htmlFor="skills"
-                        className={`block text-sm font-medium mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}
-                      >
-                        Habilidades requeridas (separadas por comas)
-                      </label>
-                      <input
-                        type="text"
-                        id="skills"
-                        name="skills"
-                        value={newCourse.skills}
-                        onChange={handleFormChange}
-                        placeholder="Ej: HTML, CSS, JavaScript"
-                        className={`w-full px-3 py-2 border rounded-md ${isDark ? "bg-[#3E3E3E] border-[#4E4E4E] text-[#F5F5F5]" : "bg-white border-gray-300 text-gray-900"}`}
-                      />
-                    </div>
+                    <label
+                      htmlFor="skills"
+                      className={`block text-sm font-medium mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}
+                    >
+                      Habilidades (selecciona o escribe y presiona Enter)
+                    </label>
+                    <CreatableSelect
+                      isMulti
+                      options={habilidadesDisponibles}
+                      value={newCourse.skills}
+                      onChange={(selected: MultiValue<HabilidadOption>) => {
+                        setNewCourse((prev) => ({
+                          ...prev,
+                          skills: selected as HabilidadOption[],
+                        }));
+                      }}
+                      placeholder="Selecciona habilidades..."
+                    />
+
+                  </div>
 
                     <div>
                       <label
@@ -859,20 +958,20 @@ useEffect(() => {
                       console.log("[v0] Processing curso:", {
                         id: curso.id,
                         titulo: curso.titulo,
-                        User_Id: curso.User_Id,
-                        User_Id_type: typeof curso.User_Id,
+                        User_Id: curso.user_id,
+                        User_Id_type: typeof curso.user_id,
                       })
 
                       const isCreator =
                         currentUser &&
-                        curso.User_Id !== undefined &&
-                        curso.User_Id !== null &&
-                        Number(currentUser.id) === Number(curso.User_Id)
+                        curso.user_id !== undefined &&
+                        curso.user_id !== null &&
+                        Number(currentUser.id) === Number(curso.user_id)
 
                       console.log("[v0] Grid item creator check:", {
                         cursoId: curso.id,
                         currentUserId: currentUser?.id,
-                        cursoUserId: curso.User_Id,
+                        cursoUserId: curso.user_id,
                         isCreator,
                       })
 

@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional  
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -12,13 +12,24 @@ class CursoBase(BaseModel):
     img_Cursos: Optional[str] = None
 
 # =========================
+# Nuevo schema para entrada de archivos
+# =========================
+class AttachmentInput(BaseModel):
+    file_url: str
+    file_name: str
+    file_size: int
+
+# =========================
 # Curso Create / Update
 # =========================
 class CursoCreate(CursoBase):
-    User_Id: int
+    user_id: int
+    habilidades_ids: List[int] = []
+    attachments: Optional[List[AttachmentInput]] = None  # Cambio de nombre correcto
 
 class CursoUpdate(CursoBase):
-    pass
+    habilidades_ids: List[int] = []
+    attachments: Optional[List[AttachmentInput]] = None  # Cambio de nombre correcto
 
 # =========================
 # Respuestas relacionadas
@@ -29,13 +40,13 @@ class CursoHabilidadResponse(BaseModel):
     tipo: Optional[str] = None
 
     class Config:
-        from_attributes = True  # Cambiado de orm_mode
+        orm_mode = True  # corregido
 
 class UsuarioResponse(BaseModel):
     nombre: str
 
     class Config:
-        from_attributes = True  # Cambiado de orm_mode
+        orm_mode = True  # corregido
 
 class AttachmentResponse(BaseModel):
     id: int
@@ -45,17 +56,17 @@ class AttachmentResponse(BaseModel):
     fecha_subida: datetime
 
     class Config:
-        from_attributes = True  # Cambiado de orm_mode
+        orm_mode = True  # corregido
 
 # =========================
 # Curso Response
 # =========================
 class CursoResponse(CursoBase):
     id: int
-    User_Id: int
+    user_id: int
     usuario: Optional[UsuarioResponse] = None
     habilidades: List[CursoHabilidadResponse] = []
     attachments: List[AttachmentResponse] = []
 
     class Config:
-        from_attributes = True  # Cambiado de orm_mode
+        orm_mode = True  # corregido

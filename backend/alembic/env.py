@@ -12,7 +12,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 # Importa configuración y modelos
 from backend.db.database import MARIADB_URL
 from backend.db.base import Base
-from backend.models import Usuario, Habilidad, Intercambio, Resena, Mensaje, Reporte, Notificacion,  Sugerencia, Archivo, Curso, InscripcionCurso,Perfil,Archivo_Expediente, Attachment, Chat,CondicionIntercambio, CursoHabilidad, Expediente, IntercambioHabilidad, Llamada, perfilHabilidad
+from backend.models import Usuario, Habilidad, Intercambio, Resena, Mensaje, Reporte, Notificacion,  Sugerencia, Archivo, Curso, InscripcionCurso,Perfil,Archivo_Expediente, Attachment, Chat,CondicionIntercambio, CursoHabilidad, Expediente, IntercambioHabilidad, Llamada, perfilHabilidad, comentario, like, publicaciones
 
 # Configuración de Alembic
 config = context.config

@@ -13,7 +13,7 @@ export interface Curso {
   descripcion?: string
   objetivo?: string
   img_Cursos?: string
-  User_Id: number
+  user_id: number // cambio aquí a user_id
   usuario?: { nombre: string }
   habilidades?: { id: number; habilidad_nombre: string; tipo?: string }[]
   attachments?: { id: number; url: string; file_name: string; file_size: number; fecha_subida: string }[]
@@ -24,7 +24,7 @@ export interface CursoCreate {
   descripcion?: string
   objetivo?: string
   img_Cursos?: string
-  User_Id: number
+  user_id: number // cambio aquí también para crear cursos
 }
 
 export interface CursoUpdate {
@@ -92,10 +92,10 @@ export const getCursos = async (): Promise<Curso[]> => {
     console.log("[v0] API Response - Full data:", response.data)
     if (response.data && response.data.length > 0) {
       console.log("[v0] First curso from API:", response.data[0])
-      console.log("[v0] User_Id in first curso:", response.data[0].User_Id)
+      console.log("[v0] user_id in first curso:", response.data[0].user_id) // cambio aquí
       console.log(
-        "[v0] All User_Ids:",
-        response.data.map((c: any) => ({ id: c.id, User_Id: c.User_Id })),
+        "[v0] All user_ids:",
+        response.data.map((c: any) => ({ id: c.id, user_id: c.user_id })), // y aquí
       )
     }
     return response.data

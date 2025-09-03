@@ -11,6 +11,8 @@ from backend.controllers.profile_controller import router as perfil_router
 from backend.controllers.perfil_habilidad_controller import router as perfil_habilidad_router
 from backend.controllers import curso_controller
 from backend.controllers.attachments_controller import router as attachments_router
+from backend.controllers.publicaciones_controller import router as publicaciones_router
+from backend.controllers import curso_habilidad_controller
 
 
 app = FastAPI()
@@ -41,3 +43,5 @@ app.include_router(perfil_router)
 app.include_router(perfil_habilidad_router)
 app.include_router(curso_controller.router)
 app.include_router(attachments_router)
+app.include_router(publicaciones_router)
+app.include_router(curso_habilidad_controller.router)

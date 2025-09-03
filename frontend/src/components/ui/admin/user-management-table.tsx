@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../table"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,12 +10,12 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "../dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { MoreHorizontal, Plus, Pencil, Trash2 } from "lucide-react"
-import { type Usuario, RolUsuario, type CreateUsuarioData, type UpdateUsuarioData } from "@/types/user"
-import { UserDialog } from "./user-dialog"
+import { MoreHorizontal, Plus, Pencil, Trash2,  Search } from "lucide-react"
+import { type Usuario, RolUsuario, type CreateUsuarioData, type UpdateUsuarioData } from "@/services/user"
+import { UserDialog } from "./user_dialog"
 
 // Mock data - en una aplicación real, esto vendría de una API
 const mockUsers: Usuario[] = [
@@ -111,44 +111,69 @@ export function UserManagementTable() {
     }
   }
 
+  const [searchQuery, setSearchQuery] = useState("")
+
+
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Gestión de Usuarios</CardTitle>
-            <CardDescription>
-              Administra los usuarios del sistema. Solo los administradores pueden acceder a esta sección.
-            </CardDescription>
-          </div>
-          <Button onClick={handleCreateUser}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Usuario
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Nombre</TableHead>
-              <TableHead>Correo</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Fecha de Creación</TableHead>
-              <TableHead className="text-right">Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.id}</TableCell>
-                <TableCell>{user.nombre}</TableCell>
-                <TableCell>{user.correo}</TableCell>
+  <CardHeader>
+    <div className="flex items-center justify-between ">
+      <div>
+        <CardTitle className="text-white">Gestión de Usuarios</CardTitle>
+        <CardDescription>
+          Administra los usuarios del sistema. Solo los administradores pueden acceder a esta sección.
+        </CardDescription>
+      </div>
+    </div>
+  </CardHeader>
+
+  <CardContent>
+    {/* Buscador y botón */}
+    <div className="flex items-center space-x-2 mb-4">
+      <div className="relative flex-1">
+        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground text-white" />
+        <input
+          placeholder="Buscar usuarios..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-8 py-2 px-3 w-full rounded-md border border-gray-700 bg-[#1e1e1e] text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
+      <Button onClick={handleCreateUser} className="text-white">
+        <Plus className="mr-2 h-4 w-4 " />
+        Nuevo Usuario
+      </Button>
+    </div>
+
+    {/* Tabla con fondo oscuro */}
+    <div className="rounded-md border border-gray-700 bg-[#1e1e1e] text-white">
+      <Table>
+        <TableHeader className="bg-[#2a2a2a] text-white">
+          <TableRow>
+            <TableHead>ID</TableHead>
+            <TableHead>Nombre</TableHead>
+            <TableHead>Correo</TableHead>
+            <TableHead>Rol</TableHead>
+            <TableHead>Fecha de Creación</TableHead>
+            <TableHead className="text-right">Acciones</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users
+            .filter(
+              (user) =>
+                user.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                user.correo.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            .map((user) => (
+              <TableRow key={user.id} className="hover:bg-[#2a2a2a] transition-colors">
+                <TableCell className="font-medium text-white">{user.id}</TableCell>
+                <TableCell className="text-white">{user.nombre}</TableCell>
+                <TableCell className="text-white">{user.correo}</TableCell>
                 <TableCell>
                   <Badge variant={getRoleBadgeVariant(user.rol)}>{user.rol}</Badge>
                 </TableCell>
-                <TableCell>{formatDate(user.fecha_creacion)}</TableCell>
+                <TableCell className="text-white">{formatDate(user.fecha_creacion)}</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -176,11 +201,13 @@ export function UserManagementTable() {
                 </TableCell>
               </TableRow>
             ))}
-          </TableBody>
-        </Table>
+        </TableBody>
+      </Table>
+    </div>
 
-        <UserDialog user={selectedUser} open={dialogOpen} onOpenChange={setDialogOpen} onSave={handleSaveUser} />
-      </CardContent>
-    </Card>
+    <UserDialog user={selectedUser} open={dialogOpen} onOpenChange={setDialogOpen} onSave={handleSaveUser} />
+  </CardContent>
+</Card>
+
   )
 }

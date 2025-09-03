@@ -19,3 +19,6 @@ from .Expediente import Expediente
 from .Intercambio_Habilidad import IntercambioHabilidad
 from .llamadas import Llamada
 from .perfil_habilidad import perfilHabilidad
+from .publicaciones import Publicacion
+from .comentario import Comentario
+from .like import Like
