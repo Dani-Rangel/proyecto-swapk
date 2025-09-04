@@ -404,9 +404,6 @@ useEffect(() => {
                   <button onClick={() => setShowAddForm(true)} className="bg-blue-600 px-3 py-2 rounded mt-3 text-white">
                     Añadir habilidad
                   </button>
-                  <button className="text-emerald-400 text-sm hover:text-emerald-300 transition-colors font-medium hover:underline">
-                    Ver más
-                  </button>
                 </div>
               </div>
 
