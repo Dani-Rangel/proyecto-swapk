@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -7,6 +8,7 @@ import { CheckCircle, Clock, XCircle, AlertCircle, RefreshCw } from "lucide-reac
 import SettingsLayout from "../../components/settings_layout"
 
 export default function VerificationStatus() {
+  const { t } = useTranslation()
   const skills = [
     {
       id: 1,

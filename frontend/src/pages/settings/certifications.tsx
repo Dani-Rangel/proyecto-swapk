@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,6 +9,7 @@ import { Award, Plus, ExternalLink } from "lucide-react"
 import SettingsLayout from "../../components/settings_layout"
 
 export default function Certifications() {
+  const { t } = useTranslation()
   const [certifications] = useState([
     {
       id: 1,

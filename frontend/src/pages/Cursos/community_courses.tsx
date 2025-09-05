@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import {
@@ -62,6 +63,7 @@ interface UserData {
 }
 
 const CursosComunidad: React.FC = () => {
+  const { t } = useTranslation()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<UserData | null>(null)
   

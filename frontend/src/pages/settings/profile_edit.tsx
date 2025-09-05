@@ -1,5 +1,4 @@
-"use client"
-
+import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -31,6 +30,7 @@ interface Perfil {
 }
 
 export default function ProfileEdit() {
+  const { t } = useTranslation()
   const [description, setDescription] = useState("")
   const [email, setEmail] = useState("")
   const [phone, setPhone] = useState("")

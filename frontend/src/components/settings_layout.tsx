@@ -10,6 +10,7 @@ import {
   HelpCircle,
   Globe,
   Palette,
+  Archive,
   Monitor,
   Eye,
   Award,
@@ -44,14 +45,13 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
       items: [
         { id: "language", label: "Idioma", icon: Globe },
         { id: "theme", label: "Tema: Claro / Oscuro", icon: Palette },
-        { id: "preferred_mode", label: "Modalidad preferida", icon: Monitor },
+        { id: "preferred_mode", label: "Mis archivos", icon: Archive },
         { id: "activity_privacy", label: "Privacidad de actividad", icon: Eye },
       ],
     },
     {
       category: "Privacidad y seguridad",
       items: [
-        { id: "profile_visibility", label: "Quién puede ver tu perfil", icon: Eye },
         { id: "certifications", label: "Certificaciones y validaciones", icon: Award },
         { id: "upload_documents", label: "Subir o actualizar soportes", icon: Upload },
         { id: "verification_status", label: "Ver estado de verificación de habilidades", icon: CheckCircle },

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function UploadDocuments() {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState({
     name: "",
     type: "",

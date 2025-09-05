@@ -1,29 +1,34 @@
 "use client"
+
 import { createContext, useContext, useEffect, useState } from "react"
 
+type Language = "es" | "en"
+
 const LanguageContext = createContext<{
-  lang: string
-  setLang: (lang: string) => void
+  lang: Language
+  setLang: (lang: Language) => void
 }>({
   lang: "es",
   setLang: () => {},
 })
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState("es")
-
+  const [lang, setLang] = useState<Language>("es")
+    console.log("LanguageProvider mounted");
+  // Cargar idioma al iniciar
   useEffect(() => {
-    const saved = localStorage.getItem("appLanguage")
+    const saved = localStorage.getItem("appLanguage") as Language | null
     if (saved && ["es", "en"].includes(saved)) {
       setLang(saved)
     } else {
-      setLang(navigator.language.startsWith("es") ? "es" : "en")
+      const browserLang = navigator.language.startsWith("es") ? "es" : "en"
+      setLang(browserLang)
     }
   }, [])
 
+  // Guardar en localStorage cuando cambia
   useEffect(() => {
     localStorage.setItem("appLanguage", lang)
-    // Puedes emitir un evento si usas i18n basado en eventos
   }, [lang])
 
   return (

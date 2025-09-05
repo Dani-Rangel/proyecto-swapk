@@ -1,8 +1,19 @@
-frontend/node_modules/
+# Dependencias
 node_modules/
+frontend/node_modules/
+
+# Build de Next.js
 .next/
+frontend/.next/
 out/
+
+# Archivos de logs
 *.log
+
+# Entornos
 .env
 .env.local
+
+# Virtual env de Python
 venv/
+backend/venv/

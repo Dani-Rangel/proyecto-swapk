@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,6 +26,9 @@ const languages: LanguageOption[] = [
 export default function Language() {
   const [selectedLanguage, setSelectedLanguage] = useState<"es" | "en">("es")
 
+  // ✅ Ahora el hook está dentro del componente
+  const { t } = useTranslation()
+
   // 🔁 Cargar idioma guardado al iniciar
   useEffect(() => {
     const savedLang = localStorage.getItem("appLanguage")
@@ -38,12 +42,20 @@ export default function Language() {
 
   // ✅ Tipa `value` como `LanguageValue`
   const handleLanguageChange = (value: LanguageValue) => {
-    if (value === "pt") return // ✅ Ahora TypeScript sabe que "pt" es un valor válido
+    if (value === "pt") return // ✅ Evita seleccionar portugués por ahora
 
-    const newLang = value as "es" | "en" // ✅ Solo guarda "es" o "en"
+    const newLang = value as "es" | "en" // Solo permite "es" o "en"
     setSelectedLanguage(newLang)
     localStorage.setItem("appLanguage", newLang)
     console.log("Idioma actualizado a:", newLang)
+  }
+
+  // 🧪 Verificación para detectar React duplicado
+  if (typeof window !== "undefined") {
+    // @ts-ignore
+    window.React2 = require("react");
+    // @ts-ignore
+    console.log("¿React es el mismo?", window.React1 === window.React2);
   }
 
   return (
@@ -69,10 +81,10 @@ export default function Language() {
                       ? "opacity-60 cursor-not-allowed"
                       : "hover:bg-gray-700"
                   }`}
-                  // ✅ Asegúrate de que el evento no cambie el valor si es "pt"
+                  // Evita que RadioGroup cambie el valor si es "pt"
                   onClick={(e) => {
                     if (language.value === "pt") {
-                      e.preventDefault() // ❌ Evita que RadioGroup cambie el valor
+                      e.preventDefault()
                     }
                   }}
                 >

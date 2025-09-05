@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, constr
 from typing import Optional
 
-# ✅ Para devolver info del usuario (perfil sin contraseña)
+# Para devolver info del usuario (perfil sin contraseña)
 class UserResponse(BaseModel):
     id: int
     nombre: str
@@ -9,8 +9,16 @@ class UserResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        from_attributes = True
+        # Mapea el campo del modelo
+        fields = {"email": "correo"}
 
-# ✅ Para actualizar datos del usuario
+# Para actualizar datos del usuario
 class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+        fields = {"email": "correo"}

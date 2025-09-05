@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { ChevronLeft, Settings, User, Shield, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "../../components/state/theme_context"
@@ -11,6 +12,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
+  const { t } = useTranslation()
   const { theme } = useTheme()
 
   const menuItems = [

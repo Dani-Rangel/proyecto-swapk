@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +11,7 @@ import { Globe, Users, Lock } from "lucide-react"
 import SettingsLayout from "../../components/settings_layout"
 
 export default function ProfileVisibility() {
+  const { t } = useTranslation()
   const [visibility, setVisibility] = useState("friends")
   const [settings, setSettings] = useState({
     showEmail: false,

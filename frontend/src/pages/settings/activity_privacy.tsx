@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -14,6 +15,7 @@ interface PrivacySettings {
 }
 
 export default function ActivityPrivacy() {
+  const { t } = useTranslation()
   const { theme } = useTheme()
   const [settings, setSettings] = useState<PrivacySettings>({
     onlineStatus: "todos",

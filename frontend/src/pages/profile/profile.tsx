@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/router";
 import {
@@ -28,6 +29,7 @@ interface Perfil {
 }
 
 export default function ProfilePage() {
+  const { t } = useTranslation()
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)

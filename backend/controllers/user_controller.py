@@ -10,28 +10,30 @@ from backend.services.oauth2 import get_current_user
 router = APIRouter(prefix="/users", tags=["Users"])
 ph = PasswordHasher()
 
-# ✅ Obtener perfil del usuario autenticado
+# Obtener perfil del usuario autenticado
+from backend.models.usuarios import Usuario  # Asegúrate de importar tu modelo
+
 @router.get("/me", response_model=UserResponse)
-def get_my_profile(current_user: UserResponse = Depends(get_current_user)):
+def get_my_profile(current_user: Usuario = Depends(get_current_user)):
     return current_user
 
-# ✅ Actualizar datos del usuario autenticado
+
 @router.put("/me", response_model=UserResponse)
 def update_user(
     update_data: UserUpdate,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(get_current_user)
+    current_user: Usuario = Depends(get_current_user)
 ):
     if update_data.username:
-        current_user.nombre = update_data.username  # ojo: en tu modelo DB el campo es "nombre"
+        current_user.nombre = update_data.username
     if update_data.email:
-        current_user.email = update_data.email
+        current_user.correo = update_data.email  # ← Campo real en la DB
 
     db.commit()
     db.refresh(current_user)
     return current_user
 
-# ✅ Cambiar contraseña
+# Cambiar contraseña
 @router.put("/me/change-password")
 def change_password(
     old_password: str,
@@ -53,7 +55,7 @@ def change_password(
     db.commit()
     return {"msg": "Contraseña actualizada con éxito"}
 
-# ✅ Eliminar cuenta
+# Eliminar cuenta
 @router.delete("/me")
 def delete_account(
     db: Session = Depends(get_db),

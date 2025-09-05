@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 import Image from "next/image"
@@ -18,6 +19,7 @@ import {
 } from "lucide-react"
 
 export default function AdminPage() {
+  const { t } = useTranslation()
   const [currentUserRole, setCurrentUserRole] = useState<RolUsuario | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
