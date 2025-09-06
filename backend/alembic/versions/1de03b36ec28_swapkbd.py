@@ -1,8 +1,8 @@
-"""bd swapk
+"""SwapkBD
 
-Revision ID: 031a6b2fada8
+Revision ID: 1de03b36ec28
 Revises: 
-Create Date: 2025-09-02 17:00:52.535393
+Create Date: 2025-09-05 15:06:43.386494
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '031a6b2fada8'
+revision: str = '1de03b36ec28'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -33,7 +33,7 @@ def upgrade() -> None:
     sa.Column('nombre', sa.String(length=255), nullable=False),
     sa.Column('correo', sa.String(length=255), nullable=False),
     sa.Column('contrasena_hash', sa.String(length=255), nullable=False),
-    sa.Column('rol', sa.Enum('Administrador', 'Moderador', 'Usuario', 'Verificado', name='rolusuario'), nullable=True),
+    sa.Column('rol', sa.Enum('Administrador', 'Moderador', 'Usuario', name='rolusuario'), nullable=True),
     sa.Column('fecha_creacion', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('correo')
@@ -61,14 +61,14 @@ def upgrade() -> None:
     op.create_table('expediente',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('usuario_id', sa.Integer(), nullable=True),
-    sa.Column('Nombre', sa.String(length=255), nullable=True),
-    sa.Column('Intitucion', sa.String(length=255), nullable=True),
+    sa.Column('nombre', sa.String(length=255), nullable=True),
+    sa.Column('institucion', sa.String(length=255), nullable=True),
     sa.Column('descripcion', sa.Text(), nullable=True),
     sa.Column('tipo', sa.Enum('CV', 'CERTIFICADO', 'ACTA', 'CARTA', 'BECAS', 'CONTRATOS', 'PROYECTOS', name='tipoexpedienteenum'), nullable=True),
     sa.Column('estado', sa.Enum('EN_PROCESO', 'VERIFICADO', 'PENDIENTE', 'RECHAZADO', name='tipoestadoenum'), nullable=True),
-    sa.Column('Url_Expediente', sa.String(length=255), nullable=True),
-    sa.Column('Fecha_Inicio', sa.DateTime(), nullable=True),
-    sa.Column('Fecha_Fin', sa.DateTime(), nullable=True),
+    sa.Column('url_expediente', sa.String(length=255), nullable=True),
+    sa.Column('fecha_inicio', sa.DateTime(), nullable=True),
+    sa.Column('fecha_fin', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

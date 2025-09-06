@@ -6,7 +6,7 @@ class TipoNotificacion(str, enum.Enum):
     Recordatorio_Aceptado = "Recordatorio Aceptado"
     Recordatorio_Cancelado = "Recordatorio Cancelado"
     Curso_Aceptado = "Curso Aceptado"
-    Curso_Cancelado = "ResuelCurso_Canceladoto"
+    Curso_Cancelado = "Curso Cancelado"
     Recordatorio_Trueque = "Recordatorio Trueque"
     Recordatorio_Curso = "Recordatorio Curso"
     Mensaje = "Mensaje"

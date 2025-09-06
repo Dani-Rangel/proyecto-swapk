@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles  # <-- Importa StaticFiles
 from backend.db.database import Base, engine
 from backend.controllers.auth_controller import router as auth_router
 from backend.controllers.habilidad_controller import router as habilidad_router
@@ -13,6 +14,8 @@ from backend.controllers import curso_controller
 from backend.controllers.attachments_controller import router as attachments_router
 from backend.controllers.publicaciones_controller import router as publicaciones_router
 from backend.controllers import curso_habilidad_controller
+from backend.controllers.expediente_controller import router as expediente_router 
+from backend.controllers.moderador_controller import router as moderador_router
 
 
 app = FastAPI()
@@ -33,6 +36,9 @@ app.add_middleware(
 # Base de datos
 Base.metadata.create_all(bind=engine)
 
+# Montar carpeta uploads como estática para servir archivos
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+
 # Rutas
 app.include_router(auth_router, prefix="/auth")
 app.include_router(habilidad_router)
@@ -45,3 +51,5 @@ app.include_router(curso_controller.router)
 app.include_router(attachments_router)
 app.include_router(publicaciones_router)
 app.include_router(curso_habilidad_controller.router)
+app.include_router(expediente_router)
+app.include_router(moderador_router)

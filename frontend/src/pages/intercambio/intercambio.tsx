@@ -20,6 +20,8 @@ import {
   LogOut,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Notificaciones } from "@/components/ui/notificaciones/notifications"
+
 
 export default function SwapkPlatform() {
   const router = useRouter()
@@ -138,7 +140,7 @@ export default function SwapkPlatform() {
         {/* Logo */}
         {isSidebarOpen && (
           <div className="flex items-center mb-8 px-4">
-            <div className="w-6 h-6 mr-3 bg-blue-500 rounded"></div>
+            <img src="/img/logoswapk.png" alt="Swapk Logo" className="w-7 h-auto" />
             <span className="text-white font-bold text-lg">Swapk</span>
           </div>
         )}
@@ -147,7 +149,7 @@ export default function SwapkPlatform() {
         {isSidebarOpen && (
           <div className="flex gap-12 justify-center mb-12">
             <User className="w-6 h-6 text-white hover:text-blue-400 cursor-pointer transition-colors" />
-            <Bell className="w-6 h-6 text-white hover:text-blue-400 cursor-pointer transition-colors" />
+            <Notificaciones />
             <MessageSquare className="w-6 h-6 text-white hover:text-blue-400 cursor-pointer transition-colors" />
           </div>
         )}

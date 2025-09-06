@@ -30,7 +30,10 @@ import {uploadAttachments} from "@/services/attachments"
 import CreatableSelect from "react-select/creatable"
 import { MultiValue } from "react-select"
 import { skillsAPI } from "@/services/api_Skills";
-import { cursoHabilidadAPI } from '@/services/api_cursoHabilidad';
+import { cursoHabilidadAPI } from '@/services/api_cursoHabilidad'
+import { Notificaciones } from "@/components/ui/notificaciones/notifications"
+import { useNotificaciones } from "@/context/notificacionesContext"
+
 
 
 
@@ -88,6 +91,8 @@ const CursosComunidad: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const { agregarNotificacion } = useNotificaciones();
+
 
 
   const loadCursos = async () => {
@@ -189,6 +194,11 @@ useEffect(() => {
 
       // Agregar a la lista
       setCursos((prev) => [createdCurso, ...prev]);
+
+       agregarNotificacion({
+        tipo: "curso_creado",
+        contenido: `El usuario ${currentUserId} ha creado el curso "${newCourse.title}".`,
+      });
     }
 
     // 3. Asociar habilidades seleccionadas
@@ -650,7 +660,7 @@ useEffect(() => {
                   size="sm"
                   className={`cursor-pointer flex-1 h-8 transition-colors duration-300 ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E] hover:text-[#F5F5F5]" : "text-gray-600 hover:text-gray-900"}`}
                 >
-                  <Bell className="w-4 h-4" />
+                  <Notificaciones />
                 </Button>
                 <Button
                   variant="ghost"

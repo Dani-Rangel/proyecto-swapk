@@ -9,7 +9,6 @@ class RolUsuario(str, enum.Enum):
     Administrador = "Administrador"
     Moderador = "Moderador"
     Usuario = "Usuario"
-    Verificado = "Verificado"
 
 
 class Usuario(Base):
