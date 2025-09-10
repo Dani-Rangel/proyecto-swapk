@@ -6,13 +6,18 @@ import { useNotificaciones } from "@/context/notificacionesContext"
 export function Notificaciones() {
   const { notificaciones, marcarComoLeida } = useNotificaciones()
   const [showNotifications, setShowNotifications] = useState(false)
+  const [isDark, setIsDark] = useState<boolean>(false)
 
   const notificacionesNoLeidas = notificaciones.filter((n) => !n.leido).length
+
+const toggleTheme = () => {
+    setIsDark(!isDark)
+  }
 
   return (
     <div className="relative">
       <Bell
-        className="w-6 h-6 text-white hover:text-blue-400 cursor-pointer transition-colors"
+        className={`cursor-pointer flex-1 h-8 transition-colors duration-300  ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E] hover:text-[#F5F5F5] " : "text-gray-600 hover:text-gray-900"}`}
         onClick={() => setShowNotifications(!showNotifications)}
       />
       {notificacionesNoLeidas > 0 && (

@@ -290,7 +290,7 @@ useEffect(() => {
                 <div className="relative inline-block mb-4 ">
                   <div className="w-24 h-24 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full mx-auto flex items-center justify-space overflow-hidden">
                     <Image
-                      src={perfil?.foto_perfil || "/img/cat_profile.jpg"}
+                      src={perfil?.foto_perfil || "/img/user.png"}
                       alt="Profile"
                       width={96}
                       height={96}

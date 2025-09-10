@@ -1,3 +1,4 @@
+//lib/auth
 export interface UserData {
   id: number
   nombre: string

@@ -665,7 +665,7 @@ useEffect(() => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`cursor-pointer flex-1 h-8 transition-colors duration-300 ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E] hover:text-[#F5F5F5]" : "text-gray-600 hover:text-gray-900"}`}
+                  className={`cursor-pointer flex-1 h-8 transition-colors duration-300  ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E] hover:text-[#F5F5F5] " : "text-gray-600 hover:text-gray-900"}`}
                 >
                   <User className="w-4 h-4" />
                 </Button>
@@ -676,7 +676,7 @@ useEffect(() => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="cursor-pointer w-full justify-start bg-blue-600 text-white hover:bg-blue-700 h-8 transition-colors duration-300"
+                  className="cursor-pointer w-full justify-start bg-blue-600 text-black hover:bg-blue-700 h-8 transition-colors duration-300"
                 >
                   <Home className="w-4 h-4 mr-2" />
                   Inicio

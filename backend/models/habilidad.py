@@ -10,3 +10,4 @@ class Habilidad(Base):
     categoria = Column(String(255))
 
     curso_habilidades = relationship("CursoHabilidad", back_populates="habilidad")
+    intercambios = relationship("IntercambioHabilidad", back_populates="habilidad", cascade="all, delete-orphan")

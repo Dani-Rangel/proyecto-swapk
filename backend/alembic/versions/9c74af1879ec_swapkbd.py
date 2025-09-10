@@ -1,8 +1,8 @@
-"""SwapkBD
+"""SwapkBd
 
-Revision ID: 1de03b36ec28
+Revision ID: 9c74af1879ec
 Revises: 
-Create Date: 2025-09-05 15:06:43.386494
+Create Date: 2025-09-09 17:19:41.193241
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '1de03b36ec28'
+revision: str = '9c74af1879ec'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -162,14 +162,20 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('intercambios',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('id_Perfil1', sa.Integer(), nullable=True),
-    sa.Column('id_Perfil2', sa.Integer(), nullable=True),
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('id_usuario1', sa.Integer(), nullable=False),
+    sa.Column('id_perfil', sa.Integer(), nullable=False),
+    sa.Column('nivel', sa.Enum('Principiante', 'Intermedio', 'Avanzado', name='nivelintercambio'), nullable=True),
+    sa.Column('modo', sa.Enum('Virtual', 'Presencial', 'Hibrido', name='modointercambio'), nullable=True),
+    sa.Column('disponibilidad', sa.String(length=255), nullable=True),
+    sa.Column('idioma', sa.Enum('Ingles', 'Espanol', 'Portugues', name='idiomaintercambio'), nullable=True),
+    sa.Column('descripcion', sa.Text(), nullable=True),
+    sa.Column('valoracion', sa.Float(), nullable=True),
+    sa.Column('estado_trueque', sa.Boolean(), nullable=True),
     sa.Column('estado', sa.Enum('Pendiente', 'Confirmado', 'Finalizado', name='estadointercambio'), nullable=True),
-    sa.Column('fecha_inicio', sa.DateTime(), nullable=True),
-    sa.Column('fecha_fin', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['id_Perfil1'], ['perfiles.id'], ),
-    sa.ForeignKeyConstraint(['id_Perfil2'], ['perfiles.id'], ),
+    sa.Column('fecha_creacion', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['id_perfil'], ['perfiles.id'], ),
+    sa.ForeignKeyConstraint(['id_usuario1'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('llamadas',
@@ -247,8 +253,7 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('intercambio_id', sa.Integer(), nullable=True),
     sa.Column('habilidad_id', sa.Integer(), nullable=True),
-    sa.Column('tipo', sa.Enum('OFRECE', 'BUSCA', name='tipoenum'), nullable=True),
-    sa.Column('nivel', sa.Enum('PRINCIPIANTE', 'INTERMEDIO', 'EXPERTO', name='nivelenum'), nullable=True),
+    sa.Column('tipo', sa.Enum('OFRECE', 'BUSCA', name='tipohabilidad'), nullable=False),
     sa.ForeignKeyConstraint(['habilidad_id'], ['habilidad.id'], ),
     sa.ForeignKeyConstraint(['intercambio_id'], ['intercambios.id'], ),
     sa.PrimaryKeyConstraint('id')

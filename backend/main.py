@@ -16,6 +16,8 @@ from backend.controllers.publicaciones_controller import router as publicaciones
 from backend.controllers import curso_habilidad_controller
 from backend.controllers.expediente_controller import router as expediente_router 
 from backend.controllers.moderador_controller import router as moderador_router
+from backend.controllers.intercambio_controller import router as intercambio_router
+
 
 
 app = FastAPI()
@@ -53,3 +55,5 @@ app.include_router(publicaciones_router)
 app.include_router(curso_habilidad_controller.router)
 app.include_router(expediente_router)
 app.include_router(moderador_router)
+app.include_router(intercambio_router)
+
