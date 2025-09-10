@@ -16,7 +16,7 @@ class Usuario(Base):
     __tablename__ = "usuarios"
 
     id = Column(Integer, primary_key=True)
-    nombre = Column(String(255), nullable=False)
+    nombre = Column(String(255), unique=True, nullable=False) 
     correo = Column(String(255), unique=True, nullable=False)
     contrasena_hash = Column(String(255), nullable=False)
     rol = Column(Enum(RolUsuario), default=RolUsuario.Usuario)
@@ -26,7 +26,7 @@ class Usuario(Base):
     publicaciones = relationship("Publicacion", back_populates="usuario")
     comentarios = relationship("Comentario", back_populates="usuario")
     likes = relationship("Like", back_populates="usuario")
-    perfil = relationship("Perfil", back_populates="usuario", uselist=False)
+    perfil = relationship("Perfil", back_populates="usuario", uselist=False, cascade="all, delete-orphan")
     cursos = relationship('Curso', back_populates='usuario')
 
 

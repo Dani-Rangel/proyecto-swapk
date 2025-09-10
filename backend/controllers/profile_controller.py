@@ -8,30 +8,34 @@ from backend.services.auth_service import hash_password
 
 router = APIRouter(prefix="/perfil", tags=["Perfil"])
 
+# ------------------- GET /perfil/me -------------------
 @router.get("/me")
 def get_my_perfil(db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     perfil = db.query(Perfil).filter(Perfil.id_usuario == current_user.id).first()
-    if not perfil:
-        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+    # Si no existe perfil, devolvemos campos por defecto
     return {
-        "id": perfil.id,
-        "id_usuario": perfil.id_usuario,
-        "nombre": perfil.nombre,
-        "correo": perfil.correo,
-        "descripcion": perfil.descripcion or "",
-        "ubicacion": perfil.ubicacion or "",
-        "Tel": perfil.Tel,
-        "foto_perfil": perfil.foto_perfil or "/img/cat_profile.jpg"
+        "id": perfil.id if perfil else None,
+        "id_usuario": current_user.id,
+        "nombre": current_user.nombre,
+        "nombre_usuario": current_user.nombre,
+        "correo": current_user.correo,
+        "descripcion": perfil.descripcion if perfil else "",
+        "ubicacion": perfil.ubicacion if perfil else "",
+        "telefono": perfil.telefono if perfil else "",
+        "foto_perfil": perfil.foto_perfil if perfil and perfil.foto_perfil else "/img/cat_profile.jpg"
     }
 
-# --- Aquí agregas la nueva ruta ---
+# ------------------- GET /perfil/usuario/{id} -------------------
 @router.get("/usuario/{id}")
 def get_perfil_by_user_id(id: int, db: Session = Depends(get_db)):
     perfil = db.query(Perfil).filter(Perfil.id_usuario == id).first()
-    if not perfil:
+    usuario = db.query(Usuario).filter(Usuario.id == id).first()
+
+    if not perfil or not usuario:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
-    # 🔍 Buscar habilidades asociadas a este perfil
+    # Obtener habilidades asociadas
     from backend.models.perfil_habilidad import perfilHabilidad
     from backend.models.habilidad import Habilidad
 
@@ -56,13 +60,13 @@ def get_perfil_by_user_id(id: int, db: Session = Depends(get_db)):
     return {
         "id": perfil.id,
         "id_usuario": perfil.id_usuario,
-        "nombre": perfil.nombre,
-        "correo": perfil.correo,
+        "nombre": usuario.nombre,
+        "correo": usuario.correo,
         "descripcion": perfil.descripcion or "",
         "ubicacion": perfil.ubicacion or "",
-        "Tel": perfil.Tel,
+        "telefono": perfil.telefono,
         "foto_perfil": perfil.foto_perfil or "/img/cat_profile.jpg",
-        "habilidades": habilidades  # ← añadimos esto
+        "habilidades": habilidades
     }
 
 # ------------------- GET /perfil/{id} -------------------
@@ -74,32 +78,29 @@ def get_perfil(id: int, db: Session = Depends(get_db), current_user: Usuario = D
     perfil = db.query(Perfil).filter(Perfil.id_usuario == id).first()
     usuario = db.query(Usuario).filter(Usuario.id == id).first()
 
-    print(f"📄 Perfil encontrado: {perfil}")
-    print(f"📧 Usuario encontrado: {usuario}")
-
     if not perfil or not usuario:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
     return {
         "id": perfil.id,
         "id_usuario": perfil.id_usuario,
-        "nombre": perfil.nombre,
-        "descripcion": perfil.descripcion,
-        "ubicacion": perfil.ubicacion,
-        "foto_perfil": perfil.foto_perfil,
+        "nombre": usuario.nombre,
         "correo": usuario.correo,
-        "nombre_usuario": usuario.nombre
+        "descripcion": perfil.descripcion or "",
+        "ubicacion": perfil.ubicacion or "",
+        "telefono": perfil.telefono,
+        "foto_perfil": perfil.foto_perfil or "/img/cat_profile.jpg",
+        "nombre_usuario": usuario.nombre  # opcional para frontend
     }
 
 # ------------------- PUT /perfil/{id} -------------------
 @router.put("/{id}")
 def update_perfil(
     id: int,
-    data: dict = Body(...),  # Puedes usar un esquema más adelante
+    data: dict = Body(...),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    # ✅ Verificar que el usuario autenticado es el dueño del perfil
     if current_user.id != id:
         raise HTTPException(status_code=403, detail="Acceso denegado")
 
@@ -109,30 +110,33 @@ def update_perfil(
     if not perfil or not usuario:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
-    # ✅ Actualizar nombre (si viene)
+    # Actualizar nombre
     if "nombre" in data:
         nuevo_nombre = data["nombre"].strip()
         if not nuevo_nombre:
             raise HTTPException(status_code=400, detail="El nombre no puede estar vacío")
-        perfil.nombre = nuevo_nombre
-        usuario.nombre = nuevo_nombre  # Mantener consistencia
+        usuario.nombre = nuevo_nombre
 
-    # ✅ Actualizar descripción (opcional)
+    # Actualizar descripción
     if "descripcion" in data:
         perfil.descripcion = data["descripcion"]
 
-    # ✅ Actualizar ubicación (opcional)
+    # Actualizar ubicación
     if "ubicacion" in data:
         perfil.ubicacion = data["ubicacion"]
 
-    # ✅ Actualizar contraseña (opcional)
+    # Actualizar teléfono
+    if "telefono" in data:
+        perfil.telefono = data["telefono"]
+
+    # Actualizar contraseña
     if "contrasena" in data:
         contrasena = data["contrasena"]
         if len(contrasena) < 6:
             raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
         usuario.contrasena_hash = hash_password(contrasena)
 
-    # ✅ Guardar cambios
+    # Guardar cambios
     try:
         db.commit()
         db.refresh(perfil)
@@ -140,4 +144,4 @@ def update_perfil(
         return {"msg": "Perfil actualizado correctamente"}
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=500, detail="Error al guardar en la base de datos")    
+        raise HTTPException(status_code=500, detail="Error al guardar en la base de datos")

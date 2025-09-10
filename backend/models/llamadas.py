@@ -17,7 +17,7 @@ class EstadoLlamada(str, enum.Enum):
 class Llamada(Base):
     __tablename__ = "llamadas"
     id = Column(Integer, primary_key=True)
-    chat_id = Column(Integer, ForeignKey("chat.id"))
+    chat_id = Column(Integer, ForeignKey("chats.id"))
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
     tipo =  Column(Enum(tipoLlamada))
     Estado = Column(Enum(EstadoLlamada))

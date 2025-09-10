@@ -1,5 +1,6 @@
 from backend.db import Base
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
+from sqlalchemy import Column, Integer, ForeignKey, Enum
+from sqlalchemy.orm import relationship
 import enum
 
 class NivelEnum(str, enum.Enum):
@@ -11,14 +12,18 @@ class TipoEnum(str, enum.Enum):
     OFRECE = "Ofrece"
     BUSCA = "Busca"
 
-class perfilHabilidad(Base):
-    __tablename__ = "Perfil_Habilidad"
+class PerfilHabilidad(Base):
+    __tablename__ = "perfil_habilidad"
+
     id = Column(Integer, primary_key=True)
-    Perfil_id = Column(Integer, ForeignKey("perfiles.id"))
-    habilidad_id = Column(Integer, ForeignKey("habilidad.id"))
+    perfil_id = Column(Integer, ForeignKey("perfiles.id"))
+    habilidad_id = Column(Integer, ForeignKey("habilidades.id"))
     tipo = Column(Enum(TipoEnum))
     nivel = Column(Enum(NivelEnum))
 
-@property
-def habilidad_nombre(self):
+    # Relación con Habilidad
+    habilidad = relationship("Habilidad")
+
+    @property
+    def habilidad_nombre(self):
         return self.habilidad.nombre if self.habilidad else None

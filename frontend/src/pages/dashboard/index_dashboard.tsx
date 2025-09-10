@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Bell,
   User,
+  Settings,
   Home,
   TrendingUp,
   RefreshCw,
@@ -50,7 +51,7 @@ export default function ForumLayout() {
   const [newPost, setNewPost] = useState({
     titulo: "",
     contenido: "",
-    tipo: "Intercambios", // Valor real, no traducido
+    tipo: "Intercambio",
     imagen: ""
   })
 
@@ -68,7 +69,7 @@ export default function ForumLayout() {
   useEffect(() => {
     const fetchPublicaciones = async () => {
       try {
-        const tipo = activeTab === t("todo") ? "all" : newPost.tipo // Usa el tipo real
+        const tipo = activeTab === t("todo") ? "all" : newPost.tipo
         const res = await fetch(`http://localhost:8000/api/publicaciones/${tipo}`)
         const data = await res.json()
         const posts = Array.isArray(data) ? data : []
@@ -293,8 +294,20 @@ export default function ForumLayout() {
             </div>
 
             <div className="flex gap-1 mb-3">
-              {[MessageSquare, Bell, User].map((Icon, idx) => (
-                <Button key={idx} variant="ghost" size="sm" className={`flex-1 h-8 cursor-pointer ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-600 hover:text-gray-900"}`}>
+              {[
+                { icon: MessageSquare, label: t("messages"), href: "/message/messages" },
+                { icon: Bell, label: t("notifications"), href: "/notifications" },
+                { icon: User, label: t("profile"), href: "/profile/profile" },
+                { icon: Settings, label: t("settings"), href: "/settings/profile_edit" },
+              ].map(({ icon: Icon, label, href }, idx) => (
+                <Button
+                  key={idx}
+                  variant="ghost"
+                  size="sm"
+                  className={`flex-1 h-8 cursor-pointer ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-600 hover:text-gray-900"}`}
+                  onClick={() => href && router.push(href)}
+                  title={label} // Tooltip útil
+                >
                   <Icon className="w-4 h-4" />
                 </Button>
               ))}

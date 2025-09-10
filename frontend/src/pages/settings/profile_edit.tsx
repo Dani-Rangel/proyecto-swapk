@@ -42,65 +42,57 @@ export default function ProfileEdit() {
   const [error, setError] = useState("")
 
   // Cargar datos del usuario desde API
+  useEffect(() => {
+    const fetchUserData = async () => {
+      setIsLoading(true)
+      setError("")
 
-useEffect(() => {
-  const fetchUserData = async () => {
-    setIsLoading(true);
-    setError("");
+      try {
+        // Leer token y userId desde la clave "user"
+        const userStr = localStorage.getItem("user")
+        let token: string | null = null
+        let userId: number | null = null
 
-    try {
-      const savedUserStr = localStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr)
+          token = user.token || null
+          userId = user.id || user.perfil?.id_usuario || null
+        }
 
-      if (!savedUserStr) {
-        setError("No se encontró el token de autenticación. Por favor, inicia sesión.");
-        setIsLoading(false);
-        return;
+        console.log("Token:", token, "User ID:", userId)
+
+        if (!token || !userId) throw new Error("No se encontró token o ID de usuario")
+
+        const response = await fetch("http://localhost:8000/perfil/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (!response.ok) {
+          const err = await response.text()
+          throw new Error(err || "Error al cargar perfil")
+        }
+
+        const data = await response.json()
+        setEmail(data.correo || "")
+        setFullName(data.nombre_usuario || "")
+        setUsername(data.nombre || "")
+        setDescription(data.descripcion || "")
+        setLocation(data.ubicacion || "")
+        setPhone(data.telefono || "")
+        setProfileImage(data.foto_perfil || "")
+      } catch (err: any) {
+        setError(`No se pudo cargar el perfil: ${err.message}`)
+      } finally {
+        setIsLoading(false)
       }
-
-      const savedUser = JSON.parse(savedUserStr);
-      const token = savedUser.token;
-      const userId = savedUser.id;
-
-      if (!token || !userId) {
-        setError("No se pudo identificar al usuario");
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch(`http://localhost:8000/perfil/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `Error ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      setEmail(data.correo || "");
-      setFullName(data.nombre_usuario || "");
-      setUsername(data.nombre || "");
-      setDescription(data.descripcion || "");
-      setLocation(data.ubicacion || "");
-      setProfileImage(data.foto_perfil || "");
-
-    } catch (err: any) {
-      console.error("Error al cargar perfil:", err);
-      setError(`No se pudo cargar el perfil: ${err.message}`);
-    } finally {
-      setIsLoading(false);
     }
-  };
 
-  fetchUserData();
-}, []);
+    fetchUserData()
+  }, [])
 
   // Función para redirigir al login
   const redirectToLogin = () => {
-    window.location.href = '/auth/login'
+    window.location.href = "/auth/login"
   }
 
   // Función para guardar cambios en el perfil
@@ -108,25 +100,18 @@ useEffect(() => {
     try {
       setIsLoading(true)
       setError("")
-      
-      const token = localStorage.getItem('token') || 
-                   localStorage.getItem('authToken') || 
-                   localStorage.getItem('userToken')
-      
-      const userDataStr = localStorage.getItem('userData') || 
-                         localStorage.getItem('currentUser') ||
-                         localStorage.getItem('perfil')
-      
-      let userId = null
-      
-      if (userDataStr) {
-        try {
-          const userData = JSON.parse(userDataStr)
-          userId = userData.id || userData.id_usuario || userData.perfil?.id_usuario
-        } catch (parseError) {
-          console.error("Error parsing userData:", parseError)
-        }
+
+      const userStr = localStorage.getItem("user")
+      let token: string | null = null
+      let userId: number | null = null
+
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        token = user.token || null
+        userId = user.id || user.perfil?.id_usuario || null
       }
+
+      console.log("Token al guardar:", token, "User ID:", userId)
 
       if (!token || !userId) {
         setError("No se pudo autenticar la solicitud")
@@ -134,21 +119,19 @@ useEffect(() => {
         return
       }
 
-      // Preparar datos para enviar
       const updatedProfile = {
         nombre: username,
         descripcion: description,
-        ubicacion: location
+        ubicacion: location,
       }
 
-      // Enviar actualización a la API - intentar diferentes endpoints
       const response = await fetch(`http://localhost:8000/perfil/${userId}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(updatedProfile)
+        body: JSON.stringify(updatedProfile),
       })
 
       if (!response.ok) {
@@ -157,31 +140,23 @@ useEffect(() => {
 
       const result = await response.json()
       console.log("Perfil actualizado:", result)
-      
-      // Actualizar localStorage con los nuevos datos
-      if (userDataStr) {
-        try {
-          const userData = JSON.parse(userDataStr)
-          const updatedUserData = {
-            ...userData,
-            nombre: username,
-            descripcion: description,
-            ubicacion: location,
-            perfil: {
-              ...userData.perfil,
-              nombre: username,
-              descripcion: description,
-              ubicacion: location
-            }
-          }
-          localStorage.setItem('userData', JSON.stringify(updatedUserData))
-        } catch (parseError) {
-          console.error("Error updating localStorage:", parseError)
-        }
-      }
-      
-      alert("Perfil actualizado exitosamente")
 
+      // Actualizar localStorage
+      const updatedUserData = {
+        ...JSON.parse(userStr),
+        nombre: username,
+        descripcion: description,
+        ubicacion: location,
+        perfil: {
+          ...JSON.parse(userStr).perfil,
+          nombre: username,
+          descripcion: description,
+          ubicacion: location,
+        },
+      }
+      localStorage.setItem("user", JSON.stringify(updatedUserData))
+
+      alert("Perfil actualizado exitosamente")
     } catch (error) {
       console.error("Error al guardar cambios:", error)
       setError("Error al guardar los cambios. Intenta nuevamente.")
@@ -207,13 +182,13 @@ useEffect(() => {
           <div className="text-center">
             <p className="text-red-400 mb-4">{error}</p>
             <div className="space-y-2">
-              <Button 
+              <Button
                 onClick={() => window.location.reload()}
                 className="bg-blue-600 hover:bg-blue-700 mr-2"
               >
                 Reintentar
               </Button>
-              <Button 
+              <Button
                 onClick={redirectToLogin}
                 className="bg-green-600 hover:bg-green-700"
               >
@@ -233,7 +208,7 @@ useEffect(() => {
           <h1 className="text-2xl font-bold">
             Editar <span className="text-blue-400">perfil</span>
           </h1>
-          <Button 
+          <Button
             className="bg-green-600 hover:bg-green-700"
             onClick={handleSaveChanges}
             disabled={isLoading}
@@ -248,7 +223,7 @@ useEffect(() => {
               <Avatar className="w-16 h-16">
                 <AvatarImage src={profileImage || "/diverse-user-avatars.png"} />
                 <AvatarFallback className="bg-blue-600 text-white">
-                  {username ? username.charAt(0).toUpperCase() : 'U'}
+                  {username ? username.charAt(0).toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
@@ -273,7 +248,9 @@ useEffect(() => {
                   className="bg-gray-700 border-gray-600 text-white min-h-[100px]"
                   maxLength={255}
                 />
-                <p className="text-right text-sm text-gray-400 mt-1">{description.length}/255</p>
+                <p className="text-right text-sm text-gray-400 mt-1">
+                  {description.length}/255
+                </p>
               </div>
             </div>
           </CardContent>

@@ -1,52 +1,68 @@
-from pydantic import BaseModel, EmailStr, Field
-import re
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
+from .user_schema import UserResponse
+import re
 
 class RegisterRequest(BaseModel):
-    nombre: str
-    email: EmailStr
-    password: str
+    nombre: str = Field(..., min_length=2, max_length=255)
+    correo: EmailStr
+    password: str = Field(..., min_length=8)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("La contraseña debe tener al menos 8 caracteres")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("La contraseña debe tener al menos una letra minúscula")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("La contraseña debe tener al menos un número")
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
+            raise ValueError("La contraseña debe tener al menos un carácter especial")
+        return v
+
 
 class LoginRequest(BaseModel):
-    emailOrUsername: str
-    password: str
+    emailOrUsername: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)
+
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
+
 
 class VerifyCodeRequest(BaseModel):
     email: EmailStr
     code: str = Field(..., min_length=6, max_length=6)
 
+
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
     code: str = Field(..., min_length=6, max_length=6)
     new_password: str = Field(..., min_length=8)
-    
+
+    @field_validator("new_password")
     @classmethod
-    def validate_password(cls, password: str) -> bool:
-        """Valida que la contraseña cumpla con requisitos mínimos"""
-        if len(password) < 8:
-            return False
-        if not re.search(r"[A-Z]", password):
-            return False
-        if not re.search(r"[a-z]", password):
-            return False
-        if not re.search(r"[0-9]", password):
-            return False
-        return True
+    def validate_new_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("La nueva contraseña debe tener al menos 8 caracteres")
+        if not re.search(r"[A-Z]", v):
+            raise ValueError("La nueva contraseña debe tener al menos una letra mayúscula")
+        if not re.search(r"[a-z]", v):
+            raise ValueError("La nueva contraseña debe tener al menos una letra minúscula")
+        if not re.search(r"[0-9]", v):
+            raise ValueError("La nueva contraseña debe tener al menos un número")
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", v):
+            raise ValueError("La nueva contraseña debe tener al menos un carácter especial")
+        return v
 
-# Opcional: Modelo para respuesta de usuario
-class UserResponse(BaseModel):
-    id: int
-    nombre: str
-    email: EmailStr
-    is_active: bool
 
-    class Config:
-        orm_mode = True
-
-# Opcional: Modelo para token de autenticación
 class Token(BaseModel):
     access_token: str
-    token_type: str
+    token_type: str = "bearer"
+
+
+# Respuesta completa de login (opcional, recomendado)
+class LoginResponse(BaseModel):
+    token: Token
+    user: "UserResponse"

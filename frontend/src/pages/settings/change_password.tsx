@@ -22,41 +22,33 @@ export default function ChangePassword() {
   })
   const [loading, setLoading] = useState(false)
 
-  // 🔁 Cargar datos del usuario al iniciar
   useEffect(() => {
     const loadUserData = () => {
       try {
         const savedUserStr = localStorage.getItem("user")
-        if (!savedUserStr) {
-          toast.error(t("no_session"))
-          return
-        }
-
+        if (!savedUserStr) return
         const savedUser = JSON.parse(savedUserStr)
         setUsername(savedUser.perfil?.nombre || savedUser.user?.nombre || "")
       } catch (err) {
         console.error("Error al cargar usuario:", err)
-        toast.error(t("error_loading_user"))
       }
     }
-
     loadUserData()
-  }, [t])
+  }, [])
 
-  // ✅ Cambiar contraseña o nombre de usuario
   const handleSubmit = async () => {
     if (!username.trim()) {
-      toast.error(t("username_empty"))
+      toast.error("El nombre de usuario no puede estar vacío")
       return
     }
 
     if (newPassword && newPassword.length < 6) {
-      toast.error(t("password_too_short"))
+      toast.error("La nueva contraseña debe tener al menos 6 caracteres")
       return
     }
 
     if (newPassword && newPassword !== confirmPassword) {
-      toast.error(t("passwords_do_not_match"))
+      toast.error("Las contraseñas no coinciden")
       return
     }
 
@@ -64,34 +56,39 @@ export default function ChangePassword() {
 
     try {
       const savedUserStr = localStorage.getItem("user")
-      if (!savedUserStr) {
-        toast.error(t("no_session"))
-        setLoading(false)
-        return
-      }
-
+      if (!savedUserStr) throw new Error("No hay sesión activa")
       const savedUser = JSON.parse(savedUserStr)
       const token = savedUser.token
-      const userId = savedUser.id
 
-      const res = await fetch(`http://localhost:8000/perfil/${userId}`, {
+      // 1️⃣ Actualizar solo nombre de usuario
+      await fetch(`http://localhost:8000/perfil/me`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          nombre: username,
-          ...(newPassword && { contrasena: newPassword }),
-        }),
+        body: JSON.stringify({ nombre: username }),
       })
 
-      const data = await res.json()
+      // 2️⃣ Actualizar contraseña solo si hay nueva
+      if (newPassword) {
+        const res = await fetch("http://localhost:8000/users/me/change-password", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            old_password: currentPassword,
+            new_password: newPassword,
+          }),
+        })
 
-      if (!res.ok) {
-        throw new Error(data.detail || t("update_error"))
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.detail || "Error al cambiar contraseña")
       }
 
+      // ✅ Actualizar localStorage
       const updatedUser = {
         ...savedUser,
         perfil: { ...savedUser.perfil, nombre: username },
@@ -99,12 +96,13 @@ export default function ChangePassword() {
       }
       localStorage.setItem("user", JSON.stringify(updatedUser))
 
-      toast.success(t("data_updated_success"))
+      toast.success("Datos actualizados correctamente")
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
 
     } catch (err: any) {
+      console.error("Error al actualizar datos:", err)
       toast.error(err.message)
     } finally {
       setLoading(false)
@@ -112,44 +110,41 @@ export default function ChangePassword() {
   }
 
   const togglePasswordVisibility = (field: "current" | "new" | "confirm") => {
-    setShowPasswords((prev) => ({
-      ...prev,
-      [field]: !prev[field],
-    }))
+    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }))
   }
 
   return (
     <SettingsLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">{t("change_password_title")}</h1>
+        <h1 className="text-2xl font-bold">Cambiar contraseña</h1>
 
         <Card className="bg-[#1a1a1a] border-[#1a1a1a]">
           <CardHeader>
-            <CardTitle>{t("update_data_card_title")}</CardTitle>
+            <CardTitle>Actualizar datos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Nombre de usuario */}
             <div>
-              <label className="block text-sm font-medium mb-2">{t("username")}</label>
+              <label className="block text-sm font-medium mb-2">Nombre de usuario</label>
               <Input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder={t("username_placeholder")}
+                placeholder="Nombre de usuario"
                 className="bg-gray-700 border-gray-600 text-white"
               />
             </div>
 
             {/* Contraseña actual */}
             <div>
-              <label className="block text-sm font-medium mb-2">{t("current_password")}</label>
+              <label className="block text-sm font-medium mb-2">Contraseña actual</label>
               <div className="relative">
                 <Input
                   type={showPasswords.current ? "text" : "password"}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   className="bg-gray-700 border-gray-600 text-white pr-10"
-                  placeholder={t("current_password_placeholder")}
+                  placeholder="Contraseña actual"
                 />
                 <Button
                   type="button"
@@ -165,14 +160,14 @@ export default function ChangePassword() {
 
             {/* Nueva contraseña */}
             <div>
-              <label className="block text-sm font-medium mb-2">{t("new_password_optional")}</label>
+              <label className="block text-sm font-medium mb-2">Nueva contraseña (opcional)</label>
               <div className="relative">
                 <Input
                   type={showPasswords.new ? "text" : "password"}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="bg-gray-700 border-gray-600 text-white pr-10"
-                  placeholder={t("new_password_placeholder")}
+                  placeholder="Nueva contraseña"
                 />
                 <Button
                   type="button"
@@ -188,14 +183,14 @@ export default function ChangePassword() {
 
             {/* Confirmar nueva contraseña */}
             <div>
-              <label className="block text-sm font-medium mb-2">{t("confirm_new_password")}</label>
+              <label className="block text-sm font-medium mb-2">Confirmar nueva contraseña</label>
               <div className="relative">
                 <Input
                   type={showPasswords.confirm ? "text" : "password"}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-gray-700 border-gray-600 text-white pr-10"
-                  placeholder={t("confirm_new_password_placeholder")}
+                  placeholder="Confirmar nueva contraseña"
                 />
                 <Button
                   type="button"
@@ -216,7 +211,7 @@ export default function ChangePassword() {
                 disabled={loading}
                 className="bg-blue-600 hover:bg-blue-700 disabled:opacity-70"
               >
-                {loading ? t("saving") : t("save_changes")}
+                {loading ? "Guardando..." : "Guardar cambios"}
               </Button>
             </div>
           </CardContent>

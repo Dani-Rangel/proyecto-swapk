@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.models import Usuario, Publicacion, Comentario, Like
-from backend.services.oauth2 import get_current_user  # Asumiendo que tienes sistema de auth
+from backend.services.oauth2 import get_current_user
 from pydantic import BaseModel
 from backend.schemas.publicaciones_schema import ComentarioCreate, PublicacionCreate
 

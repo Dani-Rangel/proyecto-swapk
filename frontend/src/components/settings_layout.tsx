@@ -11,7 +11,6 @@ import {
   Globe,
   Palette,
   Archive,
-  Monitor,
   Eye,
   Award,
   Upload,
@@ -20,6 +19,7 @@ import {
   LogOut,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useTranslation } from "../lib/useTranslations"
 
 interface SettingsLayoutProps {
   children: React.ReactNode
@@ -28,51 +28,49 @@ interface SettingsLayoutProps {
 
 export default function SettingsLayout({ children, title }: SettingsLayoutProps) {
   const router = useRouter()
+  const { t } = useTranslation()
   const [activeSection, setActiveSection] = useState(router.pathname.split("/").pop() || "profile_edit")
 
   const menuItems = [
     {
-      category: "Configuración de mi cuenta",
+      category: t("account_settings"),
       items: [
-        { id: "change_email", label: "Cambiar correo electrónico", icon: User },
-        { id: "change_password", label: "Cambiar contraseña", icon: Shield },
-        { id: "delete_account", label: "Eliminar cuenta", icon: User },
-        { id: "notifications", label: "Notificaciones", icon: Bell },
+        { id: "change_email", label: t("change_email"), icon: User },
+        { id: "change_password", label: t("change_password"), icon: Shield },
+        { id: "delete_account", label: t("delete_account"), icon: User },
+        { id: "notifications", label: t("notifications"), icon: Bell },
       ],
     },
     {
-      category: "Preferencias de la plataforma",
+      category: t("platform_preferences"),
       items: [
-        { id: "language", label: "Idioma", icon: Globe },
-        { id: "theme", label: "Tema: Claro / Oscuro", icon: Palette },
-        { id: "preferred_mode", label: "Mis archivos", icon: Archive },
-        { id: "activity_privacy", label: "Privacidad de actividad", icon: Eye },
+        { id: "language", label: t("language"), icon: Globe },
+        { id: "theme", label: t("theme"), icon: Palette },
+        { id: "preferred_mode", label: t("my_files"), icon: Archive },
+        { id: "activity_privacy", label: t("activity_privacy"), icon: Eye },
       ],
     },
     {
-      category: "Privacidad y seguridad",
+      category: t("privacy_security"),
       items: [
-        { id: "certifications", label: "Certificaciones y validaciones", icon: Award },
-        { id: "upload_documents", label: "Subir o actualizar soportes", icon: Upload },
-        { id: "verification_status", label: "Ver estado de verificación de habilidades", icon: CheckCircle },
+        { id: "certifications", label: t("certifications"), icon: Award },
+        { id: "upload_documents", label: t("upload_documents"), icon: Upload },
+        { id: "verification_status", label: t("verification_status"), icon: CheckCircle },
       ],
     },
     {
-      category: "Opciones adicionales",
+      category: t("extra_options"),
       items: [
-        { id: "help_center", label: "Centro de ayuda / Soporte", icon: HelpCircle },
+        { id: "help_center", label: t("help_center"), icon: HelpCircle },
       ],
     },
   ]
 
-  // ✅ Función para cerrar sesión
   const handleLogout = () => {
-    // ✅ Eliminar datos de sesión
     localStorage.removeItem("user")
-    localStorage.removeItem("token") // si lo guardas aparte
-    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT" // eliminar cookie
+    localStorage.removeItem("token")
+    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT"
 
-    // ✅ Redirigir al login
     router.push("/auth/login")
   }
 
@@ -91,12 +89,12 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.back()}
+                onClick={() => router.push('/dashboard/index_dashboard')}
                 className="text-gray-400 hover:text-white"
               >
                 <ArrowLeft className="w-4 h-4" />
               </Button>
-              <h1 className="text-xl font-semibold">Ajustes</h1>
+              <h1 className="text-xl font-semibold">{t("settings")}</h1>
             </div>
 
             <nav className="space-y-6">
@@ -129,7 +127,7 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
             </nav>
           </div>
 
-          {/* Cerrar sesión (siempre al final, fijo) */}
+          {/* Logout */}
           <div className="p-6 border-t border-gray-800">
             <Button
               variant="ghost"
@@ -137,7 +135,7 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
               onClick={handleLogout}
             >
               <LogOut className="w-4 h-4" />
-              <span className="cursor-pointer text-sm font-medium">Cerrar sesión</span>
+              <span className="cursor-pointer text-sm font-medium">{t("logout")}</span>
             </Button>
           </div>
         </div>

@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Bool
 from sqlalchemy.orm import relationship
 
 class Habilidad(Base):
-    __tablename__ = "habilidad"
+    __tablename__ = "habilidades"
     id = Column(Integer, primary_key=True)
     nombre = Column(String(255))
     descripcion = Column(Text)

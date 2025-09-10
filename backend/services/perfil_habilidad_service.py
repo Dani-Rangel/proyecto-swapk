@@ -1,13 +1,13 @@
 from sqlalchemy.orm import Session
-from backend.models.perfil_habilidad import perfilHabilidad
+from backend.models.perfil_habilidad import PerfilHabilidad
 from backend.models.habilidad import Habilidad
 from backend.schemas.perfil_habilidad_schema import PerfilHabilidadCreate, PerfilHabilidadResponse
 
 def get_habilidades_by_perfil(db: Session, perfil_id: int):
     asociaciones = (
-        db.query(perfilHabilidad, Habilidad.nombre)
-        .join(Habilidad, perfilHabilidad.habilidad_id == Habilidad.id)
-        .filter(perfilHabilidad.Perfil_id == perfil_id)
+        db.query(PerfilHabilidad, Habilidad.nombre)
+        .join(Habilidad, PerfilHabilidad.habilidad_id == Habilidad.id)
+        .filter(PerfilHabilidad.Perfil_id == perfil_id)
         .all()
     )
 
@@ -25,7 +25,7 @@ def get_habilidades_by_perfil(db: Session, perfil_id: int):
     return resultado
 
 def create_perfil_habilidad(db: Session, data: PerfilHabilidadCreate):
-    new_assoc = perfilHabilidad(**data.dict())
+    new_assoc = PerfilHabilidad(**data.dict())
     db.add(new_assoc)
     db.commit()
     db.refresh(new_assoc)

@@ -8,7 +8,7 @@ interface CallState {
   isCameraOff: boolean
   isRecording: boolean
   isScreenSharing: boolean
-  currentContact: string
+  currentContact?: string
   callDuration: number
 }
 

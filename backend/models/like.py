@@ -17,7 +17,7 @@ class Like(Base):
     __table_args__ = (UniqueConstraint('id_usuario', 'id_publicacion', name='_usuario_publicacion_uc'),)
 
     # Relaciones
-    usuario = relationship("Usuario", back_populates="likes")  # ✅ Cambiado: backref → back_populates
+    usuario = relationship("Usuario", back_populates="likes") 
     publicacion = relationship("Publicacion", back_populates="likes")
 
     def __repr__(self):

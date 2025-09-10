@@ -1,6 +1,16 @@
+from dotenv import load_dotenv
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from backend.db.database import Base, engine
+# Importacion de modelos
+
+from backend.models.usuarios import Usuario, RolUsuario
+from backend.models.chats import Chat, ChatUsuario
+from backend.models.archivo_expediente import Archivo_Expediente
+from backend.models.archivos import Archivo
+
+# Importacion de controllers
 from backend.controllers.auth_controller import router as auth_router
 from backend.controllers.habilidad_controller import router as habilidad_router
 from backend.controllers.forgot_password_controller import router as forgot_password_router
@@ -13,13 +23,24 @@ from backend.controllers import curso_controller
 from backend.controllers.attachments_controller import router as attachments_router
 from backend.controllers.publicaciones_controller import router as publicaciones_router
 from backend.controllers import curso_habilidad_controller
+from backend.controllers.help_controller import router as help_router
 
+#Cargamos las variables de entorno
+
+load_dotenv()
+
+
+print("MAIL_USERNAME:", os.getenv("MAIL_USERNAME"))
+print("MAIL_PASSWORD:", os.getenv("MAIL_PASSWORD"))
+print("MAIL_SERVER:", os.getenv("MAIL_SERVER"))
+print("MAIL_FROM:", os.getenv("MAIL_FROM"))
 
 app = FastAPI()
 
 # Configuración CORS
 origins = [
-    "http://localhost:3000",  # direccion frontend
+    "http://localhost:3000",  # frontend
+    "http://127.0.0.1:3000"
 ]
 
 app.add_middleware(
@@ -45,3 +66,4 @@ app.include_router(curso_controller.router)
 app.include_router(attachments_router)
 app.include_router(publicaciones_router)
 app.include_router(curso_habilidad_controller.router)
+app.include_router(help_router)

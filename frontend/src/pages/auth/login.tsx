@@ -31,7 +31,7 @@ const Login: React.FC = () => {
     setFormData((prev) => ({ ...prev, showPassword: !prev.showPassword }))
   }
 
-  const handleForgotPassword = () => router.push("/auth/forgotpassword")
+  const handleForgotPassword = () => router.push("/auth/forgot_password")
   const handleRegister = () => router.push("/auth/register")
   const handleSocialLogin = (provider: string) => {
     alert(`Login con ${provider} en construcción 🚧`)
@@ -149,9 +149,9 @@ const Login: React.FC = () => {
                 {/* Botón Google corregido */}
                 <GoogleLogin
                   onSuccess={async (credentialResponse) => {
-                    console.log("Google response:", credentialResponse); // 👈 revisa qué devuelve Google
+                    console.log("Google response:", credentialResponse);
                     
-                    const token = credentialResponse.credential; // 👈 este es el id_token (JWT)
+                    const token = credentialResponse.credential; //  este es el id_token 
                     if (!token) {
                       alert("No se obtuvo el token de Google ❌");
                       return;

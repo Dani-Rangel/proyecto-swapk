@@ -1,3 +1,4 @@
+// video_call_interface.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -17,21 +18,22 @@ interface CallState {
   isCameraOff: boolean
   isRecording: boolean
   isScreenSharing: boolean
-  currentContact: string
+  // ❌ REMOVIDO: currentContact ya no pertenece aquí
   callDuration: number
 }
 
+// ✅ Agregamos un estado separado para el contacto seleccionado
 export default function VideoCallInterface() {
-  const [viewMode, setViewMode] = useState<ViewMode>("video-call")
+  const [viewMode, setViewMode] = useState<ViewMode>("chat")
   const [callState, setCallState] = useState<CallState>({
-    isInCall: true,
+    isInCall: false,
     isMuted: false,
-    isCameraOff: false,
+    isCameraOff: true,
     isRecording: false,
     isScreenSharing: false,
-    currentContact: "Eduardo Manuel",
-    callDuration: 1596, // 26:36 in seconds
+    callDuration: 0,
   })
+  const [selectedContact, setSelectedContact] = useState<string | null>(null) // ✅ ¡ESTO ES CLAVE!
   const [notification, setNotification] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -89,49 +91,54 @@ export default function VideoCallInterface() {
 
   return (
     <div className="flex h-screen bg-[#141414] text-white">
-      {/* Left Sidebar - Always visible */}
+      {/* Sidebar de contactos */}
       <ContactsSidebar
-        currentContact={callState.currentContact}
-        onContactSelect={(contact) => setCallState((prev) => ({ ...prev, currentContact: contact }))}
+        currentContact={selectedContact || ""} // ✅ Pasamos selectedContact (puede ser null)
+        onContactSelect={setSelectedContact} // ✅ Cuando se selecciona, actualizamos selectedContact
         onViewChange={setViewMode}
         currentView={viewMode}
       />
 
-      {/* Main Content Area */}
+      {/* Área principal */}
       <div className="flex-1 flex flex-col relative">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between p-4 bg-[#1a1a1a] border-b border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-              <span className="text-sm font-medium">EM</span>
-            </div>
-            <div>
-              <span className="font-medium">{callState.currentContact}</span>
-              {callState.isInCall && (
-                <div className="flex items-center gap-2 text-sm text-gray-400">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>En llamada - {formatDuration(callState.callDuration)}</span>
-                </div>
-              )}
+        {/* Barra superior — solo si hay contacto seleccionado */}
+        {selectedContact && (
+          <div className="flex items-center justify-between p-4 bg-[#1a1a1a] border-b border-gray-700">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <span className="text-sm font-medium">
+                  {selectedContact
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium">{selectedContact}</span>
+                {callState.isInCall && (
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>En llamada - {formatDuration(callState.callDuration)}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
+        )}
 
-          {viewMode === "screen-share" && (
-            <div className="text-sm text-gray-400">Estas compartiendo: "Canva - Google Chrome"</div>
-          )}
-        </div>
-
-        {/* Content Area */}
+        {/* Contenido dinámico */}
         <div className="flex-1 relative">
-          {viewMode === "video-call" && (
+          {viewMode === "video-call" && selectedContact && (
             <VideoCallArea
               isInCall={callState.isInCall}
               isCameraOff={callState.isCameraOff}
-              currentContact={callState.currentContact}
+              currentContact={selectedContact}
             />
           )}
 
-          {viewMode === "chat" && <ChatArea currentContact={callState.currentContact} />}
+          {viewMode === "chat" && (
+            <ChatArea currentContact={selectedContact} /> // ✅ Aquí lo pasamos como null o string
+          )}
 
           {viewMode === "screen-share" && <ScreenShareArea />}
 
@@ -139,7 +146,6 @@ export default function VideoCallInterface() {
             <div className="p-6">
               <h2 className="text-xl font-bold mb-6">Seleccionar pantalla para compartir</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {/* Screen options */}
                 <div
                   className="bg-[#1a1a1a] rounded-lg p-4 cursor-pointer hover:bg-[#2a2a2a] transition-colors"
                   onClick={() => handleCallAction("start-screen-share")}
@@ -149,58 +155,17 @@ export default function VideoCallInterface() {
                   </div>
                   <p className="text-sm">Pantalla completa</p>
                 </div>
-
-                <div
-                  className="bg-[#1a1a1a] rounded-lg p-4 cursor-pointer hover:bg-[#2a2a2a] transition-colors"
-                  onClick={() => handleCallAction("start-screen-share")}
-                >
-                  <div className="aspect-video bg-blue-600 rounded mb-2 flex items-center justify-center">
-                    <span className="text-xs">Canva</span>
-                  </div>
-                  <p className="text-sm">Canva - Google Chrome</p>
-                </div>
-
-                <div
-                  className="bg-[#1a1a1a] rounded-lg p-4 cursor-pointer hover:bg-[#2a2a2a] transition-colors"
-                  onClick={() => handleCallAction("start-screen-share")}
-                >
-                  <div className="aspect-video bg-gray-600 rounded mb-2 flex items-center justify-center">
-                    <span className="text-xs">Gmail</span>
-                  </div>
-                  <p className="text-sm">Gmail - Aplicaciones</p>
-                </div>
               </div>
-
-              <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4 mb-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-5 h-5 text-yellow-500 mt-0.5">⚠️</div>
-                  <div>
-                    <p className="font-medium text-yellow-200">Advertencia:</p>
-                    <p className="text-sm text-yellow-300">
-                      Solo comparte contenido si confías en el interlocutor. Puedes dejar de compartir en cualquier
-                      momento.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setViewMode("video-call")}
-                className="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
             </div>
           )}
         </div>
 
-        {/* Call Controls - Always visible when in call */}
-        {callState.isInCall && <CallControls callState={callState} onAction={handleCallAction} />}
+        {/* Controles de llamada — solo si hay llamada activa */}
+        {callState.isInCall && <CallControls callState={{ ...callState, currentContact: selectedContact || "" }} onAction={handleCallAction} />}
       </div>
 
-      {/* Notifications */}
+      {/* Notificaciones */}
       {notification && <NotificationToast message={notification} onClose={() => setNotification(null)} />}
-
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
     </div>
   )

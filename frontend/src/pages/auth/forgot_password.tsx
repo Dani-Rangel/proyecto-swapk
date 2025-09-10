@@ -84,7 +84,7 @@ export default function ForgotPassword() {
       if (!res.ok) throw new Error(data.message || 'Error al cambiar la contraseña');
 
       setSuccess('Contraseña cambiada exitosamente.');
-      setTimeout(() => router.push('/login'), 1500);
+      setTimeout(() => router.push('/auth/login'), 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cambiar la contraseña');
     } finally { setIsLoading(false); }

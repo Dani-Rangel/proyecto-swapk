@@ -38,6 +38,57 @@ export const translations = {
     todo: "Todo",
     title: "Título",
 
+    // ===== Profile =====
+    
+    "search_placeholder": "Buscar...",
+    "messages": "Mensajes",
+    "profile": "Perfil",
+    "explore": "EXPLORAR",
+    "my_swaps": "MIS TRUEQUES",
+    "my_courses": "MIS CURSOS",
+    "community": "COMUNIDAD",
+    "edit_profile": "Editar perfil",
+    "location_not_specified": "Ubicación no especificada",
+    "welcome_to_profile": "¡Bienvenido a tu perfil!",
+    "swap_info": "Información de Intercambios",
+    "completed_swaps": "intercambios realizados",
+    "completed_courses": "cursos completos",
+    "enrolled_swaps": "Intercambios Inscrito",
+    "upcoming_courses": "Cursos a realizar",
+    "known_people": "Persona conocidas",
+    "swap_participants": "Personas de intercambio",
+    "instructors": "instructores",
+    "certificates": "Certificados",
+    "add": "Agregar",
+    "view_more": "Ver más",
+    "no_certificates": "No tienes certificados aún",
+    "upload_certificates": "Subelos a tu perfil para obtener reconocimiento!",
+    "skills": "Habilidades",
+    "add_skill": "Añadir habilidad",
+    "no_skills": "No hay habilidades agregadas",
+    "swap_history": "Historial de intercambios",
+    "user": "Usuario",
+    "swap_example": "Clases de cocina por lecciones de fotografía",
+    "swap_review": "Me encantó el intercambio, aprendí mucho y la experiencia fue genial.",
+
+
+
+    // ===== Ajustes usuario =====
+    settings: "Ajustes",
+    account_settings: "Configuración de mi cuenta",
+    change_email: "Cambiar correo electrónico",
+    delete_account: "Eliminar cuenta",
+    notifications: "Notificaciones",
+    platform_preferences: "Preferencias de la plataforma",
+    theme: "Tema: Claro / Oscuro",
+    my_files: "Mis archivos",
+    activity_privacy: "Privacidad de actividad",
+    privacy_security: "Privacidad y seguridad",
+    certifications: "Certificaciones y validaciones",
+    upload_documents: "Subir o actualizar soportes",
+    verification_status: "Ver estado de verificación de habilidades",
+    extra_options: "Opciones adicionales",
+
     // ===== Tipos de publicación =====
     postTypeExchanges: "Intercambios",
     postTypeCourses: "Cursos",
@@ -106,7 +157,6 @@ export const translations = {
 
     // ===== Help Center =====
     help_center_title: "Centro de ayuda / Soporte",
-    save_changes: "Guardar Cambios",
     user_manual: "Manual de usuario",
     user_manual_description:
       "Explora y conoce las formas de usar nuestra aplicación como todo un experto!",
@@ -218,6 +268,58 @@ export const translations = {
     todo: "All",
     title: "Title",
 
+    // ==== Profile ====
+
+      "search_placeholder": "Search...",
+    "messages": "Messages",
+    "profile": "Profile",
+    "explore": "EXPLORE",
+    "my_swaps": "MY SWAPS",
+    "my_courses": "MY COURSES",
+    "community": "COMMUNITY",
+    "edit_profile": "Edit profile",
+    "location_not_specified": "Location not specified",
+    "welcome_to_profile": "Welcome to your profile!",
+    "swap_info": "Swap Information",
+    "completed_swaps": "completed swaps",
+    "completed_courses": "completed courses",
+    "enrolled_swaps": "Enrolled Swaps",
+    "upcoming_courses": "Upcoming Courses",
+    "known_people": "Known People",
+    "swap_participants": "Swap Participants",
+    "instructors": "Instructors",
+    "certificates": "Certificates",
+    "add": "Add",
+    "view_more": "View more",
+    "no_certificates": "You don't have any certificates yet",
+    "upload_certificates": "Upload them to your profile to gain recognition!",
+    "skills": "Skills",
+    "add_skill": "Add Skill",
+    "no_skills": "No skills added",
+    "swap_history": "Swap History",
+    "user": "User",
+    "swap_example": "Cooking classes for photography lessons",
+    "swap_review": "I loved the swap, I learned a lot and the experience was great.",
+
+      // ==== Settings User ====
+
+    settings: "Settings",
+    account_settings: "Account Settings",
+    change_email: "Change Email",
+    delete_account: "Delete Account",
+    notifications: "Notifications",
+    platform_preferences: "Platform Preferences",
+    theme: "Theme: Light / Dark",
+    my_files: "My Files",
+    activity_privacy: "Activity Privacy",
+    privacy_security: "Privacy & Security",
+    certifications: "Certifications and Validations",
+    upload_documents: "Upload or Update Documents",
+    verification_status: "View Skills Verification Status",
+    extra_options: "Additional Options",
+
+
+
     // ===== Post Types =====
     postTypeExchanges: "Exchanges",
     postTypeCourses: "Courses",
@@ -288,7 +390,6 @@ export const translations = {
     help_center: "Help Center",
     user_manual_desc: "Explore and learn to use our application like a pro",
     help_center_title: "Help Center / Support",
-    save_changes: "Save Changes",
     user_manual: "User Manual",
     user_manual_description:
       "Explore and learn how to use our app like a pro!",
@@ -360,7 +461,7 @@ export const translations = {
 
     dark_theme_label: "Dark",
     dark_theme_description: "Dark theme to reduce eye strain",
-    
+
   },
 } as const;
 

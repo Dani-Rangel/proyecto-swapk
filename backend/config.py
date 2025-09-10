@@ -2,4 +2,4 @@ import os
 
 SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey") 
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 24  # 24 horas
+ACCESS_TOKEN_EXPIRE_HOURS = 42  # horas

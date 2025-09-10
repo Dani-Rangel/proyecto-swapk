@@ -15,9 +15,9 @@ export default function DeleteAccount() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [userData, setUserData] = useState<{
-    nombre: string;
-    correo: string;
-    id: number;
+    nombre: string
+    correo: string
+    id: number
   } | null>(null)
 
   // 🔁 Cargar datos del usuario
@@ -26,26 +26,27 @@ export default function DeleteAccount() {
       try {
         const savedUserStr = localStorage.getItem("user")
         if (!savedUserStr) {
-          setMessage(t("no_session"))
+          setMessage("No hay sesión activa")
           return
         }
 
         const savedUser = JSON.parse(savedUserStr)
         setUserData({
-          nombre: savedUser.nombre || savedUser.user?.nombre || t("default_user"),
-          correo: savedUser.correo || savedUser.user?.correo || t("not_available"),
+          nombre: savedUser.nombre || savedUser.user?.nombre || "Usuario",
+          correo: savedUser.correo || savedUser.user?.correo || "No disponible",
           id: savedUser.id
         })
       } catch (err) {
-        console.error(t("error_loading_user_data"), err)
-        setMessage(t("error_loading_user_data"))
+        console.error("Error cargando datos del usuario", err)
+        setMessage("Error cargando datos del usuario")
       }
     }
 
     loadUserData()
-  }, [t])
+  }, []) 
 
-  // ✅ Eliminar cuenta
+
+  // Eliminar cuenta
   const handleDelete = async () => {
     if (confirmText !== "ELIMINAR") {
       setMessage(t("confirm_text_error"))
@@ -80,7 +81,7 @@ export default function DeleteAccount() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ password }) // enviar contraseña para verificación
       })
 
       const data = await res.json()

@@ -18,6 +18,7 @@ class Comentario(Base):
     id_publicacion = Column(Integer, ForeignKey("publicaciones.id"), nullable=False)
     publicacion = relationship("Publicacion", back_populates="comentarios")
 
+
     # Relación con comentario padre (respuestas)
     id_comentario_padre = Column(Integer, ForeignKey("comentarios.id"), nullable=True)
     

@@ -29,14 +29,14 @@ def authenticate_user(credentials: HTTPBasicCredentials, db: Session):
 @router.post("/register")
 def register(data: RegisterRequest, db: Session = Depends(get_db)):
     # Verificar si ya existe
-    user = user_exists(db, data.email)
+    user = user_exists(db, data.correo)
     if user:
         raise HTTPException(status_code=400, detail="El email ya está registrado")
 
     # Crear nuevo usuario
     new_user = Usuario(
         nombre=data.nombre,
-        correo=data.email,
+        correo=data.correo,
         contrasena_hash=hash_password(data.password)
     )
     db.add(new_user)
@@ -45,8 +45,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 
     # Crear perfil asociado automáticamente con id_usuario y nombre
     new_profile = Perfil(
-        id_usuario=new_user.id,
-        nombre=new_user.nombre
+        id_usuario=new_user.id
     )
     db.add(new_profile)
     db.commit()
@@ -63,7 +62,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     return {
         "message": "Usuario y perfil creados exitosamente",
         "token": token,
-        "user": {  # ✅ Ahora en inglés, como en /login
+        "user": {
             "id": new_user.id,
             "nombre": new_user.nombre,
             "correo": new_user.correo
@@ -71,7 +70,6 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
         "perfil": {
             "id": new_profile.id,
             "id_usuario": new_profile.id_usuario,
-            "nombre": new_profile.nombre
         }
     }
 

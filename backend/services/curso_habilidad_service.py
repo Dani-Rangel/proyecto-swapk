@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from backend.models.Curso_Habilidad import CursoHabilidad
+from backend.models.curso_habilidad import CursoHabilidad
 from backend.models.habilidad import Habilidad
 from backend.schemas.curso_habilidad_schema import CursoHabilidadCreate
 

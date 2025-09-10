@@ -5,7 +5,7 @@ from backend.schemas.perfil_habilidad_schema import PerfilHabilidadCreate, Perfi
 from backend.services import perfil_habilidad_service
 from backend.models.habilidad import Habilidad
 from typing import List
-from backend.models.perfil_habilidad import perfilHabilidad
+from backend.models.perfil_habilidad import PerfilHabilidad
 
 router = APIRouter()
 
@@ -34,7 +34,7 @@ def create_perfil_habilidad(data: PerfilHabilidadCreate, db: Session = Depends(g
 
 @router.delete("/perfil_habilidad/{id}")
 def delete_perfil_habilidad(id: int, db: Session = Depends(get_db)):
-    asociacion = db.query(perfilHabilidad).filter(perfilHabilidad.id == id).first()
+    asociacion = db.query(PerfilHabilidad).filter(PerfilHabilidad.id == id).first()
     
     if not asociacion:
         raise HTTPException(status_code=404, detail="Asociación no encontrada")

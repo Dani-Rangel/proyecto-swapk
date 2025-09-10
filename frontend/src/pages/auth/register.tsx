@@ -32,17 +32,18 @@ export default function RegisterPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             nombre: formData.nombre,
-            email: formData.email,
+            correo: formData.email,
             password: formData.password,
           }),
         });
 
         const data = await res.json();
+        console.log("Respuesta completa del backend:", data);
 
         if (res.ok) {
           // ✅ Guardar el token en el objeto del usuario en localStorage
           const userData = {
-            token: data.token,           // ← ¡Importante! Incluye el token aquí
+            token: data.token, 
             id: data.usuario?.id || data.user.id,
             nombre: data.usuario?.nombre || data.user.nombre,
             correo: data.usuario?.correo || data.user.correo,
@@ -214,7 +215,7 @@ export default function RegisterPage() {
                     )
                     alert(`Bienvenido ${res.data.nombre} 🎉`)
                     localStorage.setItem("user", JSON.stringify(res.data))
-                    router.push("/index_dashboard")
+                    router.push("../dashboard/index_dashboard")
                   } catch (err: any) {
                     console.error(err.response || err)
                     alert(
@@ -228,7 +229,7 @@ export default function RegisterPage() {
                 }}
                 useOneTap
                 theme="filled_blue"
-                shape="circle" // 👈 esto lo hace botón redondo solo con el icono
+                shape="circle" 
               />
             </div>
           </div>
