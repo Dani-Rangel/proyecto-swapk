@@ -35,7 +35,7 @@ import {
   NivelIntercambio,
   IdiomaIntercambio,
   Habilidad,
-  obtenerHabilidades,
+  obtenerTodasHabilidades,
 } from "@/services/intercambio"
 
 import { getCurrentUser } from "@/lib/auth"
@@ -70,41 +70,24 @@ export default function SwapkPlatform() {
   }, [])
 
   // Cargar habilidades
-  useEffect(() => {
+ useEffect(() => {
   const fetchData = async () => {
     try {
       const [truequesData, habilidadesData] = await Promise.all([
         obtenerIntercambios(),
-        obtenerHabilidades()
-      ])
+        obtenerTodasHabilidades(),
+      ]);
 
-      setHabilidades(habilidadesData)
-
-      // Crear mapa id -> nombre
-      const habilidadesMap = new Map<number, string>()
-      habilidadesData.forEach(h => habilidadesMap.set(h.id, h.nombre))
-
-      // Mapear habilidades de cada trueque
-      const mappedTrueques = truequesData.map(t => ({
-        ...t,
-        habilidades_ofrecidas: t.habilidades_ofrecidas?.map(h => ({
-          ...h,
-          nombre: habilidadesMap.get(h.id) || h.nombre || ""
-        })),
-        habilidades_buscadas: t.habilidades_buscadas?.map(h => ({
-          ...h,
-          nombre: habilidadesMap.get(h.id) || h.nombre || ""
-        }))
-      }))
-
-      setTrueques(mappedTrueques)
+      setHabilidades(habilidadesData);   // Se usa para el formulario
+      setTrueques(truequesData);         // Ya viene con nombres de habilidades
     } catch (error) {
-      console.error("Error cargando trueques o habilidades:", error)
+      console.error("Error cargando trueques o habilidades:", error);
     }
-  }
+  };
 
-  fetchData()
-}, [])
+  fetchData();
+}, []);
+
 
 
   const handleLogout = () => {
@@ -413,14 +396,17 @@ export default function SwapkPlatform() {
                       <div className="mt-2">
                         <p className="text-xs text-blue-400">Ofrece:</p>
                         <div className="flex flex-wrap gap-1">
-                          {trueque.habilidades_ofrecidas?.map((h, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                            >
-                              {h.nombre}
-                            </span>
-                          ))}
+                          {trueque.habilidades_ofrecidas?.map((h, idx) => {
+                                console.log("🧠 habilidad ofrecida:", h)
+                                return (
+                                  <span
+                                    key={idx}
+                                    className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                  >
+                                    {String(h.nombre)}
+                                  </span>
+                                )
+                              })}
                         </div>
                         <p className="text-xs text-red-400 mt-2">Busca:</p>
                         <div className="flex flex-wrap gap-1">

@@ -11,7 +11,7 @@ import {
   NivelIntercambio, 
   IdiomaIntercambio, 
   Habilidad,
-  obtenerHabilidades
+  obtenerTodasHabilidades
 } from "@/services/intercambio"
 
 // -------------------------------
@@ -66,7 +66,7 @@ export default function CrearTruequeModal({
   // Cargar habilidades
   useEffect(() => {
     const fetchHabilidades = async () => {
-      const data: Habilidad[] = habilidades || await obtenerHabilidades()
+      const data: Habilidad[] = habilidades || await obtenerTodasHabilidades()
       setHabilidadesOpciones(
         data.map((h: Habilidad) => ({ value: h.id, label: h.nombre }))
       )
@@ -74,33 +74,35 @@ export default function CrearTruequeModal({
     fetchHabilidades()
   }, [habilidades])
 
-  // Inicializar formulario si estamos editando
+  // Inicializar formulario si estamos editando o con initialData
   useEffect(() => {
-  if (initialData && habilidadesOpciones.length > 0) {
-    setModalidad(initialData.modalidad)
-    setNivel(initialData.nivel)
-    setIdioma(initialData.idioma)
-    setDescripcion(initialData.descripcion)
-    setDisponibilidad(initialData.disponibilidad || "")
+    if (initialData && habilidadesOpciones.length > 0) {
+      setModalidad(initialData.modalidad || "")
+      setNivel(initialData.nivel || "")
+      setIdioma(initialData.idioma || "")
+      setDescripcion(initialData.descripcion || "")
+      setDisponibilidad(initialData.disponibilidad || "")
 
-    setOfreces(
-      (initialData.habilidades_ofrecidas_ids || [])
-        .map((id) => habilidadesOpciones.find(h => h.value === id))
-        .filter((h): h is HabilidadOption => !!h)
-    )
-    setBuscas(
-      (initialData.habilidades_buscadas_ids || [])
-        .map((id) => habilidadesOpciones.find(h => h.value === id))
-        .filter((h): h is HabilidadOption => !!h)
-    )
-  }
-}, [initialData, habilidadesOpciones])
+      setOfreces(
+        (initialData.habilidades_ofrecidas_ids || [])
+          .map((id) => habilidadesOpciones.find(h => h.value === id))
+          .filter((h): h is HabilidadOption => !!h)
+      )
+      setBuscas(
+        (initialData.habilidades_buscadas_ids || [])
+          .map((id) => habilidadesOpciones.find(h => h.value === id))
+          .filter((h): h is HabilidadOption => !!h)
+      )
+    }
+  }, [initialData, habilidadesOpciones])
 
   // -------------------------------
   // Enviar formulario
   // -------------------------------
   const handleSubmit = async () => {
-    if (!descripcion || !disponibilidad || [...ofreces, ...buscas].length === 0) {
+    if (
+      !modalidad || !nivel || !idioma || !descripcion || !disponibilidad || [...ofreces, ...buscas].length === 0
+    ) {
       alert("Completa todos los campos y agrega al menos una habilidad.")
       return
     }
@@ -142,16 +144,16 @@ export default function CrearTruequeModal({
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Habilidades que ofreces</label>
               
-                  <CreatableSelect
-                    isMulti
-                    options={habilidadesOpciones} 
-                    value={ofreces}
-                    onChange={(selected: MultiValue<HabilidadOption>, actionMeta: ActionMeta<HabilidadOption>) => 
-                      setOfreces([...selected]) // convertimos a array mutable
-                    }
-                    placeholder="Selecciona o escribe habilidades..."
-                    className="text-black"
-                  />
+              <CreatableSelect
+                isMulti
+                options={habilidadesOpciones} 
+                value={ofreces}
+                onChange={(selected: MultiValue<HabilidadOption>, actionMeta: ActionMeta<HabilidadOption>) => 
+                  setOfreces([...selected]) // convertimos a array mutable
+                }
+                placeholder="Selecciona o escribe habilidades..."
+                className="text-black"
+              />
             </div>
 
             {/* Habilidades que buscas */}
@@ -264,7 +266,14 @@ export default function CrearTruequeModal({
             <Button 
               onClick={handleSubmit} 
               className="bg-blue-600 hover:bg-blue-700 px-6"
-              disabled={[...ofreces, ...buscas].length === 0 || !descripcion || !disponibilidad}
+              disabled={[
+                !modalidad, 
+                !nivel, 
+                !idioma, 
+                !descripcion, 
+                !disponibilidad, 
+                [...ofreces, ...buscas].length === 0
+              ].some(cond => cond)}
             >
               {isEditing ? "Actualizar trueque" : "Publicar trueque"}
             </Button>

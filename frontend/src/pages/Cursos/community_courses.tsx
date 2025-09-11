@@ -761,7 +761,7 @@ useEffect(() => {
                           ref={imageInputRef}
                           onChange={handleImageChange}
                           className="hidden"
-                          accept="image/*"
+                          accept="image/*" 
                         />
 
                         {newCourse.courseImage && (
@@ -986,15 +986,15 @@ useEffect(() => {
                       })
 
                       return (
-                        <Card key={curso.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                        <Card key={curso.id} className="overflow-hidden ransition-shadow  shadow-xl  transition-all hover:scale-[1.02] hover:shadow-2xl  rounded-lg border  border-gray-700 duration-300">
                           <div className="relative pb-48 overflow-hidden rounded-t-lg">
                             <img
                               className="absolute inset-0 h-full w-full object-cover"
-                              src={curso.img_Cursos || "/default-course.png"}
+                              src={curso.img_Cursos || "/img/image.png"}
                               alt={curso.titulo}
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement
-                                // target.src = "/default-course.png";
+                                //target.src = "/";
                               }}
                             />
                             <div className="absolute bottom-4 left-4">
@@ -1005,7 +1005,7 @@ useEffect(() => {
                                   alt={curso.usuario?.nombre || "Usuario"}
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement
-                                    // target.src = "/default-avatar.png";
+                                    target.src = "/img/user.png";
                                   }}
                                 />
                               </div>

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel 
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
@@ -27,11 +27,34 @@ class IdiomaIntercambioEnum(str, Enum):
     Portugues = "Portugues"
 
 # -------------------------------
+# Enum para tipo habilidad
+# -------------------------------
+class TipoHabilidadEnum(str, Enum):
+    ofrece = "ofrece"
+    busca = "busca"
+
+# -------------------------------
 # Habilidad
 # -------------------------------
 class HabilidadBase(BaseModel):
     id: int
     nombre: str
+
+    class Config:
+        orm_mode = True
+
+# -------------------------------
+# IntercambioHabilidad
+# -------------------------------
+class IntercambioHabilidadBase(BaseModel):
+    tipo: TipoHabilidadEnum
+
+class IntercambioHabilidadCreate(IntercambioHabilidadBase):
+    habilidad_id: int
+
+class IntercambioHabilidadResponse(IntercambioHabilidadBase):
+    id: int
+    habilidad: HabilidadBase
 
     class Config:
         orm_mode = True
@@ -89,9 +112,7 @@ class IntercambioResponse(IntercambioBase):
     usuario1: UsuarioBase
     perfil: PerfilBase
 
-    habilidades_ofrecidas: List[HabilidadBase] = []
-    habilidades_buscadas: List[HabilidadBase] = []
+    habilidades: List[IntercambioHabilidadResponse] = []
 
     class Config:
         orm_mode = True
-
