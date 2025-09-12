@@ -39,13 +39,13 @@ const api = axios.create({
   timeout: 30000, // Aumentado a 30 segundos
 })
 
-// Interceptor para requests
+// para requests
 api.interceptors.request.use((config) => {
   console.log(`Enviando request a: ${config.url}`)
   return config
 })
 
-// Interceptor para manejar errores
+// para manejar errores
 api.interceptors.response.use(
   (response) => {
     console.log(`Respuesta recibida de: ${response.config.url}`, response.status)
@@ -73,11 +73,11 @@ api.interceptors.response.use(
 // Métodos API
 // =============================
 
-// ✅ Crear curso
+// Crear curso
 export const createCurso = async (curso: CursoCreate): Promise<Curso> => {
   try {
     const response = await api.post("/", curso)
-    console.log("Curso creado:", response.data) // <-- Aquí
+    console.log("Curso creado:", response.data)
     return response.data
   } catch (error) {
     console.error("Error al crear curso:", error)
@@ -85,7 +85,7 @@ export const createCurso = async (curso: CursoCreate): Promise<Curso> => {
   }
 }
 
-// ✅ Obtener todos los cursos
+// Obtener todos los cursos
 export const getCursos = async (): Promise<Curso[]> => {
   try {
     const response = await api.get("/")
@@ -105,11 +105,11 @@ export const getCursos = async (): Promise<Curso[]> => {
   }
 }
 
-// ✅ Obtener un curso por ID
+// Obtener un curso por ID
 export const getCursoById = async (cursoId: number): Promise<Curso> => {
   try {
     const response = await api.get(`/${cursoId}`)
-    console.log("Curso obtenido por ID:", response.data) // <-- Aquí
+    console.log("Curso obtenido por ID:", response.data)
     return response.data
   } catch (error) {
     console.error(`Error al obtener curso ${cursoId}:`, error)
@@ -117,7 +117,7 @@ export const getCursoById = async (cursoId: number): Promise<Curso> => {
   }
 }
 
-// ✅ Actualizar un curso
+// Actualizar un curso
 export const updateCurso = async (cursoId: number, cursoData: CursoUpdate): Promise<Curso> => {
   try {
     const response = await api.put(`/${cursoId}`, cursoData)
@@ -128,7 +128,7 @@ export const updateCurso = async (cursoId: number, cursoData: CursoUpdate): Prom
   }
 }
 
-// ✅ Eliminar un curso
+// Eliminar un curso
 export const deleteCurso = async (cursoId: number): Promise<{ message: string }> => {
   try {
     const response = await api.delete(`/${cursoId}`)

@@ -38,6 +38,17 @@ export const translations = {
     todo: "Todo",
     title: "Título",
 
+    "services": "Servicios",
+    "mission_vision": "Misión y Visión",
+    "testimonials": "Testimonios",
+
+    // ==== Redes =====
+
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "website": "Website",
+
     // ===== Profile =====
     
     "search_placeholder": "Buscar...",
@@ -461,6 +472,18 @@ export const translations = {
 
     dark_theme_label: "Dark",
     dark_theme_description: "Dark theme to reduce eye strain",
+
+        // ==== Redes =====
+
+    "whatsapp": "WhatsApp",
+    "instagram": "Instagram",
+    "facebook": "Facebook",
+    "website": "Website",
+
+
+    "services": "Servicios",
+    "mission_vision": "Misión y Visión",
+    "testimonials": "Testimonios",
 
   },
 } as const;

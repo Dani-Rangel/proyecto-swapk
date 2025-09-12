@@ -9,7 +9,6 @@ class RolUsuario(str, enum.Enum):
     Administrador = "Administrador"
     Moderador = "Moderador"
     Usuario = "Usuario"
-    Verificado = "Verificado"
 
 
 class Usuario(Base):
@@ -23,6 +22,7 @@ class Usuario(Base):
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relaciones
+    
     publicaciones = relationship("Publicacion", back_populates="usuario")
     comentarios = relationship("Comentario", back_populates="usuario")
     likes = relationship("Like", back_populates="usuario")

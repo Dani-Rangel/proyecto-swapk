@@ -1,6 +1,5 @@
 "use client"
 
-import { useTranslation } from "../../lib/useTranslations"
 import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import {
@@ -31,7 +30,10 @@ import {uploadAttachments} from "@/services/attachments"
 import CreatableSelect from "react-select/creatable"
 import { MultiValue } from "react-select"
 import { skillsAPI } from "@/services/api_Skills";
-import { cursoHabilidadAPI } from '@/services/api_cursoHabilidad';
+import { cursoHabilidadAPI } from '@/services/api_cursoHabilidad'
+import { Notificaciones } from "@/components/ui/notificaciones/notifications"
+import { useNotificaciones } from "@/components/context/notificaciones_context"
+
 
 
 
@@ -63,7 +65,6 @@ interface UserData {
 }
 
 const CursosComunidad: React.FC = () => {
-  const { t } = useTranslation()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<UserData | null>(null)
   
@@ -90,6 +91,8 @@ const CursosComunidad: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
+  const { agregarNotificacion } = useNotificaciones();
+
 
 
   const loadCursos = async () => {
@@ -191,6 +194,11 @@ useEffect(() => {
 
       // Agregar a la lista
       setCursos((prev) => [createdCurso, ...prev]);
+
+       agregarNotificacion({
+        tipo: "curso_creado",
+        contenido: `El usuario ${currentUserId} ha creado el curso "${newCourse.title}".`,
+      });
     }
 
     // 3. Asociar habilidades seleccionadas
@@ -652,12 +660,12 @@ useEffect(() => {
                   size="sm"
                   className={`cursor-pointer flex-1 h-8 transition-colors duration-300 ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E] hover:text-[#F5F5F5]" : "text-gray-600 hover:text-gray-900"}`}
                 >
-                  <Bell className="w-4 h-4" />
+                  <Notificaciones />
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`cursor-pointer flex-1 h-8 transition-colors duration-300 ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E] hover:text-[#F5F5F5]" : "text-gray-600 hover:text-gray-900"}`}
+                  className={`cursor-pointer flex-1 h-8 transition-colors duration-300  ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E] hover:text-[#F5F5F5] " : "text-gray-600 hover:text-gray-900"}`}
                 >
                   <User className="w-4 h-4" />
                 </Button>
@@ -668,7 +676,7 @@ useEffect(() => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="cursor-pointer w-full justify-start bg-blue-600 text-white hover:bg-blue-700 h-8 transition-colors duration-300"
+                  className="cursor-pointer w-full justify-start bg-blue-600 text-black hover:bg-blue-700 h-8 transition-colors duration-300"
                 >
                   <Home className="w-4 h-4 mr-2" />
                   Inicio

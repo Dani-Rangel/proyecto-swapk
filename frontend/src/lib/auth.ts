@@ -7,7 +7,7 @@ export interface UserData {
 }
 
 export const getCurrentUser = (): UserData | null => {
-  if (typeof window === "undefined") return null // Verifica que esto no se ejecute en el servidor
+  if (typeof window === "undefined") return null
 
   const userStr = localStorage.getItem("user")
 

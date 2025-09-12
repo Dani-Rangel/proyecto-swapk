@@ -2,6 +2,7 @@ from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
 import enum 
 from datetime import datetime
+from sqlalchemy.orm import relationship
 
 
 class Archivo_Expediente(Base):
@@ -10,4 +11,6 @@ class Archivo_Expediente(Base):
     expediente_id = Column(Integer, ForeignKey("expediente.id"))
     nombre = Column(String(255))
     ruta = Column(String(255))
-    fecha_subida = Column(DateTime, default= datetime.now)
+    fecha_subida = Column(DateTime, default=datetime.now)
+
+    expediente = relationship("Expediente", back_populates="archivos")

@@ -9,7 +9,7 @@ class Perfil(Base):
     id = Column(Integer, primary_key=True)
     id_usuario = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
 
-    # Campos adicionales (NO duplicados con Usuario)
+    # (NO duplicados con Usuario)
     descripcion = Column(Text, nullable=True)
     ubicacion = Column(String(255), nullable=True)
     telefono = Column(String(20), nullable=True)
@@ -21,7 +21,7 @@ class Perfil(Base):
     usuario = relationship("Usuario", back_populates="perfil", uselist=False)
 
 
-    # 🔹 Relación inversa con Publicacion
+    # Relación con Publicacion
     publicaciones = relationship("Publicacion", back_populates="perfil")
 
     def __repr__(self):
