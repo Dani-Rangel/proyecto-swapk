@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Shield, ShieldAlert } from "lucide-react"
 import { RolUsuario } from "@/services/user"
+import { IntercambioManagementTable } from "@/components/ui/admin/intercambio-management-table"
+
 
 import {
   X, Search, HomeIcon, Star, Camera, Plus, Settings,
@@ -183,17 +185,21 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6 bg-[#2a2a2a] rounded p-6 text-white">
-          <TabsList className="grid w-full grid-cols-2 bg-[#3e3e3e] p-1 rounded-lg">
+          <TabsList className="grid w-full grid-cols-3 bg-[#3e3e3e] p-1 rounded-lg">
             <TabsTrigger value="users">Gestión de Usuarios</TabsTrigger>
             <TabsTrigger value="courses">Gestión de Cursos</TabsTrigger>
+            <TabsTrigger value="intercambios">Gestión de Intercambios</TabsTrigger>
           </TabsList>
-
           <TabsContent value="users" className="space-y-6">
             <UserManagementTable />
           </TabsContent>
 
           <TabsContent value="courses" className="space-y-6">
             <CourseManagementTable />
+          </TabsContent>
+
+          <TabsContent value="intercambios" className="space-y-6">
+            <IntercambioManagementTable />
           </TabsContent>
         </Tabs>
       </div>

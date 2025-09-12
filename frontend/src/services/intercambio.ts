@@ -46,14 +46,12 @@ export interface Perfil {
 // Para enviar en la creación/edición
 export interface HabilidadIntercambio {
   habilidad_id: number;
-  tipo: TipoHabilidad;
 }
 
 // Lo que devuelve el backend (con nombre incluido)
 export interface Habilidad {
   id: number;
   nombre: string;
-  tipo: TipoHabilidad;
 }
 
 // ✅ Base de Intercambio (para enviar al backend)
@@ -86,8 +84,8 @@ export interface IntercambioResponse {
   fecha_creacion: string;
   usuario1: Usuario;
   perfil: Perfil;
-   habilidades_ofrecidas: Habilidad[];
-  habilidades_buscadas: Habilidad[]; // ya viene con nombre y tipo
+   habilidades_ofrece: Habilidad[];
+  habilidades_busca: Habilidad[];
 }
 
 // -------------------------------

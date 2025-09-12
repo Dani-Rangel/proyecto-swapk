@@ -4,8 +4,7 @@ import { useState, useEffect } from "react"
 import { Dialog } from "@headlessui/react"
 import { Button } from "@/components/ui/button"
 import { X, BookOpen, Users, Globe, MessageSquare, Calendar } from "lucide-react"
-import CreatableSelect from "react-select/creatable"
-import { MultiValue, ActionMeta } from "react-select"
+import Select, { MultiValue } from "react-select"
 import { 
   ModoIntercambio, 
   NivelIntercambio, 
@@ -75,26 +74,27 @@ export default function CrearTruequeModal({
   }, [habilidades])
 
   // Inicializar formulario si estamos editando o con initialData
-  useEffect(() => {
-    if (initialData && habilidadesOpciones.length > 0) {
-      setModalidad(initialData.modalidad || "")
-      setNivel(initialData.nivel || "")
-      setIdioma(initialData.idioma || "")
-      setDescripcion(initialData.descripcion || "")
-      setDisponibilidad(initialData.disponibilidad || "")
+ useEffect(() => {
+  if (!initialData || habilidadesOpciones.length === 0) return;
 
-      setOfreces(
-        (initialData.habilidades_ofrecidas_ids || [])
-          .map((id) => habilidadesOpciones.find(h => h.value === id))
-          .filter((h): h is HabilidadOption => !!h)
-      )
-      setBuscas(
-        (initialData.habilidades_buscadas_ids || [])
-          .map((id) => habilidadesOpciones.find(h => h.value === id))
-          .filter((h): h is HabilidadOption => !!h)
-      )
-    }
-  }, [initialData, habilidadesOpciones])
+  setModalidad(initialData.modalidad || "")
+  setNivel(initialData.nivel || "")
+  setIdioma(initialData.idioma || "")
+  setDescripcion(initialData.descripcion || "")
+  setDisponibilidad(initialData.disponibilidad || "")
+
+  const ofreceMapped = (initialData.habilidades_ofrecidas_ids || [])
+    .map((id) => habilidadesOpciones.find((h) => h.value === id))
+    .filter((h): h is HabilidadOption => !!h)
+
+  const buscaMapped = (initialData.habilidades_buscadas_ids || [])
+    .map((id) => habilidadesOpciones.find((h) => h.value === id))
+    .filter((h): h is HabilidadOption => !!h)
+
+  setOfreces(ofreceMapped)
+  setBuscas(buscaMapped)
+}, [habilidadesOpciones, initialData])
+
 
   // -------------------------------
   // Enviar formulario
@@ -120,6 +120,7 @@ export default function CrearTruequeModal({
     await onSave(data)
     onClose()
   }
+  
 
   // -------------------------------
   // Render
@@ -144,14 +145,14 @@ export default function CrearTruequeModal({
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Habilidades que ofreces</label>
               
-              <CreatableSelect
+              <Select
                 isMulti
                 options={habilidadesOpciones} 
                 value={ofreces}
-                onChange={(selected: MultiValue<HabilidadOption>, actionMeta: ActionMeta<HabilidadOption>) => 
-                  setOfreces([...selected]) // convertimos a array mutable
+                onChange={(selected: MultiValue<HabilidadOption>) => 
+                  setOfreces(selected as HabilidadOption[])
                 }
-                placeholder="Selecciona o escribe habilidades..."
+                placeholder="Selecciona habilidades..."
                 className="text-black"
               />
             </div>
@@ -159,14 +160,14 @@ export default function CrearTruequeModal({
             {/* Habilidades que buscas */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Habilidades que buscas</label>
-              <CreatableSelect
+              <Select
                 isMulti
                 options={habilidadesOpciones} 
                 value={buscas}
-                onChange={(selected: MultiValue<HabilidadOption>, actionMeta: ActionMeta<HabilidadOption>) => 
-                  setBuscas([...selected]) // convertimos a array mutable
+                onChange={(selected: MultiValue<HabilidadOption>) => 
+                  setBuscas(selected as HabilidadOption[])
                 }
-                placeholder="Selecciona o escribe habilidades..."
+                placeholder="Selecciona habilidades..."
                 className="text-black"
               />
             </div>

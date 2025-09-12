@@ -108,11 +108,32 @@ class IntercambioCreate(IntercambioBase):
 class IntercambioResponse(IntercambioBase):
     id: int
     fecha_creacion: datetime
-
     usuario1: UsuarioBase
     perfil: PerfilBase
 
-    habilidades: List[IntercambioHabilidadResponse] = []
+    class Config:
+        orm_mode = True
+
+# -------------------------------
+# Intercambio: Response extendido con habilidades separadas
+# -------------------------------
+class IntercambioConHabilidadesSeparadas(BaseModel):
+    id: int
+    id_usuario1: int
+    id_perfil: int
+    nivel: Optional[NivelIntercambioEnum] = None
+    modo: Optional[ModoIntercambioEnum] = None
+    disponibilidad: Optional[str] = None
+    idioma: Optional[IdiomaIntercambioEnum] = None
+    descripcion: Optional[str] = None
+    valoracion: Optional[float] = 0.0
+    estado_trueque: Optional[bool] = True
+    estado: Optional[EstadoIntercambioEnum] = EstadoIntercambioEnum.Pendiente
+    fecha_creacion: datetime
+    usuario1: UsuarioBase
+    perfil: PerfilBase
+    habilidades_ofrece: List[HabilidadBase] = []
+    habilidades_busca: List[HabilidadBase] = []
 
     class Config:
         orm_mode = True

@@ -105,8 +105,8 @@ export default function SwapkPlatform() {
     idioma: intercambio.idioma || "",
     descripcion: intercambio.descripcion || "",
     disponibilidad: intercambio.disponibilidad || "",
-    habilidades_ofrecidas_ids: intercambio.habilidades_ofrecidas?.map(h => h.id) || [],
-    habilidades_buscadas_ids: intercambio.habilidades_buscadas?.map(h => h.id) || [],
+    habilidades_ofrecidas_ids: intercambio.habilidades_ofrece?.map(h => h.id) || [],
+    habilidades_buscadas_ids: intercambio.habilidades_busca?.map(h => h.id) || [],
   })
 
   // Crear o actualizar trueque
@@ -391,17 +391,17 @@ export default function SwapkPlatform() {
                         {renderEstadoCircle(trueque.estado)}
                       </div>
                       <div className="flex">{renderStars(trueque.valoracion || 0)}</div>
-                      <p className="text-green-400">{trueque.nivel}</p>
+                      <p className="text-gray-400">{trueque.nivel}</p>
 
                       <div className="mt-2">
                         <p className="text-xs text-blue-400">Ofrece:</p>
                         <div className="flex flex-wrap gap-1">
-                          {trueque.habilidades_ofrecidas?.map((h, idx) => {
+                          {trueque.habilidades_ofrece?.map((h, idx) => {
                                 console.log("🧠 habilidad ofrecida:", h)
                                 return (
                                   <span
                                     key={idx}
-                                    className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                    className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
                                   >
                                     {String(h.nombre)}
                                   </span>
@@ -410,7 +410,7 @@ export default function SwapkPlatform() {
                         </div>
                         <p className="text-xs text-red-400 mt-2">Busca:</p>
                         <div className="flex flex-wrap gap-1">
-                          {trueque.habilidades_buscadas?.map((h, idx) => (
+                          {trueque.habilidades_busca?.map((h, idx) => (
                             <span
                               key={idx}
                               className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
@@ -455,6 +455,19 @@ export default function SwapkPlatform() {
                       </Button>
                     </div>
                   )}
+                  {currentUser?.id !== trueque.id_usuario1 && (
+                      <div className="mt-4">
+                        <Button
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                          onClick={() => {
+                            // Aquí puedes abrir un modal, redirigir a otra página, o iniciar una conversación
+                            alert(`Propuesta enviada a ${trueque.usuario1?.nombre}`)
+                          }}
+                        >
+                          Proponer trueque
+                        </Button>
+                      </div>
+                    )}
                 </div>
               ))}
             </div>
