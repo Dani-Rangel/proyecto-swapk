@@ -5,12 +5,12 @@ import { Dialog } from "@headlessui/react"
 import { Button } from "@/components/ui/button"
 import { X, BookOpen, Users, Globe, MessageSquare, Calendar } from "lucide-react"
 import Select, { MultiValue } from "react-select"
-import { 
-  ModoIntercambio, 
-  NivelIntercambio, 
-  IdiomaIntercambio, 
+import {
+  ModoIntercambio,
+  NivelIntercambio,
+  IdiomaIntercambio,
   Habilidad,
-  obtenerTodasHabilidades
+  obtenerTodasHabilidades,
 } from "@/services/intercambio"
 
 // -------------------------------
@@ -43,15 +43,14 @@ interface Props {
 // -------------------------------
 // Componente
 // -------------------------------
-export default function CrearTruequeModal({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  habilidades, 
+export default function CrearTruequeModal({
+  isOpen,
+  onClose,
+  onSave,
+  habilidades,
   initialData,
-  isEditing
+  isEditing,
 }: Props) {
-
   const [modalidad, setModalidad] = useState<ModoIntercambio | "">("")
   const [nivel, setNivel] = useState<NivelIntercambio | "">("")
   const [idioma, setIdioma] = useState<IdiomaIntercambio | "">("")
@@ -61,48 +60,59 @@ export default function CrearTruequeModal({
   const [ofreces, setOfreces] = useState<HabilidadOption[]>([])
   const [buscas, setBuscas] = useState<HabilidadOption[]>([])
   const [habilidadesOpciones, setHabilidadesOpciones] = useState<HabilidadOption[]>([])
+  const [formInicializado, setFormInicializado] = useState(false)
 
-  // Cargar habilidades
+  // ✅ Cargar habilidades
   useEffect(() => {
     const fetchHabilidades = async () => {
-      const data: Habilidad[] = habilidades || await obtenerTodasHabilidades()
-      setHabilidadesOpciones(
-        data.map((h: Habilidad) => ({ value: h.id, label: h.nombre }))
-      )
+      const data: Habilidad[] = habilidades || (await obtenerTodasHabilidades())
+      setHabilidadesOpciones(data.map((h) => ({ value: h.id, label: h.nombre })))
     }
     fetchHabilidades()
   }, [habilidades])
 
-  // Inicializar formulario si estamos editando o con initialData
- useEffect(() => {
-  if (!initialData || habilidadesOpciones.length === 0) return;
+  // ✅ Aplicar initialData solo una vez cuando habilidades ya estén listas
+  useEffect(() => {
+    if (!initialData || habilidadesOpciones.length === 0 || formInicializado) return
 
-  setModalidad(initialData.modalidad || "")
-  setNivel(initialData.nivel || "")
-  setIdioma(initialData.idioma || "")
-  setDescripcion(initialData.descripcion || "")
-  setDisponibilidad(initialData.disponibilidad || "")
+    setModalidad(initialData.modalidad || "")
+    setNivel(initialData.nivel || "")
+    setIdioma(initialData.idioma || "")
+    setDescripcion(initialData.descripcion || "")
+    setDisponibilidad(initialData.disponibilidad || "")
 
-  const ofreceMapped = (initialData.habilidades_ofrecidas_ids || [])
-    .map((id) => habilidadesOpciones.find((h) => h.value === id))
-    .filter((h): h is HabilidadOption => !!h)
+    const ofreceMapped = (initialData.habilidades_ofrecidas_ids || [])
+      .map((id) => habilidadesOpciones.find((h) => h.value === id))
+      .filter((h): h is HabilidadOption => !!h)
 
-  const buscaMapped = (initialData.habilidades_buscadas_ids || [])
-    .map((id) => habilidadesOpciones.find((h) => h.value === id))
-    .filter((h): h is HabilidadOption => !!h)
+    const buscaMapped = (initialData.habilidades_buscadas_ids || [])
+      .map((id) => habilidadesOpciones.find((h) => h.value === id))
+      .filter((h): h is HabilidadOption => !!h)
 
-  setOfreces(ofreceMapped)
-  setBuscas(buscaMapped)
-}, [habilidadesOpciones, initialData])
+    setOfreces(ofreceMapped)
+    setBuscas(buscaMapped)
+    setFormInicializado(true)
+  }, [initialData, habilidadesOpciones, formInicializado])
 
+  // ✅ Resetear formulario al cerrar el modal
+  useEffect(() => {
+    if (!isOpen) {
+      setModalidad("")
+      setNivel("")
+      setIdioma("")
+      setDescripcion("")
+      setDisponibilidad("")
+      setOfreces([])
+      setBuscas([])
+      setFormInicializado(false)
+    }
+  }, [isOpen])
 
   // -------------------------------
   // Enviar formulario
   // -------------------------------
   const handleSubmit = async () => {
-    if (
-      !modalidad || !nivel || !idioma || !descripcion || !disponibilidad || [...ofreces, ...buscas].length === 0
-    ) {
+    if (!modalidad || !nivel || !idioma || !descripcion || !disponibilidad || [...ofreces, ...buscas].length === 0) {
       alert("Completa todos los campos y agrega al menos una habilidad.")
       return
     }
@@ -113,14 +123,13 @@ export default function CrearTruequeModal({
       idioma,
       descripcion,
       disponibilidad,
-      habilidades_ofrecidas_ids: ofreces.map(h => h.value),
-      habilidades_buscadas_ids: buscas.map(h => h.value),
+      habilidades_ofrecidas_ids: ofreces.map((h) => h.value),
+      habilidades_buscadas_ids: buscas.map((h) => h.value),
     }
 
     await onSave(data)
     onClose()
   }
-  
 
   // -------------------------------
   // Render
@@ -144,14 +153,12 @@ export default function CrearTruequeModal({
             {/* Habilidades que ofreces */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Habilidades que ofreces</label>
-              
               <Select
+                key={`ofreces-${habilidadesOpciones.length}`}
                 isMulti
-                options={habilidadesOpciones} 
+                options={habilidadesOpciones}
                 value={ofreces}
-                onChange={(selected: MultiValue<HabilidadOption>) => 
-                  setOfreces(selected as HabilidadOption[])
-                }
+                onChange={(selected: MultiValue<HabilidadOption>) => setOfreces(selected as HabilidadOption[])}
                 placeholder="Selecciona habilidades..."
                 className="text-black"
               />
@@ -161,12 +168,11 @@ export default function CrearTruequeModal({
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Habilidades que buscas</label>
               <Select
+                key={`buscas-${habilidadesOpciones.length}`}
                 isMulti
-                options={habilidadesOpciones} 
+                options={habilidadesOpciones}
                 value={buscas}
-                onChange={(selected: MultiValue<HabilidadOption>) => 
-                  setBuscas(selected as HabilidadOption[])
-                }
+                onChange={(selected: MultiValue<HabilidadOption>) => setBuscas(selected as HabilidadOption[])}
                 placeholder="Selecciona habilidades..."
                 className="text-black"
               />
@@ -185,7 +191,9 @@ export default function CrearTruequeModal({
               >
                 <option value="">Seleccionar</option>
                 {Object.values(ModoIntercambio).map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
                 ))}
               </select>
             </div>
@@ -203,7 +211,9 @@ export default function CrearTruequeModal({
               >
                 <option value="">Seleccionar</option>
                 {Object.values(NivelIntercambio).map((n) => (
-                  <option key={n} value={n}>{n}</option>
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
                 ))}
               </select>
             </div>
@@ -221,7 +231,9 @@ export default function CrearTruequeModal({
               >
                 <option value="">Seleccionar idioma</option>
                 {Object.values(IdiomaIntercambio).map((i) => (
-                  <option key={i} value={i}>{i}</option>
+                  <option key={i} value={i}>
+                    {i}
+                  </option>
                 ))}
               </select>
             </div>
@@ -243,9 +255,7 @@ export default function CrearTruequeModal({
 
             {/* Descripción */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Descripción
-              </label>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Descripción</label>
               <textarea
                 placeholder="Describe los términos del intercambio"
                 value={descripcion}
@@ -257,24 +267,24 @@ export default function CrearTruequeModal({
 
           {/* Botones */}
           <div className="flex justify-between p-5 border-t border-gray-700 bg-gray-800/50">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={onClose}
               className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
             >
               Cancelar
             </Button>
-            <Button 
-              onClick={handleSubmit} 
+            <Button
+              onClick={handleSubmit}
               className="bg-blue-600 hover:bg-blue-700 px-6"
               disabled={[
-                !modalidad, 
-                !nivel, 
-                !idioma, 
-                !descripcion, 
-                !disponibilidad, 
-                [...ofreces, ...buscas].length === 0
-              ].some(cond => cond)}
+                !modalidad,
+                !nivel,
+                !idioma,
+                !descripcion,
+                !disponibilidad,
+                [...ofreces, ...buscas].length === 0,
+              ].some((cond) => cond)}
             >
               {isEditing ? "Actualizar trueque" : "Publicar trueque"}
             </Button>

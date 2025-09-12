@@ -37,6 +37,8 @@ import {
   Habilidad,
   obtenerTodasHabilidades,
 } from "@/services/intercambio"
+import { actualizarIntercambio } from "@/services/intercambio"
+
 
 import { getCurrentUser } from "@/lib/auth"
 
@@ -99,15 +101,16 @@ export default function SwapkPlatform() {
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => e.preventDefault()
 
   // Transformar IntercambioResponse a TruequeFormData para el modal
-  const mapIntercambioToFormData = (intercambio: IntercambioResponse): TruequeFormData => ({
-    modalidad: intercambio.modo || "",
-    nivel: intercambio.nivel || "",
-    idioma: intercambio.idioma || "",
-    descripcion: intercambio.descripcion || "",
-    disponibilidad: intercambio.disponibilidad || "",
-    habilidades_ofrecidas_ids: intercambio.habilidades_ofrece?.map(h => h.id) || [],
-    habilidades_buscadas_ids: intercambio.habilidades_busca?.map(h => h.id) || [],
-  })
+ const mapIntercambioToFormData = (intercambio: IntercambioResponse): TruequeFormData => ({
+  modalidad: intercambio.modo || "",
+  nivel: intercambio.nivel || "",
+  idioma: intercambio.idioma || "",
+  descripcion: intercambio.descripcion || "",
+  disponibilidad: intercambio.disponibilidad || "",
+  habilidades_ofrecidas_ids: intercambio.habilidades_ofrece?.map(h => h.id) || [],
+  habilidades_buscadas_ids: intercambio.habilidades_busca?.map(h => h.id) || [],
+})
+
 
   // Crear o actualizar trueque
   const handleSaveTrueque = async (formData: TruequeFormData) => {
@@ -124,22 +127,29 @@ export default function SwapkPlatform() {
       }))
 
     if (truequeEditando) {
-      setTrueques((prev) =>
-        prev.map((t) =>
-          t.id === truequeEditando.id
-            ? {
-                ...t,
-                modo: formData.modalidad as ModoIntercambio,
-                nivel: formData.nivel as NivelIntercambio,
-                idioma: formData.idioma as IdiomaIntercambio,
-                descripcion: formData.descripcion,
-                disponibilidad: formData.disponibilidad,
-                habilidades_ofrecidas: mapHabilidades(formData.habilidades_ofrecidas_ids, "ofrece"),
-                habilidades_buscadas: mapHabilidades(formData.habilidades_buscadas_ids, "busca"),
-              }
-            : t
-        )
-      )
+      const updatedTrueque = {
+        id_usuario1: currentUser.id,
+        id_perfil: currentUser.id, // Esto deberías ajustar si los perfiles son distintos
+        modo: formData.modalidad as ModoIntercambio,
+        nivel: formData.nivel as NivelIntercambio,
+        idioma: formData.idioma as IdiomaIntercambio,
+        descripcion: formData.descripcion,
+        disponibilidad: formData.disponibilidad,
+        estado: truequeEditando.estado || EstadoIntercambio.Pendiente,
+        habilidades_ofrecidas_ids: formData.habilidades_ofrecidas_ids,
+        habilidades_buscadas_ids: formData.habilidades_buscadas_ids,
+      }
+
+      try {
+        const updated = await actualizarIntercambio(truequeEditando.id, updatedTrueque)
+        if (updated) {
+          setTrueques((prev) =>
+            prev.map((t) => (t.id === updated.id ? updated : t))
+          )
+        }
+      } catch (error) {
+        console.error("❌ Error al actualizar intercambio:", error)
+      }
     } else {
       const newTrueque = {
         id_usuario1: currentUser.id,
@@ -150,8 +160,8 @@ export default function SwapkPlatform() {
         descripcion: formData.descripcion,
         disponibilidad: formData.disponibilidad,
         estado: EstadoIntercambio.Pendiente,
-        habilidades_ofrecidas: mapHabilidades(formData.habilidades_ofrecidas_ids, "ofrece"),
-        habilidades_buscadas: mapHabilidades(formData.habilidades_buscadas_ids, "busca"),
+        habilidades_ofrecidas_ids: formData.habilidades_ofrecidas_ids,  
+        habilidades_buscadas_ids: formData.habilidades_buscadas_ids,  
       }
 
       try {
