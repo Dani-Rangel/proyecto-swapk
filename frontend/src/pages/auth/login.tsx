@@ -1,70 +1,47 @@
-import React, { useState, useEffect } from "react";
-import { Apple, Eye, EyeOff, Sun, Moon } from "lucide-react";
-import Image from "next/image";
-import { useRouter } from "next/router";
-import { GoogleLogin } from "@react-oauth/google";
-import axios from "axios";
-
-interface LoginFormData {
-  emailOrUsername: string;
-  password: string;
-  showPassword: boolean;
-}
+"use client"
+import React, { useState, useEffect } from "react"
+import { Eye, EyeOff, Sun, Moon } from "lucide-react"
+import Image from "next/image"
+import { useRouter } from "next/router"
+import { GoogleLogin } from "@react-oauth/google"
+import axios from "axios"
 
 const Login: React.FC = () => {
-  const [formData, setFormData] = useState<LoginFormData>({
+  const [formData, setFormData] = useState({
     emailOrUsername: "",
     password: "",
     showPassword: false,
-  });
-  const [error, setError] = useState("");
-  const [darkMode, setDarkMode] = useState(true);
-  const [attempts, setAttempts] = useState(0); // Contador de intentos fallidos
-  const [isLocked, setIsLocked] = useState(false); // Estado para bloquear el formulario
-  const [countdown, setCountdown] = useState(0); // Tiempo para el contador de espera
-  const router = useRouter();
+  })
+  const [error, setError] = useState("")
+  const [darkMode, setDarkMode] = useState(true)
+  const [attempts, setAttempts] = useState(0)
+  const [isLocked, setIsLocked] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const router = useRouter()
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-
+    let timer: NodeJS.Timeout
     if (isLocked && countdown > 0) {
-      // Inicia el temporizador
-      timer = setInterval(() => {
-        setCountdown((prev) => prev - 1); // Disminuye el contador cada segundo
-      }, 1000);
+      timer = setInterval(() => setCountdown((prev) => prev - 1), 1000)
     }
-
     if (countdown === 0 && isLocked) {
-      // Desbloquear el formulario después de 5 segundos
-      setIsLocked(false); // Desbloquear el formulario
-      setAttempts(0); // Reiniciar el contador de intentos
+      setIsLocked(false)
+      setAttempts(0)
     }
-
-    return () => clearInterval(timer); // Limpiar el temporizador cuando el componente se desmonte
-  }, [isLocked, countdown]);
+    return () => clearInterval(timer)
+  }, [isLocked, countdown])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    const { name, value } = e.target
+    setFormData((prev) => ({ ...prev, [name]: value }))
+  }
 
-  const togglePasswordVisibility = () => {
-    setFormData((prev) => ({ ...prev, showPassword: !prev.showPassword }));
-  };
+  const togglePasswordVisibility = () =>
+    setFormData((prev) => ({ ...prev, showPassword: !prev.showPassword }))
 
-  const handleForgotPassword = () => router.push("/auth/forgotpassword");
-  const handleRegister = () => router.push("/auth/register");
-  const handleSocialLogin = (provider: string) => {
-    alert(`Login con ${provider} en construcción 🚧`);
-  };
-
-  // LOGIN NORMAL
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isLocked) {
-      setError(`Intenta nuevamente en ${countdown} segundos`);
-      return; // Si el formulario está bloqueado, no continuar con el envío
-    }
+    e.preventDefault()
+    if (isLocked) return
 
     try {
       const res = await fetch("http://localhost:8000/auth/login", {
@@ -74,55 +51,41 @@ const Login: React.FC = () => {
           emailOrUsername: formData.emailOrUsername,
           password: formData.password,
         }),
-      });
+      })
 
+      const data = await res.json()
       if (res.ok) {
-        const data = await res.json();
-
-        // Guardar el token EN EL OBJETO "user" en localStorage
         const userData = {
           token: data.token,
           id: data.user.id,
           nombre: data.user.nombre,
           correo: data.user.correo,
           perfil: data.perfil,
-        };
-
-        localStorage.setItem("user", JSON.stringify(userData));
-
-        console.log("✅ Token guardado:", userData.token);
-        console.log("🔍 Longitud del token:", userData.token?.length);
-        console.log("📦 Usuario guardado en localStorage:", JSON.parse(localStorage.getItem("user")!));
-
-        document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`;
-
-        router.push("../dashboard/index_dashboard");
+        }
+        localStorage.setItem("user", JSON.stringify(userData))
+        document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
+        router.push("/dashboard/index_dashboard")
       } else {
-        const errorData = await res.json();
-        setError(errorData.detail || "Error al iniciar sesión");
-        setAttempts((prev) => prev + 1); // Incrementar el contador de intentos fallidos
+        setError(data.detail || "Error al iniciar sesión")
+        setAttempts((prev) => prev + 1)
       }
     } catch (err) {
-      console.error(err);
-      setError("Error de conexión con el servidor");
-      setAttempts((prev) => prev + 1); // Incrementar el contador de intentos fallidos
+      console.error(err)
+      setError("Error de conexión con el servidor")
+      setAttempts((prev) => prev + 1)
     }
 
-    // Bloquear el formulario después de 5 intentos fallidos
     if (attempts + 1 >= 5) {
-      setIsLocked(true); // Bloquear el formulario
-      setCountdown(5); // Establecer el contador en 5 segundos
+      setIsLocked(true)
+      setCountdown(5)
     }
-  };
+  }
 
   return (
-    <div
-      className={`min-h-screen ${darkMode ? "bg-[#121212] text-white" : "bg-gray-100 text-gray-900"} transition-colors duration-700`}
-    >
-      {/* Header */}
+    <div className={`min-h-screen ${darkMode ? "bg-[#121212] text-white" : "bg-gray-100 text-gray-900"}`}>
       <header
-        className={`flex justify-between items-center shadow-sm border-b px-6 py-4 transition-colors duration-700 ${
-          darkMode ? "bg-[#121212] border-gray-700" : "bg-white border-gray-200"
+        className={`flex justify-between items-center shadow-sm border-b px-6 py-4 ${
+          darkMode ? "bg-[#121212]" : "bg-white"
         }`}
       >
         <div className="flex items-center gap-3">
@@ -131,142 +94,114 @@ const Login: React.FC = () => {
           </a>
           <span className="text-xl font-bold">SWAPK</span>
         </div>
-        <button
-          onClick={() => setDarkMode(!darkMode)}
-          className="cursor-pointer p-2 rounded-lg border hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-500"
-        >
+        <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg border">
           {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-700" />}
         </button>
       </header>
 
-      {/* Contenido */}
-      <div className="flex min-h-[calc(100vh-80px)] transition-colors duration-700">
-        <div className="flex-1 flex items-center justify-center px-6 py-12">
-          <div className="w-full max-w-md space-y-8">
-            <div className="text-center">
-              <Image src="/img/logoswapk.png" alt="Logo Swapk" width={35} height={35} className="mx-auto rounded-lg mb-4" />
-              <h1 className="text-3xl font-bold">
-                Sw<span className="text-blue-600">a</span>pk
-              </h1>
-            </div>
+      <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center">
+            <Image src="/img/logoswapk.png" alt="Logo Swapk" width={35} height={35} className="mx-auto rounded-lg mb-4" />
+            <h1 className="text-3xl font-bold">Sw<span className="text-blue-600">a</span>pk</h1>
+          </div>
 
-            {/* Formulario */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {error && <p className="text-red-600 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-              {/* Si está bloqueado, muestra el mensaje de espera */}
-              {isLocked && (
-                <div className="text-center mb-4">
-                  <div className="bg-yellow-100 text-yellow-800 p-4 rounded-lg shadow-lg mx-6">
-                    <p className="font-medium text-lg">
-                      Por favor espera <span className="font-bold">{countdown} segundos</span> antes de intentarlo nuevamente.
-                    </p>
-                  </div>
-                </div>
-              )}
-
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <input
+              type="text"
+              name="emailOrUsername"
+              placeholder="Correo electrónico o usuario"
+              value={formData.emailOrUsername}
+              onChange={handleInputChange}
+              required
+              disabled={isLocked}
+              className="w-full px-4 py-2 rounded-lg border"
+            />
+            <div className="relative">
               <input
-                type="text"
-                name="emailOrUsername"
-                placeholder="Correo electrónico o usuario"
-                value={formData.emailOrUsername}
+                type={formData.showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Contraseña"
+                value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-2 mb-1 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-500 ${
-                  darkMode ? "bg-gray-800 text-white placeholder-gray-400 border-gray-700" : "bg-white text-gray-900 placeholder-gray-500 border-gray-300"
-                }`}
                 required
-                disabled={isLocked} // Deshabilitar cuando esté bloqueado
+                disabled={isLocked}
+                className="w-full px-4 py-2 rounded-lg border"
               />
-
-              <div className="relative">
-                <input
-                  type={formData.showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Contraseña"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-2 mb-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-500 ${
-                    darkMode ? "bg-gray-800 text-white placeholder-gray-400 border-gray-700" : "bg-white text-gray-900 placeholder-gray-500 border-gray-300"
-                  }`}
-                  required
-                  disabled={isLocked} // Deshabilitar cuando esté bloqueado
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition cursor-pointer"
-                  onClick={togglePasswordVisibility}
-                >
-                  {formData.showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-
-              <button
-                type="submit"
-                className="cursor-pointer w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 transition-colors duration-500"
-                disabled={isLocked} // Deshabilitar el botón cuando esté bloqueado
-              >
-                Iniciar sesión
+              <button type="button" onClick={togglePasswordVisibility} className="absolute right-3 top-3 text-gray-500">
+                {formData.showPassword ? <EyeOff /> : <Eye />}
               </button>
-            </form>
-
-            {/* Opciones sociales */}
-            <div className="space-y-4">
-              <p className="text-center text-sm">Otras opciones de inicio de sesión</p>
-              <div className="flex justify-center gap-4">
-                {/* Botón Google */}
-                <GoogleLogin
-                  onSuccess={async (credentialResponse) => {
-                    console.log("Google response:", credentialResponse); // 👈 revisa qué devuelve Google
-
-                    const token = credentialResponse.credential; // 👈 este es el id_token (JWT)
-                    if (!token) {
-                      alert("No se obtuvo el token de Google ❌");
-                      return;
-                    }
-
-                    try {
-                      const res = await axios.post("http://localhost:8000/auth/google/login", { token });
-                      alert(`Bienvenido ${res.data.nombre} 🎉`);
-                      localStorage.setItem("user", JSON.stringify(res.data));
-                      router.push("../dashboard/index_dashboard");
-                    } catch (err: any) {
-                      console.error(err.response || err);
-                      alert(err.response?.data?.detail || "Error al iniciar sesión con Google ❌");
-                    }
-                  }}
-                  onError={() => {
-                    console.log("Error en Google Login ❌");
-                  }}
-                  useOneTap
-                  theme="filled_blue"
-                  shape="circle"
-                />
-              </div>
             </div>
+            <button
+              type="submit"
+              disabled={isLocked}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700"
+            >
+              Iniciar sesión
+            </button>
+          </form>
 
-            {/* Links extra */}
-            <div className="text-center space-y-3">
+          <p className="text-center text-sm">Otra opcion de inicio de sesión</p>
+          {/* Google login */}
+          <div className="flex justify-center">
+            <GoogleLogin
+              onSuccess={async (credentialResponse) => {
+                const token = credentialResponse.credential
+                if (!token) {
+                  setError("No se obtuvo el token de Google ❌")
+                  return
+                }
+                try {
+                  const res = await axios.post("http://localhost:8000/auth/google/login", { token })
+                  const data = res.data
+                  const userData = {
+                    token: data.token,
+                    id: data.id,
+                    nombre: data.nombre,
+                    correo: data.correo,
+                    perfil: data.perfil,
+                  }
+                  localStorage.setItem("user", JSON.stringify(userData))
+                  document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
+                  router.push("/dashboard/index_dashboard")
+                } catch (err: any) {
+                  console.error(err.response || err)
+                  setError(err.response?.data?.detail || "Error al iniciar sesión con Google ❌")
+                }
+              }}
+              onError={() => setError("Error en Google Login ❌")}
+              useOneTap
+              theme="filled_blue"
+              shape="circle"
+            />
+          </div>
+
+          {/* Links extras */}
+          <div className="text-center space-y-2">
+            <p className="text-sm">
+              ¿No tienes cuenta?{" "}
               <button
-                className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors duration-500 cursor-pointer"
-                onClick={handleForgotPassword}
+                onClick={() => router.push("/auth/register")}
+                className="text-blue-600 hover:underline"
+              >
+                Regístrate aquí
+              </button>
+            </p>
+            <p className="text-sm">
+              <button
+                onClick={() => router.push("/auth/forgot-password")}
+                className="text-gray-500 hover:underline"
               >
                 ¿Olvidaste tu contraseña?
               </button>
-              <p className="text-sm">
-                ¿No tienes una cuenta?{" "}
-                <button
-                  className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-500 cursor-pointer"
-                  onClick={handleRegister}
-                >
-                  Regístrate gratis.
-                </button>
-              </p>
-            </div>
+            </p>
           </div>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Login;
+export default Login

@@ -7,8 +7,6 @@ class Perfil(Base):
     __tablename__ = "perfiles"
     id = Column(Integer, primary_key=True)
     id_usuario = Column(Integer, ForeignKey("usuarios.id"))
-    nombre = Column(String(255), nullable=True)
-    correo = Column(String(255))
     descripcion = Column(Text, nullable=True)
     ubicacion = Column(String(255))
     Tel = Column(Integer)

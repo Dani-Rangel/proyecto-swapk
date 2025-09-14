@@ -1,148 +1,146 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/router";
+import { useRouter } from "next/router"
 import {
   X, Search, HomeIcon, Star, Camera, Plus, Settings,
   LogOut, User, Bell, MessageSquare, Eye, Edit, MapPin, Menu
 } from "lucide-react"
 
-// ✅ CORREGIDO: Importar correctamente
-import { skillsAPI, SkillAssociation, Skill, SkillAssociationResponse } from "@/services/api_Skills";
+import { skillsAPI, SkillAssociation, Skill, SkillAssociationResponse } from "@/services/api_Skills"
 import { AddSkillForm } from "../../components/ui/AddSkillForm"
-import CreateSkillForm from "../../components/ui/CreateSkillForm"
 import Image from "next/image"
 import axios from "axios"
 
+// ✅ Importa las funciones de autenticación
+import { getCurrentUser, clearCurrentUser, UserData } from "@/lib/auth"
 
 interface Perfil {
-  id: number; 
-  nombre: string;
-  id_usuario: number;
-  correo?: string;
-  descripcion?: string;
-  ubicacion?: string;
-  Tel?: number;
-  foto_perfil?: string;
-  habilidades: any[];
+  id: number
+  nombre: string
+  id_usuario: number
+  correo?: string
+  descripcion?: string
+  ubicacion?: string
+  Tel?: number
+  foto_perfil?: string
+  habilidades: any[]
 }
 
 export default function ProfilePage() {
   const [perfil, setPerfil] = useState<Perfil | null>(null)
+  const [user, setUser] = useState<UserData | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [showCreateForm, setShowCreateForm] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeSkillIndex, setActiveSkillIndex] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const skillContainerRef = useRef<HTMLDivElement>(null)
-  const [user, setUser] = useState<any>(null); 
-  const router = useRouter();
   const [habilidadesDisponibles, setHabilidadesDisponibles] = useState<Skill[]>([])
-  const [habilidadesPerfil, setHabilidadesPerfil] = useState<SkillAssociationResponse[]>([]);
+  const [habilidadesPerfil, setHabilidadesPerfil] = useState<SkillAssociationResponse[]>([])
+  const router = useRouter()
 
-
-   useEffect(() => {
-  const storedUser = localStorage.getItem("user");
-  if (!storedUser) {
-    router.push("../auth/login");
-    return;
-  }
-
-  try {
-    const parsedUser = JSON.parse(storedUser);
-    if (!parsedUser.token) {
-      console.warn("❌ No hay token en el objeto de usuario");
-      setLoading(false);
-      return;
+  // ✅ Cargar usuario y perfil
+  useEffect(() => {
+    const currentUser = getCurrentUser()
+    if (!currentUser) {
+      router.push("../auth/login")
+      return
     }
 
-    console.log("✅ Usuario cargado:", parsedUser);
-    setUser(parsedUser);
+    if (!currentUser.token) {
+      console.warn("❌ No hay token en el objeto de usuario")
+      setLoading(false)
+      return
+    }
 
-    // 🔥 Cargar el perfil del usuario
-    axios.get(`http://localhost:8000/perfil/usuario/${parsedUser.id}`, {
-      headers: {
-        Authorization: `Bearer ${parsedUser.token}`
-      }
-    })
-    .then(response => {
-      setPerfil(response.data);
-    })
-    .catch(error => {
-      console.error("Error al obtener el perfil:", error);
-      setError("No se pudo cargar el perfil.");
-    });
-  } catch (err) {
-    console.error("Error al parsear localStorage", err);
-  } finally {
-    setLoading(false);
-  }
-}, []);
+    console.log("✅ Usuario cargado:", currentUser)
+    setUser(currentUser)
 
- useEffect(() => {
-  skillsAPI.getSkills()
-    .then(setHabilidadesDisponibles)
-    .catch(err => {
-      console.error("❌ Error al cargar habilidades disponibles:", err);
-    });
-}, []);
+    // 🔥 Cargar perfil del usuario
+    axios
+      .get(`http://localhost:8000/perfil/usuario/${currentUser.id}`, {
+        headers: {
+          Authorization: `Bearer ${currentUser.token}`,
+        },
+      })
+      .then((response) => {
+        setPerfil(response.data)
+      })
+      .catch((error) => {
+        console.error("Error al obtener el perfil:", error)
+        setError("No se pudo cargar el perfil.")
+      })
+      .finally(() => setLoading(false))
+  }, [router])
 
+  // ✅ Cargar todas las habilidades disponibles
+  useEffect(() => {
+    skillsAPI
+      .getSkills()
+      .then(setHabilidadesDisponibles)
+      .catch((err) => {
+        console.error("❌ Error al cargar habilidades disponibles:", err)
+      })
+  }, [])
+
+  // ✅ Guardar asociación de habilidad
   const handleSaveAssociation = async (assoc: SkillAssociation) => {
-  try {
-    if (!perfil) return;
-    setLoading(true);
+    try {
+      if (!perfil) return
+      setLoading(true)
 
-    const nuevaAsociacion = await skillsAPI.associateSkill({
-      Perfil_id: perfil.id,
-      habilidad_id: assoc.habilidad_id,
-      tipo: assoc.tipo,
-      nivel: assoc.nivel
-    });
+      const nuevaAsociacion = await skillsAPI.associateSkill({
+        Perfil_id: perfil.id,
+        habilidad_id: assoc.habilidad_id,
+        tipo: assoc.tipo,
+        nivel: assoc.nivel,
+      })
 
-    const habilidadCompleta = habilidadesDisponibles.find(h => h.id === assoc.habilidad_id);
+      const habilidadCompleta = habilidadesDisponibles.find((h) => h.id === assoc.habilidad_id)
 
-    // Añadir nombre en la propiedad correcta (ejemplo: habilidad_nombre)
-    setHabilidadesPerfil(prev => [
-  ...prev,
-  { ...nuevaAsociacion, habilidad_nombre: habilidadCompleta?.nombre || "" }
-]);
-    setShowAddForm(false);
-  } catch (error) {
-    console.error(error);
-  } finally {
-    setLoading(false);
+      setHabilidadesPerfil((prev) => [
+        ...prev,
+        { ...nuevaAsociacion, habilidad_nombre: habilidadCompleta?.nombre || "" },
+      ])
+      setShowAddForm(false)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setLoading(false)
+    }
   }
-};
 
-useEffect(() => {
-  if (!perfil?.id) return;
-  skillsAPI.getPerfilSkills(perfil.id)
-    .then(setHabilidadesPerfil)
-    .catch(err => console.error(err));
-}, [perfil?.id]);
+  // ✅ Cargar habilidades del perfil
+  useEffect(() => {
+    if (!perfil?.id) return
+    skillsAPI
+      .getPerfilSkills(perfil.id)
+      .then(setHabilidadesPerfil)
+      .catch((err) => console.error(err))
+  }, [perfil?.id])
 
-
+  // ✅ Eliminar habilidad
   const handleRemoveSkill = async (idAsociacion: number) => {
-  if (!perfil) return;
-  try {
-    setLoading(true);
-    await skillsAPI.deleteSkillAssociation(idAsociacion); // Debes implementar este método en tu API
-    setHabilidadesPerfil(prev => prev.filter(h => h.id !== idAsociacion));
-  } catch (error) {
-    console.error(error);
-    alert("Error al eliminar la habilidad.");
-  } finally {
-    setLoading(false);
+    if (!perfil) return
+    try {
+      setLoading(true)
+      await skillsAPI.deleteSkillAssociation(idAsociacion)
+      setHabilidadesPerfil((prev) => prev.filter((h) => h.id !== idAsociacion))
+    } catch (error) {
+      console.error(error)
+      alert("Error al eliminar la habilidad.")
+    } finally {
+      setLoading(false)
+    }
   }
-};
 
- const handleLogout = () => {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
-  router.push("/login");
-};
+  // ✅ Logout usando clearCurrentUser()
+  const handleLogout = () => {
+    clearCurrentUser()
+    router.push("/auth/login")
+  }
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -162,10 +160,8 @@ useEffect(() => {
       <div className="p-4 text-red-500 font-semibold">
         🚫 No hay token de autenticación. Por favor, inicia sesión.
       </div>
-    );
+    )
   }
-  
-
 
   return (
     <div className="relative min-h-screen bg-[#141414] flex">

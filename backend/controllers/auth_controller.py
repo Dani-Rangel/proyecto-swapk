@@ -43,16 +43,15 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    # Crear perfil asociado automáticamente con id_usuario y nombre
+    # Crear perfil asociado automáticamente
     new_profile = Perfil(
         id_usuario=new_user.id,
-        nombre=new_user.nombre
     )
     db.add(new_profile)
     db.commit()
     db.refresh(new_profile)
 
-    # Crear token JWT igual que en login
+    # Crear token JWT
     expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
     token_data = {
         "sub": str(new_user.id),
@@ -63,7 +62,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
     return {
         "message": "Usuario y perfil creados exitosamente",
         "token": token,
-        "user": {  # ✅ Ahora en inglés, como en /login
+        "user": {
             "id": new_user.id,
             "nombre": new_user.nombre,
             "correo": new_user.correo
@@ -71,7 +70,8 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
         "perfil": {
             "id": new_profile.id,
             "id_usuario": new_profile.id_usuario,
-            "nombre": new_profile.nombre
+            "nombre": new_profile.usuario.nombre,
+            "correo": new_profile.usuario.correo
         }
     }
 
@@ -98,7 +98,5 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
         "token": token,
         "user": {
             "id": user.id,
-            "nombre": user.nombre,
-            "correo": user.correo
         }
     }

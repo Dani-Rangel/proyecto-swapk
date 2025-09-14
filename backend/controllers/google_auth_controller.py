@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException 
 from sqlalchemy.orm import Session
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from backend.db.database import get_db
 from backend.models.usuarios import Usuario, RolUsuario
+from backend.models.perfil import Perfil   # 👈 importa el modelo Perfil
 from backend.schemas.google_auth_schema import TokenSchema
 
 router = APIRouter()
@@ -23,6 +24,7 @@ def google_login(data: TokenSchema, db: Session = Depends(get_db)):
         usuario = db.query(Usuario).filter(Usuario.correo == email).first()
 
         if not usuario:
+            # Crear usuario
             usuario = Usuario(
                 nombre=nombre,
                 correo=email,
@@ -33,7 +35,24 @@ def google_login(data: TokenSchema, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(usuario)
 
-        return {"id": usuario.id, "correo": usuario.correo, "nombre": usuario.nombre, "rol": usuario.rol}
+            # 👇 Crear perfil asociado automáticamente
+            perfil = Perfil(
+                id_usuario=usuario.id,
+                descripcion="",
+                ubicacion="",
+                Tel=None,
+                foto_perfil=None
+            )
+            db.add(perfil)
+            db.commit()
+            db.refresh(perfil)
+
+        return {
+            "id": usuario.id,
+            "correo": usuario.correo,
+            "nombre": usuario.nombre,
+            "rol": usuario.rol
+        }
 
     except Exception as e:
         raise HTTPException(status_code=400, detail="Token inválido o expirado")
