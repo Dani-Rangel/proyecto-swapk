@@ -1,6 +1,5 @@
 "use client"
 
-import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 import Image from "next/image"
@@ -12,6 +11,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Shield, ShieldAlert } from "lucide-react"
 import { RolUsuario } from "@/services/user"
+import { IntercambioManagementTable } from "@/components/ui/admin/intercambio-management-table"
+import { PublicacionManagementTable } from "@/components/ui/admin/publicacion-management-table"
+
+
 
 import {
   X, Search, HomeIcon, Star, Camera, Plus, Settings,
@@ -19,7 +22,6 @@ import {
 } from "lucide-react"
 
 export default function AdminPage() {
-  const { t } = useTranslation()
   const [currentUserRole, setCurrentUserRole] = useState<RolUsuario | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -185,17 +187,26 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6 bg-[#2a2a2a] rounded p-6 text-white">
-          <TabsList className="grid w-full grid-cols-2 bg-[#3e3e3e] p-1 rounded-lg">
+          <TabsList className="grid w-full grid-cols-4 bg-[#3e3e3e] p-1 rounded-lg">
             <TabsTrigger value="users">Gestión de Usuarios</TabsTrigger>
             <TabsTrigger value="courses">Gestión de Cursos</TabsTrigger>
+            <TabsTrigger value="intercambios">Gestión de Intercambios</TabsTrigger>
+            <TabsTrigger value="publicaciones">Gestión de Publicaciones</TabsTrigger>
           </TabsList>
-
           <TabsContent value="users" className="space-y-6">
             <UserManagementTable />
           </TabsContent>
 
           <TabsContent value="courses" className="space-y-6">
             <CourseManagementTable />
+          </TabsContent>
+
+          <TabsContent value="intercambios" className="space-y-6">
+            <IntercambioManagementTable />
+          </TabsContent>
+
+          <TabsContent value="publicaciones" className="space-y-6">
+            <PublicacionManagementTable />
           </TabsContent>
         </Tabs>
       </div>

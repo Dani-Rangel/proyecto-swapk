@@ -1,20 +1,29 @@
 import "@/globals.css";
 import type { AppProps } from 'next/app'
+import Head from "next/head";
 import { LanguageProvider } from "@/components/state/language_change";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { ThemeProvider } from "../components/state/theme_context"
+import { NotificacionesProvider } from "@/components/context/notificaciones_context";
 
 export default function MyApp({ Component, pageProps }: AppProps) {
   return (
-     
-    <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string}>
-      <LanguageProvider>
-        <ThemeProvider>
-        <Component {...pageProps} />
-        </ThemeProvider>
-      </LanguageProvider>
-    </GoogleOAuthProvider>
-    
+    <>
+      <Head>
+          <title>Swapk - Intercambia Conocimientos</title>
+          <meta name="description" content="Plataforma de trueque de conocimientos y habilidades." />
+          <link rel="icon" href="/img/logoswapk.png" />
+      </Head>
+      <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string}>
+        <LanguageProvider>
+          <NotificacionesProvider>
+            <ThemeProvider>
+              <Component {...pageProps} />
+            </ThemeProvider>
+          </NotificacionesProvider>
+        </LanguageProvider>
+      </GoogleOAuthProvider>
+    </>
   )
 }
 

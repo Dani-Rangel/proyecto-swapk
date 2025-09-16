@@ -1,3 +1,6 @@
+// settings/profile_edit.tsx
+"use client"
+
 import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
@@ -5,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import SettingsLayout from "../../components/settings_layout"
+import ProtectedRoute from "@/components/protected_routes/protected_routes";
 
 // Interfaces para los datos del usuario y perfil
 interface Usuario {
@@ -29,7 +33,7 @@ interface Perfil {
   detalle_Curso: number;
 }
 
-export default function ProfileEdit() {
+function ProfileEditComponent() {
   const { t } = useTranslation()
   const [description, setDescription] = useState("")
   const [email, setEmail] = useState("")
@@ -267,7 +271,7 @@ export default function ProfileEdit() {
                 <p className="text-gray-400">{email || "No especificado"}</p>
               </div>
               <Button variant="ghost" size="sm" className="text-blue-400">
-                &gt;
+                {'>'}
               </Button>
             </div>
 
@@ -277,7 +281,7 @@ export default function ProfileEdit() {
                 <p className="text-gray-400">{username || "No especificado"}</p>
               </div>
               <Button variant="ghost" size="sm" className="text-blue-400">
-                &gt;
+                {'>'}
               </Button>
             </div>
 
@@ -287,7 +291,7 @@ export default function ProfileEdit() {
                 <p className="text-gray-400">{location || "No especificada"}</p>
               </div>
               <Button variant="ghost" size="sm" className="text-blue-400">
-                &gt;
+                {'>'}
               </Button>
             </div>
 
@@ -304,5 +308,14 @@ export default function ProfileEdit() {
         )}
       </div>
     </SettingsLayout>
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function ProfileEdit() {
+  return (
+    <ProtectedRoute>
+      <ProfileEditComponent />
+    </ProtectedRoute>
   )
 }

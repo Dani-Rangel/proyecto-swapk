@@ -30,8 +30,10 @@ import {
   X,
   PlusIcon,
 } from "lucide-react"
+import Link from "next/link"
+import ProtectedRoute from "@/components/protected_routes/protected_routes" // Ajusta la ruta si es necesario
 
-export default function ForumLayout() {
+function ForumLayoutComponent() {
   const router = useRouter()
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState(t("postTypeExchanges"))
@@ -51,7 +53,7 @@ export default function ForumLayout() {
   const [newPost, setNewPost] = useState({
     titulo: "",
     contenido: "",
-    tipo: "Intercambio",
+    tipo: "Intercambios", // Corregido: coincidir con opciones del select
     imagen: ""
   })
 
@@ -92,7 +94,7 @@ export default function ForumLayout() {
     }
 
     fetchPublicaciones()
-  }, [activeTab])
+  }, [activeTab, user])
 
   const toggleTheme = () => setIsDark(!isDark)
 
@@ -226,7 +228,7 @@ export default function ForumLayout() {
         setIsModalOpen(false)
         setNewPost({ titulo: "", contenido: "", tipo: "Intercambios", imagen: "" })
 
-        const updated = await fetch(`http://localhost:8000/api/publicaciones/${activeTab}`)
+        const updated = await fetch(`http://localhost:8000/api/publicaciones/${activeTab === t("todo") ? "all" : newPost.tipo}`)
         const data = await updated.json()
         setPublicaciones(Array.isArray(data) ? data : [])
       } else {
@@ -306,7 +308,7 @@ export default function ForumLayout() {
                   size="sm"
                   className={`flex-1 h-8 cursor-pointer ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-600 hover:text-gray-900"}`}
                   onClick={() => href && router.push(href)}
-                  title={label} // Tooltip útil
+                  title={label}
                 >
                   <Icon className="w-4 h-4" />
                 </Button>
@@ -315,14 +317,26 @@ export default function ForumLayout() {
 
             <nav className="space-y-1">
               {[
-                { icon: Home, label: t("home"), active: true },
-                { icon: TrendingUp, label: t("popular"), active: false },
-                { icon: RefreshCw, label: t("exchanges"), active: false },
-                { icon: BookOpen, label: t("myCourses"), active: false },
+                { icon: Home, label: t("home"), active: true, href: "/dashboard/index_dashboard" },
+                { icon: TrendingUp, label: t("popular"), active: false, href: "/message/messages" },
+                { icon: RefreshCw, label: t("exchanges"), active: false, href: "/intercambio/intercambio" },
+                { icon: BookOpen, label: t("myCourses"), active: false, href: "/cursos/community_courses" },
               ].map((item, idx) => (
-                <Button key={idx} variant="ghost" size="sm" className={`w-full justify-start h-8 cursor-pointer transition-colors ${item.active ? "bg-blue-600 text-white hover:bg-blue-700" : isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-700 hover:bg-gray-100"}`}>
-                  <item.icon className="w-4 h-4 mr-2" /> {item.label}
-                </Button>
+                <Link key={idx} href={item.href} passHref>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`w-full justify-start h-8 cursor-pointer transition-colors ${
+                      item.active
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : isDark
+                        ? "text-[#A0A0A0] hover:bg-[#2E2E2E]"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4 mr-2" /> {item.label}
+                  </Button>
+                </Link>
               ))}
             </nav>
           </div>
@@ -702,5 +716,14 @@ export default function ForumLayout() {
         )}
       </div>
     </>
+  )
+}
+
+// Exportamos el componente protegido
+export default function ForumLayout() {
+  return (
+    <ProtectedRoute>
+      <ForumLayoutComponent />
+    </ProtectedRoute>
   )
 }

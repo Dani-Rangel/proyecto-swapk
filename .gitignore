@@ -2,6 +2,11 @@
 node_modules/
 frontend/node_modules/
 
+firebase_credentials.json
+backend/firebase_credentials.json
+backend/services/firebase/firebase_credentials.json
+
+
 # Build de Next.js
 .next/
 frontend/.next/

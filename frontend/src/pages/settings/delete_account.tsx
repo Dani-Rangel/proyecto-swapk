@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle } from "lucide-react"
 import SettingsLayout from "../../components/settings_layout"
+import ProtectedRoute from "@/components/protected_routes/protected_routes";
 
-export default function DeleteAccount() {
+function DeleteAccountComponent() {
   const { t } = useTranslation()
   const [confirmText, setConfirmText] = useState("")
   const [password, setPassword] = useState("")
@@ -171,5 +172,14 @@ export default function DeleteAccount() {
         </Card>
       </div>
     </SettingsLayout>
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function DeleteAccount() {
+  return (
+    <ProtectedRoute>
+      <DeleteAccountComponent />
+    </ProtectedRoute>
   )
 }

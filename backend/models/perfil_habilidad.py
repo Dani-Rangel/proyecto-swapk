@@ -17,7 +17,7 @@ class PerfilHabilidad(Base):
 
     id = Column(Integer, primary_key=True)
     perfil_id = Column(Integer, ForeignKey("perfiles.id"))
-    habilidad_id = Column(Integer, ForeignKey("habilidades.id"))
+    habilidad_id = Column(Integer, ForeignKey("habilidad.id"))
     tipo = Column(Enum(TipoEnum))
     nivel = Column(Enum(NivelEnum))
 

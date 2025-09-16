@@ -1,6 +1,7 @@
 "use client"
+
 import { useState } from "react"
-import { Apple, Sun, Moon } from "lucide-react"
+import { Sun, Moon } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/router"
 import { GoogleLogin } from "@react-oauth/google"
@@ -9,11 +10,12 @@ import axios from "axios"
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     nombre: "",
-    email: "",
+    correo: "",
     password: "",
     acceptOffers: false,
   })
   const [darkMode, setDarkMode] = useState(true)
+  const [error, setError] = useState("")
   const router = useRouter()
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,56 +26,55 @@ export default function RegisterPage() {
     }))
   }
 
-      const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      try {
-        const res = await fetch("http://localhost:8000/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nombre: formData.nombre,
-            correo: formData.email,
-            password: formData.password,
-          }),
-        });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
+    try {
+      const res = await fetch("http://localhost:8000/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              nombre: formData.nombre,
+              email: formData.correo,
+              password: formData.password,
+            }),
+          })
 
-        const data = await res.json();
-        console.log("Respuesta completa del backend:", data);
 
-        if (res.ok) {
-          // ✅ Guardar el token en el objeto del usuario en localStorage
-          const userData = {
-            token: data.token, 
-            id: data.usuario?.id || data.user.id,
-            nombre: data.usuario?.nombre || data.user.nombre,
-            correo: data.usuario?.correo || data.user.correo,
-            perfil: data.perfil,
-          };
+      const data = await res.json()
 
-          // ✅ Guardar todo en localStorage
-          localStorage.setItem("user", JSON.stringify(userData));
-
-          console.log("✅ Token guardado (registro):", userData.token);
-          console.log("🔍 Longitud del token (registro):", userData.token?.length);
-          console.log("📦 Usuario guardado (registro):", JSON.parse(localStorage.getItem("user")!));
-
-          // 🍪 Opcional: guardar token en cookie (puedes usarlo en el backend con HttpOnly más adelante)
-          document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`;
-
-          // ✅ Confirmación en consola
-          console.log("Usuario en localStorage:", localStorage.getItem("user"));
-          console.log("Respuesta completa del backend:", data);
-
-          alert("Usuario registrado con éxito");
-          router.push("../dashboard/index_dashboard");
-        } else {
-          alert(data.detail || "Error desconocido");
+      if (res.ok) {
+        const userData = {
+          token: data.token,
+          id: data.usuario?.id || data.user?.id,
+          nombre: data.usuario?.nombre || data.user?.nombre,
+          correo: data.usuario?.correo || data.user?.correo,
+          perfil: data.perfil,
         }
-      } catch (error) {
-        console.error("Error en el registro:", error);
-        alert("Error en el registro. Revisa tu conexión.");
+
+        localStorage.setItem("user", JSON.stringify(userData))
+        document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
+
+        router.push("/dashboard/index_dashboard")
+      } else {
+        // Manejo de error para evitar objetos en React
+        if (Array.isArray(data)) {
+          const mensajes = data.map((err: any) => err.msg).join(", ")
+          setError(mensajes)
+        } else if (typeof data.detail === "string") {
+          setError(data.detail)
+        } else if (Array.isArray(data.detail)) {
+          const mensajes = data.detail.map((err: any) => err.msg).join(", ")
+          setError(mensajes)
+        } else {
+          setError("Error desconocido")
+        }
       }
-    };
+    } catch (err) {
+      console.error("Error en el registro:", err)
+      setError("Error en el registro. Revisa tu conexión.")
+    }
+  }
 
   return (
     <div
@@ -83,54 +84,36 @@ export default function RegisterPage() {
     >
       {/* Header */}
       <header
-        className={`flex justify-between items-center shadow-sm border-b px-6 py-4 transition-colors duration-500 ${
+        className={`flex justify-between items-center shadow-sm border-b px-6 py-4 ${
           darkMode ? "bg-[#121212]" : "bg-white"
         }`}
       >
         <div className="flex items-center gap-3">
           <a href="./">
-            <Image
-              src="/img/logoswapk.png"
-              alt="Logo Swapk"
-              width={35}
-              height={35}
-              className="rounded-lg"
-            />
+            <Image src="/img/logoswapk.png" alt="Logo Swapk" width={35} height={35} className="rounded-lg" />
           </a>
           <span className="text-xl font-bold">SWAPK</span>
         </div>
-
-        {/* Toggle dark mode */}
         <button
           onClick={() => setDarkMode(!darkMode)}
           className="p-2 rounded-lg border hover:bg-gray-200 dark:hover:bg-gray-700 transition"
         >
-          {darkMode ? (
-            <Sun className="w-5 h-5 text-yellow-400" />
-          ) : (
-            <Moon className="w-5 h-5 text-gray-700" />
-          )}
+          {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-700" />}
         </button>
       </header>
 
-      {/* Main content */}
+      {/* Content */}
       <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-6 py-12">
         <div className="w-full max-w-md space-y-8">
-          {/* Logo */}
           <div className="text-center">
-            <Image
-              src="/img/logoswapk.png"
-              alt="Logo Swapk"
-              width={35}
-              height={35}
-              className="mx-auto rounded-lg mb-4"
-            />
+            <Image src="/img/logoswapk.png" alt="Logo Swapk" width={35} height={35} className="mx-auto rounded-lg mb-4" />
             <h1 className="text-3xl font-bold">
               Sw<span className="text-blue-600">a</span>pk
             </h1>
           </div>
 
-          {/* Form */}
+          {error && <p className="text-red-500 text-sm text-center whitespace-pre-wrap">{error}</p>}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <input
               type="text"
@@ -138,43 +121,35 @@ export default function RegisterPage() {
               placeholder="Nombre"
               value={formData.nombre}
               onChange={handleInputChange}
-              className={`w-full px-4 py-2 mb-1 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                darkMode
-                  ? "bg-gray-800 text-white placeholder-gray-400 border-gray-700"
-                  : "bg-white text-gray-900 placeholder-gray-500 border-gray-300"
-              }`}
               required
+              className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 ${
+                darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-900 border-gray-300"
+              }`}
             />
-
             <input
               type="email"
-              name="email"
+              name="correo"
               placeholder="Correo electrónico"
-              value={formData.email}
+              value={formData.correo}
               onChange={handleInputChange}
-              className={`w-full px-4 py-2 mb-1 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                darkMode
-                  ? "bg-gray-800 text-white placeholder-gray-400 border-gray-700"
-                  : "bg-white text-gray-900 placeholder-gray-500 border-gray-300"
-              }`}
               required
+              className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 ${
+                darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-900 border-gray-300"
+              }`}
             />
-
             <input
               type="password"
               name="password"
               placeholder="Contraseña"
               value={formData.password}
               onChange={handleInputChange}
-              className={`w-full px-4 py-2 mb-1 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                darkMode
-                  ? "bg-gray-800 text-white placeholder-gray-400 border-gray-700"
-                  : "bg-white text-gray-900 placeholder-gray-500 border-gray-300"
-              }`}
               required
+              className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 ${
+                darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-900 border-gray-300"
+              }`}
             />
 
-            {/* Checkbox */}
+            {/* Checkbox ofertas */}
             <label className="flex items-start gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -183,53 +158,50 @@ export default function RegisterPage() {
                 onChange={handleInputChange}
                 className="mt-1 cursor-pointer"
               />
-              <span>
-                Quiero recibir ofertas especiales, recomendaciones personalizadas
-                y consejos de aprendizaje.
-              </span>
+              <span>Quiero recibir ofertas especiales, recomendaciones personalizadas y consejos de aprendizaje.</span>
             </label>
 
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 transition"
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700"
             >
               Registrarte
             </button>
           </form>
 
-          {/* Social login */}
+          {/* Google login */}
           <div className="space-y-4">
             <p className="text-center text-sm">Otras opciones de registro</p>
-            <div className="flex justify-center gap-4">
+            <div className="flex justify-center">
               <GoogleLogin
                 onSuccess={async (credentialResponse) => {
                   const token = credentialResponse.credential
                   if (!token) {
-                    alert("No se obtuvo el token de Google ❌")
+                    setError("No se obtuvo el token de Google ❌")
                     return
                   }
                   try {
-                    const res = await axios.post(
-                      "http://localhost:8000/auth/google/login",
-                      { token }
-                    )
-                    alert(`Bienvenido ${res.data.nombre} 🎉`)
-                    localStorage.setItem("user", JSON.stringify(res.data))
-                    router.push("../dashboard/index_dashboard")
+                    const res = await axios.post("http://localhost:8000/auth/google/login", { token })
+                    const data = res.data
+                    const userData = {
+                      token: data.token,
+                      id: data.id,
+                      nombre: data.nombre,
+                      correo: data.correo,
+                      perfil: data.perfil,
+                    }
+                    localStorage.setItem("user", JSON.stringify(userData))
+                    document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
+                    router.push("/dashboard/index_dashboard")
                   } catch (err: any) {
                     console.error(err.response || err)
-                    alert(
-                      err.response?.data?.detail ||
-                        "Error al registrarse con Google ❌"
-                    )
+                    setError(err.response?.data?.detail || "Error al registrarse con Google ❌")
                   }
                 }}
-                onError={() => {
-                  console.log("Error en Google Register ❌")
-                }}
+                onError={() => setError("Error en Google Register ❌")}
                 useOneTap
                 theme="filled_blue"
-                shape="circle" 
+                shape="circle"
               />
             </div>
           </div>
@@ -237,10 +209,7 @@ export default function RegisterPage() {
           {/* Link login */}
           <div className="text-center text-sm">
             ¿Ya tienes una cuenta?{" "}
-            <a
-              href="./login"
-              className="text-blue-600 hover:text-blue-700 font-medium cursor-pointer"
-            >
+            <a href="./login" className="text-blue-600 hover:text-blue-700 font-medium">
               Inicia sesión aquí
             </a>
           </div>

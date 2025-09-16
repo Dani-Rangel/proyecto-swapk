@@ -47,7 +47,7 @@ class PasswordConfirm(BaseModel):
 
 class UserProfileUpdate(BaseModel):
     """
-    Esquema para actualizar solo el perfil (no el usuario).
+    Esquema para actualizar solo el perfil.
     """
     descripcion: Optional[str] = None
     ubicacion: Optional[str] = None
@@ -58,3 +58,19 @@ class UserProfileUpdate(BaseModel):
     class Config:
         orm_mode = True
         from_attributes = True
+        
+# Creamos nueva schema para chat
+
+class UserForChatResponse(BaseModel):
+    id: str  # ✅ Cambiado a str
+    name: str
+    username: str
+    avatar: str
+
+    class Config:
+        orm_mode = True
+        from_attributes = True
+        fields = {
+            "name": "nombre",
+            "username": "email",
+        }

@@ -1,3 +1,4 @@
+// settings/language.tsx
 "use client"
 
 import { useTranslation } from "../../lib/useTranslations"
@@ -7,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio_group"
 import { Label } from "@/components/ui/label"
 import SettingsLayout from "../../components/settings_layout"
+import ProtectedRoute from "@/components/protected_routes/protected_routes"; 
 
 // ✅ Define los tipos correctamente
 type LanguageValue = "es" | "en" | "pt"
@@ -23,7 +25,7 @@ const languages: LanguageOption[] = [
   { value: "pt", label: "Português (Próximamente...)", flag: "🇧🇷" },
 ] as const
 
-export default function Language() {
+function LanguageComponent() {
   const [selectedLanguage, setSelectedLanguage] = useState<"es" | "en">("es")
 
   // ✅ Ahora el hook está dentro del componente
@@ -109,5 +111,14 @@ export default function Language() {
         </Card>
       </div>
     </SettingsLayout>
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function Language() {
+  return (
+    <ProtectedRoute>
+      <LanguageComponent />
+    </ProtectedRoute>
   )
 }

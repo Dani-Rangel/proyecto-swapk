@@ -8,8 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import SettingsLayout from "../../components/settings_layout"
-
-export default function ChangePassword() {
+import ProtectedRoute from "@/components/protected_routes/protected_routes";
+function ChangePasswordComponent() {
   const { t } = useTranslation()
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -218,5 +218,14 @@ export default function ChangePassword() {
         </Card>
       </div>
     </SettingsLayout>
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function ChangePassword() {
+  return (
+    <ProtectedRoute>
+      <ChangePasswordComponent />
+    </ProtectedRoute>
   )
 }

@@ -1,6 +1,7 @@
 from backend.db import Base
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, Date
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
 from sqlalchemy.orm import relationship
+import enum
 
 
 class Perfil(Base):
@@ -12,10 +13,8 @@ class Perfil(Base):
     # (NO duplicados con Usuario)
     descripcion = Column(Text, nullable=True)
     ubicacion = Column(String(255), nullable=True)
-    telefono = Column(String(20), nullable=True)
-    foto_perfil = Column(String(500), nullable=True)  
-    sitio_web = Column(String(500), nullable=True)
-    fecha_nacimiento = Column(Date, nullable=True)  
+    Tel = Column(Integer)
+    foto_perfil = Column(String(255))  
 
     # Relación con Usuario
     usuario = relationship("Usuario", back_populates="perfil", uselist=False)

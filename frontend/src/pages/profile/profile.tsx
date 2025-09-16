@@ -1,18 +1,17 @@
 "use client"
+
 // Importacion funcionalidad "change_language"
 import { useTranslation } from "../../lib/useTranslations"
 
 // Importacion de comoponentes 
-
 import { Button } from "../../components/ui/button"
 import { Input } from "../../components/ui/input"
 
 // Importacion para alertas
-
 import toast, { Toaster } from 'react-hot-toast'
 
 import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation"; // ✅ Corregido: next/router → next/navigation
 import {
   X, 
   Search, 
@@ -41,6 +40,7 @@ import { AddSkillForm } from "../../components/ui/AddSkillForm"
 import CreateSkillForm from "../../components/ui/CreateSkillForm"
 import Image from "next/image"
 import axios from "axios"
+import ProtectedRoute from "@/components/protected_routes/protected_routes"; 
 
 interface Perfil {
   id: number; 
@@ -54,7 +54,7 @@ interface Perfil {
   habilidades: any[];
 }
 
-export default function ProfilePage() {
+function ProfilePageComponent() {
   // Cambio de tema
   const [isDark, setIsDark] = useState(true)
   // Cambio de lengauje 
@@ -78,7 +78,7 @@ export default function ProfilePage() {
    useEffect(() => {
   const storedUser = localStorage.getItem("user");
   if (!storedUser) {
-    router.push("../auth/login");
+    router.push("/auth/login"); // ✅ Corregido: ../auth/login → /auth/login
     return;
   }
 
@@ -93,7 +93,7 @@ export default function ProfilePage() {
     console.log("✅ Usuario cargado:", parsedUser);
     setUser(parsedUser);
 
-    // 🔥 Cargar el perfil del usuario
+    // Cargar el perfil del usuario
     axios.get(`http://localhost:8000/perfil/usuario/${parsedUser.id}`, {
       headers: {
         Authorization: `Bearer ${parsedUser.token}`
@@ -173,7 +173,7 @@ useEffect(() => {
  const handleLogout = () => {
   localStorage.removeItem("user");
   localStorage.removeItem("token");
-  router.push("/login");
+  router.push("/auth/login"); // ✅ Corregido: /login → /auth/login
 };
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
@@ -248,14 +248,26 @@ useEffect(() => {
 
             <nav className="space-y-4">
               {[
-                { icon: Home, label: t("home"), active: true },
-                { icon: TrendingUp, label: t("popular"), active: false },
-                { icon: RefreshCw, label: t("exchanges"), active: false },
-                { icon: BookOpen, label: t("myCourses"), active: false },
+                { icon: Home, label: t("home"), active: true, href: "/dashboard/index_dashboard" },
+                { icon: TrendingUp, label: t("popular"), active: false, href: "/message/messages" },
+                { icon: RefreshCw, label: t("exchanges"), active: false, href: "/intercambio/intercambio" },
+                { icon: BookOpen, label: t("myCourses"), active: false, href: "/cursos/community_courses" },
               ].map((item, idx) => (
-                <Button key={idx} variant="ghost" size="sm" className={`w-full justify-start h-8 cursor-pointer transition-colors ${item.active ? "bg-blue-600 text-white hover:bg-blue-700" : isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-700 hover:bg-gray-100"}`}>
-                  <item.icon className="w-4 h-4 mr-2" /> {item.label}
-                </Button>
+                <Link key={idx} href={item.href} passHref>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`w-full justify-start h-8 cursor-pointer transition-colors ${
+                      item.active
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : isDark
+                        ? "text-[#A0A0A0] hover:bg-[#2E2E2E]"
+                        : "text-gray-700 hover:bg-gray-100"
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4 mr-2" /> {item.label}
+                  </Button>
+                </Link>
               ))}
             </nav>
           </div>
@@ -468,5 +480,14 @@ useEffect(() => {
           </div>
         </div>
       </div>
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function ProfilePage() {
+  return (
+    <ProtectedRoute>
+      <ProfilePageComponent />
+    </ProtectedRoute>
   )
 }

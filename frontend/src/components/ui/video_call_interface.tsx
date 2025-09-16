@@ -1,4 +1,3 @@
-// video_call_interface.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -9,6 +8,7 @@ import { ScreenShareArea } from "./screen_share_area"
 import { CallControls } from "./call_controls"
 import { NotificationToast } from "./notification_toast"
 import { ErrorAlert } from "./error_alert"
+import { Phone, Video, MoreVertical } from "lucide-react"
 
 type ViewMode = "video-call" | "chat" | "screen-share" | "screen-select"
 
@@ -18,11 +18,18 @@ interface CallState {
   isCameraOff: boolean
   isRecording: boolean
   isScreenSharing: boolean
-  // ❌ REMOVIDO: currentContact ya no pertenece aquí
   callDuration: number
 }
 
-// ✅ Agregamos un estado separado para el contacto seleccionado
+interface Contact {
+  id: string
+  name: string
+  status: "online" | "away" | "offline"
+  lastMessage?: string
+  avatar: string
+  isVerified?: boolean
+}
+
 export default function VideoCallInterface() {
   const [viewMode, setViewMode] = useState<ViewMode>("chat")
   const [callState, setCallState] = useState<CallState>({
@@ -33,9 +40,12 @@ export default function VideoCallInterface() {
     isScreenSharing: false,
     callDuration: 0,
   })
-  const [selectedContact, setSelectedContact] = useState<string | null>(null) // ✅ ¡ESTO ES CLAVE!
+  const [selectedContact, setSelectedContact] = useState<string | null>(null)
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [notification, setNotification] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  const currentUser = "Jefferson Correa"
 
   useEffect(() => {
     if (callState.isInCall) {
@@ -85,42 +95,68 @@ export default function VideoCallInterface() {
         setNotification("Compartiendo pantalla")
         break
     }
-
     setTimeout(() => setNotification(null), 3000)
+  }
+
+  const handleContactSelect = (contactName: string) => {
+    setSelectedContact(contactName)
+    setViewMode("chat")
+    setContacts(prev => {
+      const existingContact = prev.find(c => c.name === contactName)
+      if (existingContact) return prev
+      const newContact: Contact = {
+        id: Date.now().toString(),
+        name: contactName,
+        status: "online",
+        avatar: contactName.charAt(0).toUpperCase(),
+        isVerified: false,
+      }
+      return [...prev, newContact]
+    })
   }
 
   return (
     <div className="flex h-screen bg-[#141414] text-white">
       {/* Sidebar de contactos */}
       <ContactsSidebar
-        currentContact={selectedContact || ""} // ✅ Pasamos selectedContact (puede ser null)
-        onContactSelect={setSelectedContact} // ✅ Cuando se selecciona, actualizamos selectedContact
+        currentContact={selectedContact}
+        onContactSelect={handleContactSelect}
         onViewChange={setViewMode}
         currentView={viewMode}
+        contacts={contacts}
+        currentUser={currentUser}
       />
 
       {/* Área principal */}
       <div className="flex-1 flex flex-col relative">
-        {/* Barra superior — solo si hay contacto seleccionado */}
+        {/* Barra superior */}
         {selectedContact && (
-          <div className="flex items-center justify-between p-4 bg-[#1a1a1a] border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium">
-                  {selectedContact
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium">{selectedContact}</span>
-                {callState.isInCall && (
-                  <div className="flex items-center gap-2 text-sm text-gray-400">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span>En llamada - {formatDuration(callState.callDuration)}</span>
+          <div className="px-6 py-4 bg-[#1a1a1a] border-b border-gray-700">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <span className="font-medium text-white">
+                    {selectedContact.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">{selectedContact}</h3>
+                  <div className="flex items-center gap-2 text-sm text-green-400">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>En línea</span>
                   </div>
-                )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors group">
+                  <Phone className="w-5 h-5 text-gray-300 group-hover:text-green-400" />
+                </button>
+                <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors group">
+                  <Video className="w-5 h-5 text-gray-300 group-hover:text-blue-400" />
+                </button>
+                <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors group">
+                  <MoreVertical className="w-5 h-5 text-gray-300" />
+                </button>
               </div>
             </div>
           </div>
@@ -135,37 +171,45 @@ export default function VideoCallInterface() {
               currentContact={selectedContact}
             />
           )}
-
           {viewMode === "chat" && (
-            <ChatArea currentContact={selectedContact} /> // ✅ Aquí lo pasamos como null o string
+            <ChatArea
+              currentContact={selectedContact}
+              onContactSelect={handleContactSelect}
+              onViewChange={setViewMode}
+            />
           )}
-
           {viewMode === "screen-share" && <ScreenShareArea />}
-
           {viewMode === "screen-select" && (
             <div className="p-6">
               <h2 className="text-xl font-bold mb-6">Seleccionar pantalla para compartir</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div
-                  className="bg-[#1a1a1a] rounded-lg p-4 cursor-pointer hover:bg-[#2a2a2a] transition-colors"
+                  className="bg-[#1a1a1a] rounded-xl p-4 cursor-pointer hover:bg-[#2a2a2a] transition-all duration-200 transform hover:scale-105"
                   onClick={() => handleCallAction("start-screen-share")}
                 >
-                  <div className="aspect-video bg-gray-700 rounded mb-2 flex items-center justify-center">
-                    <span className="text-sm">Pantalla completa</span>
+                  <div className="aspect-video bg-gray-700 rounded-lg mb-3 flex items-center justify-center">
+                    <span className="text-sm font-medium">Pantalla completa</span>
                   </div>
-                  <p className="text-sm">Pantalla completa</p>
+                  <p className="text-sm text-center font-medium">Pantalla completa</p>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Controles de llamada — solo si hay llamada activa */}
-        {callState.isInCall && <CallControls callState={{ ...callState, currentContact: selectedContact || "" }} onAction={handleCallAction} />}
+        {/* Controles de llamada */}
+        {callState.isInCall && (
+          <CallControls
+            callState={{ ...callState, currentContact: selectedContact || "" }}
+            onAction={handleCallAction}
+          />
+        )}
       </div>
 
-      {/* Notificaciones */}
-      {notification && <NotificationToast message={notification} onClose={() => setNotification(null)} />}
+      {/* Notificaciones y errores */}
+      {notification && (
+        <NotificationToast message={notification} onClose={() => setNotification(null)} />
+      )}
       {error && <ErrorAlert message={error} onClose={() => setError(null)} />}
     </div>
   )

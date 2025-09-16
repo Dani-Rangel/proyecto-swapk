@@ -1,8 +1,8 @@
-"""Actualizacion
+"""Create Database
 
-Revision ID: 1736a174a8f4
+Revision ID: a8226aed0987
 Revises: 
-Create Date: 2025-09-07 15:23:26.875286
+Create Date: 2025-09-14 12:42:49.249199
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '1736a174a8f4'
+revision: str = 'a8226aed0987'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,7 +28,7 @@ def upgrade() -> None:
     sa.Column('fecha_creacion', sa.DateTime(timezone=True), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('habilidades',
+    op.create_table('habilidad',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('nombre', sa.String(length=255), nullable=True),
     sa.Column('descripcion', sa.Text(), nullable=True),
@@ -40,10 +40,11 @@ def upgrade() -> None:
     sa.Column('nombre', sa.String(length=255), nullable=False),
     sa.Column('correo', sa.String(length=255), nullable=False),
     sa.Column('contrasena_hash', sa.String(length=255), nullable=False),
-    sa.Column('rol', sa.Enum('Administrador', 'Moderador', 'Usuario', 'Verificado', name='rolusuario'), nullable=True),
+    sa.Column('rol', sa.Enum('Administrador', 'Moderador', 'Usuario', name='rolusuario'), nullable=True),
     sa.Column('fecha_creacion', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('correo')
+    sa.UniqueConstraint('correo'),
+    sa.UniqueConstraint('nombre')
     )
     op.create_table('chat_usuarios',
     sa.Column('chat_id', sa.Integer(), nullable=False),
@@ -68,14 +69,14 @@ def upgrade() -> None:
     op.create_table('expediente',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('usuario_id', sa.Integer(), nullable=True),
-    sa.Column('Nombre', sa.String(length=255), nullable=True),
-    sa.Column('Intitucion', sa.String(length=255), nullable=True),
+    sa.Column('nombre', sa.String(length=255), nullable=True),
+    sa.Column('institucion', sa.String(length=255), nullable=True),
     sa.Column('descripcion', sa.Text(), nullable=True),
     sa.Column('tipo', sa.Enum('CV', 'CERTIFICADO', 'ACTA', 'CARTA', 'BECAS', 'CONTRATOS', 'PROYECTOS', name='tipoexpedienteenum'), nullable=True),
     sa.Column('estado', sa.Enum('EN_PROCESO', 'VERIFICADO', 'PENDIENTE', 'RECHAZADO', name='tipoestadoenum'), nullable=True),
-    sa.Column('Url_Expediente', sa.String(length=255), nullable=True),
-    sa.Column('Fecha_Inicio', sa.DateTime(), nullable=True),
-    sa.Column('Fecha_Fin', sa.DateTime(), nullable=True),
+    sa.Column('url_expediente', sa.String(length=255), nullable=True),
+    sa.Column('fecha_inicio', sa.DateTime(), nullable=True),
+    sa.Column('fecha_fin', sa.DateTime(), nullable=True),
     sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -90,6 +91,19 @@ def upgrade() -> None:
     sa.Column('duracion', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['chat_id'], ['chats.id'], ),
     sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('mensajes',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('chat_id', sa.Integer(), nullable=True),
+    sa.Column('id_usuario', sa.Integer(), nullable=True),
+    sa.Column('contenido', sa.Text(), nullable=True),
+    sa.Column('tipo', sa.String(length=20), nullable=True),
+    sa.Column('url_archivo', sa.String(length=500), nullable=True),
+    sa.Column('leido', sa.Boolean(), nullable=True),
+    sa.Column('fecha', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['chat_id'], ['chats.id'], ),
+    sa.ForeignKeyConstraint(['id_usuario'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('notificaciones',
@@ -107,10 +121,8 @@ def upgrade() -> None:
     sa.Column('id_usuario', sa.Integer(), nullable=False),
     sa.Column('descripcion', sa.Text(), nullable=True),
     sa.Column('ubicacion', sa.String(length=255), nullable=True),
-    sa.Column('telefono', sa.String(length=20), nullable=True),
-    sa.Column('foto_perfil', sa.String(length=500), nullable=True),
-    sa.Column('sitio_web', sa.String(length=500), nullable=True),
-    sa.Column('fecha_nacimiento', sa.Date(), nullable=True),
+    sa.Column('Tel', sa.Integer(), nullable=True),
+    sa.Column('foto_perfil', sa.String(length=255), nullable=True),
     sa.ForeignKeyConstraint(['id_usuario'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -158,7 +170,7 @@ def upgrade() -> None:
     sa.Column('curso_id', sa.Integer(), nullable=True),
     sa.Column('habilidad_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['curso_id'], ['cursos.id'], ),
-    sa.ForeignKeyConstraint(['habilidad_id'], ['habilidades.id'], ),
+    sa.ForeignKeyConstraint(['habilidad_id'], ['habilidad.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('inscripciones_cursos',
@@ -172,24 +184,30 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('intercambios',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('id_Perfil1', sa.Integer(), nullable=True),
-    sa.Column('id_Perfil2', sa.Integer(), nullable=True),
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('id_usuario1', sa.Integer(), nullable=False),
+    sa.Column('id_perfil', sa.Integer(), nullable=False),
+    sa.Column('nivel', sa.Enum('Principiante', 'Intermedio', 'Avanzado', name='nivelintercambio'), nullable=True),
+    sa.Column('modo', sa.Enum('Virtual', 'Presencial', 'Hibrido', name='modointercambio'), nullable=True),
+    sa.Column('disponibilidad', sa.String(length=255), nullable=True),
+    sa.Column('idioma', sa.Enum('Ingles', 'Espanol', 'Portugues', name='idiomaintercambio'), nullable=True),
+    sa.Column('descripcion', sa.Text(), nullable=True),
+    sa.Column('valoracion', sa.Float(), nullable=True),
+    sa.Column('estado_trueque', sa.Boolean(), nullable=True),
     sa.Column('estado', sa.Enum('Pendiente', 'Confirmado', 'Finalizado', name='estadointercambio'), nullable=True),
-    sa.Column('fecha_inicio', sa.DateTime(), nullable=True),
-    sa.Column('fecha_fin', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['id_Perfil1'], ['perfiles.id'], ),
-    sa.ForeignKeyConstraint(['id_Perfil2'], ['perfiles.id'], ),
+    sa.Column('fecha_creacion', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['id_perfil'], ['perfiles.id'], ),
+    sa.ForeignKeyConstraint(['id_usuario1'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('perfil_habilidad',
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('Perfil_id', sa.Integer(), nullable=True),
+    sa.Column('perfil_id', sa.Integer(), nullable=True),
     sa.Column('habilidad_id', sa.Integer(), nullable=True),
     sa.Column('tipo', sa.Enum('OFRECE', 'BUSCA', name='tipoenum'), nullable=True),
     sa.Column('nivel', sa.Enum('PRINCIPIANTE', 'INTERMEDIO', 'EXPERTO', name='nivelenum'), nullable=True),
-    sa.ForeignKeyConstraint(['Perfil_id'], ['perfiles.id'], ),
-    sa.ForeignKeyConstraint(['habilidad_id'], ['habilidades.id'], ),
+    sa.ForeignKeyConstraint(['habilidad_id'], ['habilidad.id'], ),
+    sa.ForeignKeyConstraint(['perfil_id'], ['perfiles.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('publicaciones',
@@ -243,9 +261,8 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('intercambio_id', sa.Integer(), nullable=True),
     sa.Column('habilidad_id', sa.Integer(), nullable=True),
-    sa.Column('tipo', sa.Enum('OFRECE', 'BUSCA', name='tipoenum'), nullable=True),
-    sa.Column('nivel', sa.Enum('PRINCIPIANTE', 'INTERMEDIO', 'EXPERTO', name='nivelenum'), nullable=True),
-    sa.ForeignKeyConstraint(['habilidad_id'], ['habilidades.id'], ),
+    sa.Column('tipo', sa.Enum('OFRECE', 'BUSCA', name='tipohabilidad'), nullable=False),
+    sa.ForeignKeyConstraint(['habilidad_id'], ['habilidad.id'], ),
     sa.ForeignKeyConstraint(['intercambio_id'], ['intercambios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -294,12 +311,13 @@ def downgrade() -> None:
     op.drop_table('reportes')
     op.drop_table('perfiles')
     op.drop_table('notificaciones')
+    op.drop_table('mensajes')
     op.drop_table('llamadas')
     op.drop_table('expediente')
     op.drop_index(op.f('ix_cursos_id'), table_name='cursos')
     op.drop_table('cursos')
     op.drop_table('chat_usuarios')
     op.drop_table('usuarios')
-    op.drop_table('habilidades')
+    op.drop_table('habilidad')
     op.drop_table('chats')
     # ### end Alembic commands ###

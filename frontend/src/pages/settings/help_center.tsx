@@ -1,3 +1,4 @@
+// settings/help_center.tsx
 "use client"
 
 import { useTranslation } from "../../lib/useTranslations"
@@ -10,8 +11,9 @@ import { MessageSquare } from "lucide-react"
 import { useTheme } from "../../components/state/theme_context"
 import SettingsLayout from "../../components/settings_layout"
 import { useState } from "react"
+import ProtectedRoute from "@/components/protected_routes/protected_routes";
 
-export default function HelpCenter() {
+function HelpCenterComponent() {
   const { t } = useTranslation()
   const { theme } = useTheme()
 
@@ -144,5 +146,14 @@ export default function HelpCenter() {
         </Card>
       </div>
     </SettingsLayout>
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function HelpCenter() {
+  return (
+    <ProtectedRoute>
+      <HelpCenterComponent />
+    </ProtectedRoute>
   )
 }

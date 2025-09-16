@@ -29,7 +29,7 @@ class ChatUsuario(Base):
     fecha_unirse = Column(DateTime(timezone=True), default=datetime.now)
 
     chat = relationship("Chat", back_populates="usuarios")
-    usuarios = relationship("Usuario")
+    usuario = relationship("Usuario")
 
 
 

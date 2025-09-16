@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import SettingsLayout from "../../components/settings_layout"
+import ProtectedRoute from "@/components//protected_routes/protected_routes";
 
-export default function ChangeEmail() {
+function ChangeEmailComponent() {
   const { t } = useTranslation()
   const [currentEmail, setCurrentEmail] = useState("")
   const [newEmail, setNewEmail] = useState("")
@@ -172,5 +173,14 @@ export default function ChangeEmail() {
         </Card>
       </div>
     </SettingsLayout>
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function ChangeEmail() {
+  return (
+    <ProtectedRoute>
+      <ChangeEmailComponent />
+    </ProtectedRoute>
   )
 }

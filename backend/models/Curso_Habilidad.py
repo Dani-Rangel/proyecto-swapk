@@ -7,7 +7,7 @@ class CursoHabilidad(Base):
     __tablename__ = "curso_habilidad"
     id = Column(Integer, primary_key=True)
     curso_id = Column(Integer, ForeignKey("cursos.id"))
-    habilidad_id = Column(Integer, ForeignKey("habilidades.id"))
+    habilidad_id = Column(Integer, ForeignKey("habilidad.id"))
 
     curso = relationship("Curso", back_populates="curso_habilidades")
     habilidad = relationship("Habilidad", back_populates="curso_habilidades")

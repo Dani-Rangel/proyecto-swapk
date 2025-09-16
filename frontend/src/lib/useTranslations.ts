@@ -1,5 +1,5 @@
 import { useLanguage } from "../components/state/language_change"
-import { translations } from "./i18n"  // ✅ Importación estática
+import { translations } from "./i18n"  // Importación estática
 
 export type Locale = keyof typeof translations
 

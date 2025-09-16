@@ -3,13 +3,14 @@ from sqlalchemy.orm import Session
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from backend.db.database import get_db
-from backend.models import usuarios
-from backend.schemas.user_schema import UserResponse, UserUpdate, PasswordUpdate, PasswordConfirm
+from backend.models.usuarios import Usuario
+from backend.schemas.user_schema import UserResponse, UserUpdate, PasswordUpdate, PasswordConfirm, UserForChatResponse 
 from backend.services.oauth2 import get_current_user
 from backend.models.perfil import Perfil
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
 ph = PasswordHasher()
 
 # Obtener perfil del usuario autenticado
@@ -70,3 +71,23 @@ def delete_account(
     db.delete(current_user)
     db.commit()
     return {"msg": "Cuenta eliminada correctamente"}
+
+
+
+# Obtendremos todos los usuarios (para la funcionalidad chat)
+@router.get("/all", response_model=list[UserForChatResponse])
+def get_all_users(db: Session = Depends(get_db)):
+    """
+    Obtiene todos los usuarios registrados para mostrar en el selector de chat.
+    """
+    users = db.query(Usuario).all()
+    
+    return [
+        UserForChatResponse(
+            id=str(user.id),
+            name=user.nombre,
+            username=user.correo.split("@")[0],  # Ej: "jeffersonsticcorrealelopez@gmail.com" → "jeffersonsticcorrealelopez"
+            avatar=f"https://ui-avatars.com/api/?name={user.nombre}&background=random&color=fff&size=128"
+        )
+        for user in users
+    ]

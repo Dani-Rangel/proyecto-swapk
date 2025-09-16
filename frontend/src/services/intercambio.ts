@@ -8,7 +8,7 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// ENUMS
+// ✅ ENUMS
 export enum EstadoIntercambio {
   Pendiente = "Pendiente",
   Confirmado = "Confirmado",
@@ -32,7 +32,7 @@ export enum IdiomaIntercambio {
 
 export type TipoHabilidad = "ofrece" | "busca";
 
-// Interfaces auxiliares
+// ✅ Interfaces auxiliares
 export interface Usuario {
   id: number;
   nombre: string;
@@ -46,17 +46,15 @@ export interface Perfil {
 // Para enviar en la creación/edición
 export interface HabilidadIntercambio {
   habilidad_id: number;
-  tipo: TipoHabilidad;
 }
 
 // Lo que devuelve el backend (con nombre incluido)
 export interface Habilidad {
   id: number;
   nombre: string;
-  tipo: TipoHabilidad;
 }
 
-// Base de Intercambio
+// ✅ Base de Intercambio (para enviar al backend)
 export interface IntercambioBase {
   id_usuario1: number;
   id_perfil: number;
@@ -68,10 +66,10 @@ export interface IntercambioBase {
   valoracion?: number;
   estado?: EstadoIntercambio;
   habilidades_ofrecidas_ids?: number[];
-  habilidades_buscadas_ids?: number[]; // solo ids y tipo
+  habilidades_buscadas_ids?: number[];// solo ids y tipo
 }
 
-// Respuesta de Intercambio
+// ✅ Respuesta de Intercambio (lo que recibes del backend)
 export interface IntercambioResponse {
   id: number;
   id_usuario1: number;
@@ -86,8 +84,8 @@ export interface IntercambioResponse {
   fecha_creacion: string;
   usuario1: Usuario;
   perfil: Perfil;
-    habilidades_ofrecidas: Habilidad[];
-  habilidades_buscadas: Habilidad[]; // ya viene con nombre y tipo
+   habilidades_ofrece: Habilidad[];
+  habilidades_busca: Habilidad[];
 }
 
 // -------------------------------
@@ -175,58 +173,87 @@ export const eliminarIntercambio = async (id: number): Promise<boolean> => {
 // FUNCIONES HABILIDADES
 // -------------------------------
 
-export const obtenerHabilidades = async (): Promise<Habilidad[]> => {
+// Obtener todas las habilidades (nueva función)
+export const obtenerTodasHabilidades = async (): Promise<Habilidad[]> => {
   try {
-    const res = await api.get("/habilidades");
+    const res = await api.get("/habilidades") // ajusta la ruta si es diferente
+    return res.data
+  } catch (error: any) {
+    console.error("❌ Error al obtener habilidades:", error.response?.data || error.message)
+    return []
+  }
+}
+
+
+// Obtener habilidades asociadas a un intercambio
+export const obtenerHabilidadesPorIntercambio = async (
+  idIntercambio: number
+): Promise<Habilidad[]> => {
+  try {
+    const res = await api.get(`/intercambio_habilidades/intercambio/${idIntercambio}`);
     return res.data;
   } catch (error: any) {
     console.error(
-      "❌ Error al obtener habilidades:",
+      `❌ Error al obtener habilidades del intercambio ${idIntercambio}:`,
       error.response?.data || error.message
     );
     return [];
   }
 };
 
-export const actualizarHabilidad = async (
-  id: number,
-  nombre: string
+// Crear una habilidad asociada a un intercambio
+export const crearIntercambioHabilidad = async (
+  intercambio_id: number,
+  habilidad_id: number,
+  tipo: TipoHabilidad
 ): Promise<Habilidad | null> => {
   try {
-    const res = await api.put(`/habilidades/${id}`, { nombre });
+    const res = await api.post(`/intercambio_habilidades/`, {
+      intercambio_id,
+      habilidad_id,
+      tipo,
+    });
     return res.data;
   } catch (error: any) {
     console.error(
-      `❌ Error al actualizar habilidad ${id}:`,
+      `❌ Error al crear habilidad para intercambio ${intercambio_id}:`,
       error.response?.data || error.message
     );
     return null;
   }
 };
 
-export const eliminarHabilidad = async (id: number): Promise<boolean> => {
+// Actualizar una habilidad asociada a un intercambio
+export const actualizarIntercambioHabilidad = async (
+  id: number,
+  intercambio_id: number,
+  habilidad_id: number,
+  tipo: TipoHabilidad
+): Promise<Habilidad | null> => {
   try {
-    await api.delete(`/habilidades/${id}`);
-    return true;
+    const res = await api.put(`/intercambio_habilidades/${id}`, {
+      intercambio_id,
+      habilidad_id,
+      tipo,
+    });
+    return res.data;
   } catch (error: any) {
     console.error(
-      `❌ Error al eliminar habilidad ${id}:`,
+      `❌ Error al actualizar habilidad asociada ${id}:`,
       error.response?.data || error.message
     );
-    return false;
+    return null;
   }
 };
 
-// Eliminar todas las habilidades asociadas a un intercambio
-export const eliminarHabilidadesPorIntercambio = async (
-  idIntercambio: number
-): Promise<boolean> => {
+// Eliminar habilidad asociada a un intercambio
+export const eliminarIntercambioHabilidad = async (id: number): Promise<boolean> => {
   try {
-    await api.delete(`/intercambios/${idIntercambio}/habilidades`);
+    await api.delete(`/intercambio_habilidades/${id}`);
     return true;
   } catch (error: any) {
     console.error(
-      `❌ Error al eliminar habilidades del intercambio ${idIntercambio}:`,
+      `❌ Error al eliminar habilidad asociada ${id}:`,
       error.response?.data || error.message
     );
     return false;
