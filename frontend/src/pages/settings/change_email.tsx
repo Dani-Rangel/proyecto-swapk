@@ -1,12 +1,15 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import SettingsLayout from "../../components/settings_layout"
+import ProtectedRoute from "@/components//protected_routes/protected_routes";
 
-export default function ChangeEmail() {
+function ChangeEmailComponent() {
+  const { t } = useTranslation()
   const [currentEmail, setCurrentEmail] = useState("")
   const [newEmail, setNewEmail] = useState("")
   const [confirmEmail, setConfirmEmail] = useState("")
@@ -25,32 +28,30 @@ export default function ChangeEmail() {
 
         const savedUser = JSON.parse(savedUserStr)
         const token = savedUser.token
-        const emailFromStorage = savedUser.correo || savedUser.user?.correo
+        if (!token) throw new Error("No hay token de autenticación")
 
-        // ✅ Primero intenta usar el correo de localStorage
-        if (emailFromStorage) {
-          setCurrentEmail(emailFromStorage)
-        }
-
-        // ✅ Luego refresca desde API (opcional)
+        // 🔹 Intentar fetch desde API
         const res = await fetch("http://localhost:8000/users/me", {
           headers: {
             "Authorization": `Bearer ${token}`
           }
         })
 
-        if (res.ok) {
-          const data = await res.json()
-          const apiEmail = data.correo // ✅ Usa 'correo', no 'email'
-          setCurrentEmail(apiEmail)
-
-          // ✅ Actualiza localStorage si hay cambios
-          if (apiEmail !== savedUser.correo) {
-            const updatedUser = { ...savedUser, correo: apiEmail }
-            localStorage.setItem("user", JSON.stringify(updatedUser))
-          }
+        if (!res.ok) {
+          const errText = await res.text()
+          throw new Error(errText || "Error al obtener usuario")
         }
-      } catch (err) {
+
+        const data = await res.json()
+        setCurrentEmail(data.correo || "")
+        
+        // 🔹 Actualizar localStorage si hubo cambio
+        if (data.correo !== savedUser.correo) {
+          const updatedUser = { ...savedUser, correo: data.correo }
+          localStorage.setItem("user", JSON.stringify(updatedUser))
+        }
+
+      } catch (err: any) {
         console.error("Error al obtener usuario:", err)
         setMessage("No se pudo cargar tu información")
       }
@@ -59,7 +60,7 @@ export default function ChangeEmail() {
     fetchUser()
   }, [])
 
-  // ✅ Actualizar correo
+  // 🔹 Actualizar correo
   const handleUpdate = async () => {
     if (newEmail !== confirmEmail) {
       setMessage("Los correos no coinciden")
@@ -83,17 +84,16 @@ export default function ChangeEmail() {
 
       const savedUser = JSON.parse(savedUserStr)
       const token = savedUser.token
-      const userId = savedUser.id
+      if (!token) throw new Error("No hay token de autenticación")
 
-      const res = await fetch(`http://localhost:8000/users/me`, {
+      // 🔹 PUT al endpoint
+      const res = await fetch("http://localhost:8000/users/me", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ 
-          correo: newEmail  // ✅ Asegúrate de que tu backend espere 'correo'
-        })
+        body: JSON.stringify({ email: newEmail })
       })
 
       const data = await res.json()
@@ -102,21 +102,17 @@ export default function ChangeEmail() {
         throw new Error(data.detail || "Error al actualizar correo")
       }
 
-      // ✅ Actualiza estado y localStorage
+      // 🔹 Actualizar estado y localStorage
       setCurrentEmail(newEmail)
       setNewEmail("")
       setConfirmEmail("")
-
-      const updatedUser = {
-        ...savedUser,
-        correo: newEmail,
-        user: { ...savedUser.user, correo: newEmail }
-      }
+      const updatedUser = { ...savedUser, correo: newEmail, user: { ...savedUser.user, correo: newEmail } }
       localStorage.setItem("user", JSON.stringify(updatedUser))
 
       setMessage("Correo actualizado correctamente ✅")
 
     } catch (err: any) {
+      console.error("Error al actualizar correo:", err)
       setMessage(err.message)
     } finally {
       setLoading(false)
@@ -164,7 +160,7 @@ export default function ChangeEmail() {
               />
             </div>
 
-            {message && <p className="text-sm text-red-400">{message}</p>}
+            {message && <p className={`text-sm ${message.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>{message}</p>}
 
             <Button
               onClick={handleUpdate}
@@ -177,5 +173,14 @@ export default function ChangeEmail() {
         </Card>
       </div>
     </SettingsLayout>
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function ChangeEmail() {
+  return (
+    <ProtectedRoute>
+      <ChangeEmailComponent />
+    </ProtectedRoute>
   )
 }

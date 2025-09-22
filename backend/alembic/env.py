@@ -1,7 +1,6 @@
 from logging.config import fileConfig
 import sys
 import os
-
 from sqlalchemy import create_engine
 from sqlalchemy import pool
 from alembic import context
@@ -12,7 +11,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 # Importa configuración y modelos
 from backend.db.database import MARIADB_URL
 from backend.db.base import Base
-from backend.models import Usuario, Habilidad, Intercambio, Resena, Mensaje, Reporte, Notificacion,  Sugerencia, Archivo, Curso, InscripcionCurso,Perfil,Archivo_Expediente, Attachment, Chat,CondicionIntercambio, CursoHabilidad, Expediente, IntercambioHabilidad, Llamada, perfilHabilidad, comentario, like, publicaciones
+from backend.models import * 
+
+print("Modelos cargados:", [mapper.class_.__name__ for mapper in Base.registry.mappers])
+print("Tablas detectadas:", list(Base.metadata.tables.keys()))
 
 # Configuración de Alembic
 config = context.config

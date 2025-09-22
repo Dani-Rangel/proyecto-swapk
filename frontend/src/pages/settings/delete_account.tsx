@@ -1,30 +1,33 @@
 "use client"
 
+import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle } from "lucide-react"
 import SettingsLayout from "../../components/settings_layout"
+import ProtectedRoute from "@/components/protected_routes/protected_routes";
 
-export default function DeleteAccount() {
+function DeleteAccountComponent() {
+  const { t } = useTranslation()
   const [confirmText, setConfirmText] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [userData, setUserData] = useState<{
-    nombre: string;
-    correo: string;
-    id: number;
+    nombre: string
+    correo: string
+    id: number
   } | null>(null)
 
-  // 🔁 Cargar datos del usuario al iniciar
+  // 🔁 Cargar datos del usuario
   useEffect(() => {
     const loadUserData = () => {
       try {
         const savedUserStr = localStorage.getItem("user")
         if (!savedUserStr) {
-          setMessage("No has iniciado sesión")
+          setMessage("No hay sesión activa")
           return
         }
 
@@ -35,27 +38,28 @@ export default function DeleteAccount() {
           id: savedUser.id
         })
       } catch (err) {
-        console.error("Error al cargar datos del usuario:", err)
-        setMessage("Error al cargar tu información")
+        console.error("Error cargando datos del usuario", err)
+        setMessage("Error cargando datos del usuario")
       }
     }
 
     loadUserData()
-  }, [])
+  }, []) 
 
-  // ✅ Eliminar cuenta
+
+  // Eliminar cuenta
   const handleDelete = async () => {
     if (confirmText !== "ELIMINAR") {
-      setMessage("Debes escribir 'ELIMINAR' para confirmar")
+      setMessage(t("confirm_text_error"))
       return
     }
 
     if (!password) {
-      setMessage("Debes ingresar tu contraseña")
+      setMessage(t("password_required"))
       return
     }
 
-    if (!window.confirm("¿Estás seguro? Esta acción no se puede deshacer.")) {
+    if (!window.confirm(t("delete_confirm_alert"))) {
       return
     }
 
@@ -65,7 +69,7 @@ export default function DeleteAccount() {
 
       const savedUserStr = localStorage.getItem("user")
       if (!savedUserStr) {
-        setMessage("No has iniciado sesión")
+        setMessage(t("no_session"))
         return
       }
 
@@ -78,21 +82,20 @@ export default function DeleteAccount() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ password }) // Asegúrate de que tu backend espere la contraseña
+        body: JSON.stringify({ password }) // enviar contraseña para verificación
       })
 
       const data = await res.json()
 
       if (!res.ok) {
-        throw new Error(data.detail || "Error al eliminar la cuenta")
+        throw new Error(data.detail || t("delete_error"))
       }
 
-      // ✅ Éxito: limpiar sesión
+      // ✅ Éxito
       localStorage.removeItem("user")
-      localStorage.removeItem("token") // por si lo tienes guardado aparte
-      setMessage("Cuenta eliminada correctamente ✅")
+      localStorage.removeItem("token")
+      setMessage(t("delete_success"))
 
-      // ✅ Redirigir al login después de 2 segundos
       setTimeout(() => {
         window.location.href = "/auth/login"
       }, 2000)
@@ -107,7 +110,7 @@ export default function DeleteAccount() {
   return (
     <SettingsLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Eliminar cuenta</h1>
+        <h1 className="text-2xl font-bold">{t("delete_account_title")}</h1>
 
         {message && (
           <p className={`text-sm ${message.includes("Error") || message.includes("no") ? "text-red-400" : "text-green-400"}`}>
@@ -115,12 +118,12 @@ export default function DeleteAccount() {
           </p>
         )}
 
-        {/* Mostrar datos del usuario */}
+        {/* Datos del usuario */}
         {userData && (
           <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <h3 className="font-semibold">Verificando tu identidad</h3>
-            <p><strong>Nombre:</strong> {userData.nombre}</p>
-            <p><strong>Correo:</strong> {userData.correo}</p>
+            <h3 className="font-semibold">{t("verify_identity")}</h3>
+            <p><strong>{t("name")}:</strong> {userData.nombre}</p>
+            <p><strong>{t("email")}:</strong> {userData.correo}</p>
           </div>
         )}
 
@@ -128,20 +131,17 @@ export default function DeleteAccount() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-400">
               <AlertTriangle className="w-5 h-5" />
-              Zona de peligro
+              {t("danger_zone")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-red-900/30 p-4 rounded-lg border border-red-700">
-              <h3 className="font-semibold text-red-300 mb-2">¡Advertencia!</h3>
-              <p className="text-sm text-red-200">
-                Esta acción no se puede deshacer. Se eliminarán permanentemente todos tus datos, incluyendo tu perfil,
-                configuraciones y cualquier contenido asociado.
-              </p>
+              <h3 className="font-semibold text-red-300 mb-2">{t("warning_title")}</h3>
+              <p className="text-sm text-red-200">{t("delete_warning")}</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Escribe "ELIMINAR" para confirmar</label>
+              <label className="block text-sm font-medium mb-2">{t("write_delete_to_confirm")}</label>
               <Input
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
@@ -151,7 +151,7 @@ export default function DeleteAccount() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Confirma tu contraseña</label>
+              <label className="block text-sm font-medium mb-2">{t("confirm_password")}</label>
               <Input
                 type="password"
                 value={password}
@@ -166,11 +166,20 @@ export default function DeleteAccount() {
               disabled={confirmText !== "ELIMINAR" || !password || loading}
               className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
             >
-              {loading ? "Eliminando..." : "Eliminar cuenta permanentemente"}
+              {loading ? t("deleting") : t("delete_account_button")}
             </Button>
           </CardContent>
         </Card>
       </div>
     </SettingsLayout>
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function DeleteAccount() {
+  return (
+    <ProtectedRoute>
+      <DeleteAccountComponent />
+    </ProtectedRoute>
   )
 }

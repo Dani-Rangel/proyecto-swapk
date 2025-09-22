@@ -94,9 +94,11 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 
     return {
-        "message": "Login exitoso",
-        "token": token,
-        "user": {
-            "id": user.id,
-        }
+    "message": "Login exitoso",
+    "token": token,
+    "user": {
+        "id": user.id,
+        "nombre": user.nombre, 
+        "correo": user.correo   
     }
+}

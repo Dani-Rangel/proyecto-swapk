@@ -11,14 +11,19 @@ class Publicacion(Base):
     titulo = Column(String(255), nullable=False)
     contenido = Column(Text, nullable=False)
     tipo = Column(Enum("Intercambio", "Curso", "Pregunta", "Logro"), nullable=False)
-    imagen = Column(String(500), nullable=True)  # URL de la imagen
+    imagen = Column(String(500), nullable=True)
     fecha_creacion = Column(DateTime(timezone=True), default=datetime.utcnow)
     id_usuario = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     id_perfil = Column(Integer, ForeignKey("perfiles.id"))
 
     usuario = relationship("Usuario", back_populates="publicaciones")
     perfil = relationship("Perfil", back_populates="publicaciones")
-    comentarios = relationship("Comentario", back_populates="publicacion")
+    comentarios = relationship(
+        "Comentario",
+        back_populates="publicacion",
+        cascade="all, delete-orphan",
+        passive_deletes=True
+    )
     likes = relationship("Like", back_populates="publicacion")
 
     def __repr__(self):

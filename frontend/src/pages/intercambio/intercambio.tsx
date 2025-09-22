@@ -2,8 +2,12 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import Image from "next/image"
+import { useTranslation } from "@/lib/useTranslations"
+import { useRouter } from "next/navigation"; // ✅ Corregido: next/router → next/navigation
+import toast, { Toaster } from 'react-hot-toast'
+import Link from "next/link"
+import { Input } from "@/components/ui/input"
 import {
   Search,
   Menu,
@@ -15,16 +19,22 @@ import {
   Star,
   Camera,
   Plus,
+  Home,
   Settings,
+  Moon, 
+  Sun,
+  PlusIcon,
   LogOut,
   Calendar,
+  TrendingUp,
+  RefreshCw,
+  BookOpen,
   Edit,
   Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import CrearTruequeModal, { TruequeFormData } from "@/components/ui/CreateTruequeForm"
 import { TipoHabilidad } from "@/services/intercambio"
-
 import {
   obtenerIntercambios,
   eliminarIntercambio,
@@ -38,12 +48,21 @@ import {
   obtenerTodasHabilidades,
 } from "@/services/intercambio"
 import { actualizarIntercambio } from "@/services/intercambio"
-
-
+import { useNotificaciones } from "@/context/notificacionesContext"
 import { getCurrentUser } from "@/lib/auth"
+import ProtectedRoute from "@/components/protected_routes/protected_routes";
+import { MainSidebar } from "@/components/MainSidebar"
 
-export default function SwapkPlatform() {
+function SwapkPlatformComponent() {
   const router = useRouter()
+  const { t } = useTranslation()
+  const { agregarNotificacion } = useNotificaciones()
+
+  // Tema oscuro
+  const [isDark, setIsDark] = useState(true)
+  const toggleTheme = () => setIsDark(prev => !prev)
+
+  // Estados
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [modalidad, setModalidad] = useState("")
@@ -54,68 +73,56 @@ export default function SwapkPlatform() {
   const [habilidades, setHabilidades] = useState<Habilidad[]>([])
   const [trueques, setTrueques] = useState<IntercambioResponse[]>([])
   const [currentUser, setCurrentUser] = useState(getCurrentUser())
+  const [user, setUser] = useState<any>(null)
+  const [perfil, setPerfil] = useState<any>(null)
 
   // Validar usuario logueado
   useEffect(() => {
     const user = getCurrentUser()
     if (user) setCurrentUser(user)
-    else router.push("/login")
+    else router.push("/auth/login") // ✅ Corregido: /login → /auth/login
   }, [router])
 
-  // Cargar intercambios
+  // Cargar intercambios y habilidades
   useEffect(() => {
-    const fetchIntercambios = async () => {
-      const data = await obtenerIntercambios()
-      setTrueques(data)
+    const fetchData = async () => {
+      try {
+        const [truequesData, habilidadesData] = await Promise.all([
+          obtenerIntercambios(),
+          obtenerTodasHabilidades(),
+        ])
+        setHabilidades(habilidadesData)
+        setTrueques(truequesData)
+      } catch (error) {
+        console.error("Error cargando trueques o habilidades:", error)
+      }
     }
-    fetchIntercambios()
+    fetchData()
   }, [])
-
-  // Cargar habilidades
- useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const [truequesData, habilidadesData] = await Promise.all([
-        obtenerIntercambios(),
-        obtenerTodasHabilidades(),
-      ]);
-
-      setHabilidades(habilidadesData);   // Se usa para el formulario
-      setTrueques(truequesData);         // Ya viene con nombres de habilidades
-    } catch (error) {
-      console.error("Error cargando trueques o habilidades:", error);
-    }
-  };
-
-  fetchData();
-}, []);
-
-
 
   const handleLogout = () => {
     localStorage.removeItem("user")
     localStorage.removeItem("token")
-    router.push("/login")
+    router.push("/auth/login") // ✅ Corregido: /login → /auth/login
   }
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => e.preventDefault()
 
   // Transformar IntercambioResponse a TruequeFormData para el modal
- const mapIntercambioToFormData = (intercambio: IntercambioResponse): TruequeFormData => ({
-  modalidad: intercambio.modo || "",
-  nivel: intercambio.nivel || "",
-  idioma: intercambio.idioma || "",
-  descripcion: intercambio.descripcion || "",
-  disponibilidad: intercambio.disponibilidad || "",
-  habilidades_ofrecidas_ids: intercambio.habilidades_ofrece?.map(h => h.id) || [],
-  habilidades_buscadas_ids: intercambio.habilidades_busca?.map(h => h.id) || [],
-})
-
+  const mapIntercambioToFormData = (intercambio: IntercambioResponse): TruequeFormData => ({
+    modalidad: intercambio.modo || "",
+    nivel: intercambio.nivel || "",
+    idioma: intercambio.idioma || "",
+    descripcion: intercambio.descripcion || "",
+    disponibilidad: intercambio.disponibilidad || "",
+    habilidades_ofrecidas_ids: intercambio.habilidades_ofrece?.map(h => h.id) || [],
+    habilidades_buscadas_ids: intercambio.habilidades_busca?.map(h => h.id) || [],
+  })
 
   // Crear o actualizar trueque
   const handleSaveTrueque = async (formData: TruequeFormData) => {
     if (!currentUser) {
-      alert("Debes iniciar sesión para crear un intercambio")
+      alert(t("login_required_exchange"))
       return
     }
 
@@ -129,7 +136,7 @@ export default function SwapkPlatform() {
     if (truequeEditando) {
       const updatedTrueque = {
         id_usuario1: currentUser.id,
-        id_perfil: currentUser.id, // Esto deberías ajustar si los perfiles son distintos
+        id_perfil: currentUser.id,
         modo: formData.modalidad as ModoIntercambio,
         nivel: formData.nivel as NivelIntercambio,
         idioma: formData.idioma as IdiomaIntercambio,
@@ -166,7 +173,21 @@ export default function SwapkPlatform() {
 
       try {
         const saved = await crearIntercambio(newTrueque)
-        if (saved) setTrueques((prev) => [...prev, saved])
+        if (saved) {
+        setTrueques((prev) => [...prev, saved])
+
+        // 🚀 Solo si es una NUEVA publicación (no edición), crear notificación
+        if (!truequeEditando) {
+          const user = getCurrentUser()
+          const nombreUsuario = user?.nombre || "Un usuario"
+
+          agregarNotificacion({
+            tipo: "Intercambio", // ✅ Coincide con tu enum en el backend
+            contenido: `El usuario ${nombreUsuario} ha creado un nuevo intercambio: ${formData.modalidad} - ${formData.nivel}.`,
+            id_usuario: user?.id || 0,
+          })
+        }
+      }
       } catch (error) {
         console.error("❌ Error al crear intercambio:", error)
       }
@@ -177,7 +198,7 @@ export default function SwapkPlatform() {
   }
 
   const handleDeleteTrueque = async (id: number) => {
-    if (!confirm("¿Seguro que quieres eliminar este intercambio?")) return
+    if (!confirm(t("confirm_delete_exchange"))) return
     const eliminado = await eliminarIntercambio(id)
     if (eliminado) setTrueques(trueques.filter((t) => t.id !== id))
   }
@@ -222,109 +243,61 @@ export default function SwapkPlatform() {
     return matchesSearchQuery && matchesFilters
   })
 
+  // Clases de estilo consistentes con el Sidebar
+  const sidebarBgClass = isDark ? "bg-[#1E1E1E]" : "bg-white";
+  const sidebarBorderClass = isDark ? "border-[#2E2E2E]" : "border-gray-200";
+  const sidebarTextClass = isDark ? "text-[#F5F5F5]" : "text-gray-900";
+  const sidebarMutedTextClass = isDark ? "text-[#A0A0A0]" : "text-gray-600";
+  const sidebarInputClass = isDark ? "bg-[#1E1E1E] text-[#F5F5F5] placeholder-[#A0A0A0] border-[#2E2E2E]" : "bg-gray-100 text-gray-900 placeholder-gray-500 border-gray-300";
+  const sidebarCardClass = isDark ? "bg-[#2E2E2E] border-[#2E2E2E]" : "bg-white border-gray-200";
+  const sidebarButtonClass = isDark ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-500 hover:bg-blue-600";
+
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
-      {/* Sidebar */}
-      <nav
-        className={`fixed md:relative h-screen bg-[rgb(30,30,30)] border-[#2E2E2E] backdrop-blur-md border-r flex flex-col transition-all duration-300
-        ${isSidebarOpen ? "w-60 fixed" : "w-14 fixed"}`}
-      >
-        {/* Botón abrir/cerrar */}
-        <div className="flex justify-end p-2">
-          <button
-            className="text-white hover:text-blue-400"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          >
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
-        </div>
+    <div className={`flex h-screen ${isDark ? "bg-[#1A1A1A]" : "bg-gray-50"} ${sidebarTextClass}`}>
+      {/* Botón Hamburguesa */}
+      <div className="absolute top-4 left-4 md:hidden z-50">
+        <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`${isDark ? "text-gray-300" : "text-gray-600"}`}>
+          {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </Button>
+      </div>
 
-        {/* Logo */}
-        {isSidebarOpen && (
-          <div className="flex items-center mb-8 px-4">
-            <img src="/img/logoswapk.png" alt="Swapk Logo" className="w-7 h-auto" />
-            <span className="text-white font-bold text-lg">Swapk</span>
-          </div>
-        )}
-
-        {/* Menú lateral */}
-        {isSidebarOpen && (
-          <div className="flex gap-12 justify-center mb-12">
-            <User className="w-6 h-6 hover:text-blue-400 cursor-pointer" />
-            <Bell className="w-6 h-6 hover:text-blue-400 cursor-pointer" />
-            <MessageSquare className="w-6 h-6 hover:text-blue-400 cursor-pointer" />
-          </div>
-        )}
-
-        {/* Links */}
-        <div className="flex flex-col gap-4 mb-8 px-5">
-          <button className="flex items-center gap-3 hover:text-blue-400">
-            <HomeIcon className="w-5 h-5" />
-            {isSidebarOpen && "INICIO"}
-          </button>
-          <button className="flex items-center gap-3 hover:text-blue-400">
-            <Search className="w-5 h-5" />
-            {isSidebarOpen && "EXPLORAR"}
-          </button>
-          <button className="flex items-center gap-3 hover:text-blue-400">
-            <Star className="w-5 h-5" />
-            {isSidebarOpen && "MIS TRUEQUES"}
-          </button>
-          <button className="flex items-center gap-3 hover:text-blue-400">
-            <Camera className="w-5 h-5" />
-            {isSidebarOpen && "MIS CURSOS"}
-          </button>
-          <button className="flex items-center gap-3 hover:text-blue-400">
-            <Plus className="w-5 h-5" />
-            {isSidebarOpen && "COMUNIDAD"}
-          </button>
-          <button className="flex items-center gap-3 hover:text-blue-400">
-            <Settings className="w-5 h-5" />
-            {isSidebarOpen && "AJUSTES"}
-          </button>
-        </div>
-
-        {/* Logout */}
-        <div className="mt-auto px-2 mb-4">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 text-red-500 hover:text-red-400"
-          >
-            <LogOut className="w-5 h-5" />
-            {isSidebarOpen && <span>Cerrar sesión</span>}
-          </button>
-        </div>
-      </nav>
+      {/* Sidebar Izquierdo */}
+       <MainSidebar
+                  isDark={isDark}
+                  toggleTheme={toggleTheme}
+                  isSidebarOpen={isSidebarOpen}
+                  setIsSidebarOpen={setIsSidebarOpen}
+                />
 
       {/* Main */}
       <div className="flex-1 transition-all duration-300 ml-2">
         <div className="flex-1 p-6 overflow-y-auto">
           {/* Encabezado */}
-          <div className="flex items-center justify-between mb-8 bg-gray-800 p-4 rounded-lg border border-gray-700">
-            <h2 className="text-2xl font-bold">Intercambios</h2>
+          <div className={`flex items-center justify-between mb-8 ${sidebarBgClass} ${sidebarBorderClass} p-4 rounded-lg border`}>
+            <h2 className={`text-2xl font-bold ${sidebarTextClass}`}>{t("exchanges_title")}</h2>
             <Button
               onClick={() => setIsCrearModalOpen(true)}
-              className="bg-blue-600 hover:bg-blue-700"
+              className={sidebarButtonClass}
             >
-              Crear trueque
+              {t("create_exchange")}
             </Button>
           </div>
 
           {/* Filtros */}
-          <div className="mb-6 bg-gray-800 p-4 rounded-lg border border-gray-700">
+          <div className={`mb-6 ${sidebarBgClass} ${sidebarBorderClass} p-4 rounded-lg border`}>
             <form
               onSubmit={handleSearch}
               className="flex flex-col md:flex-row md:items-center md:gap-4"
             >
               {/* Buscador */}
-              <div className="flex items-center bg-gray-700 px-3 py-2 rounded-lg flex-1">
-                <Search className="w-5 h-5 text-gray-400 mr-2" />
+              <div className={`flex items-center ${isDark ? "bg-[#1E1E1E]" : "bg-gray-100"} px-3 py-2 rounded-lg flex-1 border ${isDark ? "border-[#2E2E2E]" : "border-gray-300"}`}>
+                <Search className={`w-5 h-5 ${sidebarMutedTextClass} mr-2`} />
                 <input
                   type="text"
-                  placeholder="Buscar por descripción, nivel o modalidad..."
+                  placeholder={t("search_placeholder_exchange")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-transparent outline-none w-full text-white placeholder-gray-400"
+                  className="bg-transparent outline-none w-full placeholder-current text-inherit"
                 />
               </div>
 
@@ -332,11 +305,11 @@ export default function SwapkPlatform() {
               <select
                 value={modalidad}
                 onChange={(e) => setModalidad(e.target.value)}
-                className="mt-2 md:mt-0 bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600"
+                className={`${sidebarInputClass} px-3 py-2 rounded-lg mt-2 md:mt-0`}
               >
-                <option value="">Todas las modalidades</option>
+                <option value="">{t("all_modalities")}</option>
                 {Object.values(ModoIntercambio).map((modo) => (
-                  <option key={modo} value={modo}>
+                  <option key={modo} value={modo} className={sidebarTextClass}>
                     {modo}
                   </option>
                 ))}
@@ -345,11 +318,11 @@ export default function SwapkPlatform() {
               <select
                 value={nivel}
                 onChange={(e) => setNivel(e.target.value)}
-                className="mt-2 md:mt-0 bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600"
+                className={`${sidebarInputClass} px-3 py-2 rounded-lg mt-2 md:mt-0`}
               >
-                <option value="">Todos los niveles</option>
+                <option value="">{t("all_levels")}</option>
                 {Object.values(NivelIntercambio).map((niv) => (
-                  <option key={niv} value={niv}>
+                  <option key={niv} value={niv} className={sidebarTextClass}>
                     {niv}
                   </option>
                 ))}
@@ -358,11 +331,11 @@ export default function SwapkPlatform() {
               <select
                 value={idioma}
                 onChange={(e) => setIdioma(e.target.value)}
-                className="mt-2 md:mt-0 bg-gray-700 text-white px-3 py-2 rounded-lg border border-gray-600"
+                className={`${sidebarInputClass} px-3 py-2 rounded-lg mt-2 md:mt-0`}
               >
-                <option value="">Todos los idiomas</option>
+                <option value="">{t("all_languages")}</option>
                 {Object.values(IdiomaIntercambio).map((idi) => (
-                  <option key={idi} value={idi}>
+                  <option key={idi} value={idi} className={sidebarTextClass}>
                     {idi}
                   </option>
                 ))}
@@ -370,9 +343,9 @@ export default function SwapkPlatform() {
 
               <Button
                 type="submit"
-                className="mt-2 md:mt-0 bg-blue-600 hover:bg-blue-700"
+                className={`${sidebarButtonClass} mt-2 md:mt-0`}
               >
-                Buscar
+                {t("search_button")}
               </Button>
             </form>
           </div>
@@ -383,7 +356,7 @@ export default function SwapkPlatform() {
               {filteredTrueques.map((trueque) => (
                 <div
                   key={trueque.id}
-                  className="bg-[#1E1E1E] border border-[#2E2E2E] rounded-xl p-6 flex flex-col"
+                  className={`${sidebarCardClass} rounded-xl p-6 flex flex-col hover:shadow-lg transition-shadow`}
                 >
                   <div className="flex items-start gap-4 mb-4">
                     <Image
@@ -395,30 +368,27 @@ export default function SwapkPlatform() {
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 justify-between">
-                        <h3 className="text-xl font-semibold">
+                        <h3 className={`text-xl font-semibold ${sidebarTextClass}`}>
                           {trueque.usuario1?.nombre}
                         </h3>
                         {renderEstadoCircle(trueque.estado)}
                       </div>
                       <div className="flex">{renderStars(trueque.valoracion || 0)}</div>
-                      <p className="text-gray-400">{trueque.nivel}</p>
+                      <p className={sidebarMutedTextClass}>{trueque.nivel}</p>
 
                       <div className="mt-2">
-                        <p className="text-xs text-blue-400">Ofrece:</p>
+                        <p className="text-xs text-blue-400">{t("offer_label")}</p>
                         <div className="flex flex-wrap gap-1">
-                          {trueque.habilidades_ofrece?.map((h, idx) => {
-                                console.log("🧠 habilidad ofrecida:", h)
-                                return (
-                                  <span
-                                    key={idx}
-                                    className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                                  >
-                                    {String(h.nombre)}
-                                  </span>
-                                )
-                              })}
+                          {trueque.habilidades_ofrece?.map((h, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            >
+                              {String(h.nombre)}
+                            </span>
+                          ))}
                         </div>
-                        <p className="text-xs text-red-400 mt-2">Busca:</p>
+                        <p className="text-xs text-red-400 mt-2">{t("seek_label")}</p>
                         <div className="flex flex-wrap gap-1">
                           {trueque.habilidades_busca?.map((h, idx) => (
                             <span
@@ -433,7 +403,7 @@ export default function SwapkPlatform() {
                     </div>
                   </div>
 
-                  <p className="text-gray-300 break-words whitespace-pre-wrap">
+                  <p className={sidebarTextClass} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {trueque.descripcion}
                   </p>
 
@@ -453,7 +423,7 @@ export default function SwapkPlatform() {
                         className="flex-1 flex items-center justify-center gap-2"
                         onClick={() => handleEditTrueque(trueque)}
                       >
-                        <Edit size={16} /> Editar
+                        <Edit size={16} /> {t("edit_exchange")}
                       </Button>
                       <Button
                         size="sm"
@@ -461,40 +431,56 @@ export default function SwapkPlatform() {
                         className="flex-1 flex items-center justify-center gap-2 text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
                         onClick={() => handleDeleteTrueque(trueque.id)}
                       >
-                        <Trash2 size={16} /> Eliminar
+                        <Trash2 size={16} /> {t("delete_exchange")}
                       </Button>
                     </div>
                   )}
                   {currentUser?.id !== trueque.id_usuario1 && (
-                      <div className="mt-4">
-                        <Button
-                          className="w-full bg-blue-600 hover:bg-blue-700"
-                          onClick={() => {
-                            // Aquí puedes abrir un modal, redirigir a otra página, o iniciar una conversación
-                            alert(`Propuesta enviada a ${trueque.usuario1?.nombre}`)
-                          }}
-                        >
-                          Proponer trueque
-                        </Button>
-                      </div>
-                    )}
+                    <div className="mt-4">
+                      <Button
+                      className={sidebarButtonClass}
+                      onClick={() => {
+                        const user = getCurrentUser()
+                        const nombreUsuario = user?.nombre || "Un usuario"
+
+                        agregarNotificacion({
+                          tipo: "Intercambio",
+                          contenido: `El usuario ${nombreUsuario} está interesado en tu intercambio: ${trueque.modo} - ${trueque.nivel}.`,
+                          id_usuario: trueque.id_usuario1, // ✅ Notificar al autor del intercambio
+                        })
+
+                        alert(`Propuesta enviada a ${trueque.usuario1?.nombre}`)
+                      }}
+                    >
+                      {t("propose_exchange")}
+                    </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 text-center mt-6">
-              No se encontraron trueques que coincidan.
-            </p>
+            <div className={`text-center py-16 px-6 rounded-lg ${sidebarBgClass} ${sidebarBorderClass}`}>
+              <p className={`${sidebarMutedTextClass} mb-6`}>
+                {t("no_exchanges_found")}
+              </p>
+              <Button
+                className={sidebarButtonClass}
+                onClick={() => setIsCrearModalOpen(true)}
+              >
+                {t("create_exchange")}
+              </Button>
+            </div>
           )}
         </div>
       </div>
 
-     {/* Modal Crear/Editar Trueque */}
+      {/* Modal Crear/Editar Trueque */}
       {isCrearModalOpen && (
         <CrearTruequeModal
           isOpen={isCrearModalOpen}
           onClose={handleCloseModal}
-          onSave={handleSaveTrueque} // cambiar onSave -> onCreateTrueque
+          onSave={handleSaveTrueque}
           habilidades={habilidades}
           initialData={truequeEditando ? mapIntercambioToFormData(truequeEditando) : undefined}
           isEditing={!!truequeEditando}
@@ -504,3 +490,11 @@ export default function SwapkPlatform() {
   )
 }
 
+// ✅ Exportamos el componente protegido
+export default function SwapkPlatform() {
+  return (
+    <ProtectedRoute>
+      <SwapkPlatformComponent />
+    </ProtectedRoute>
+  )
+}

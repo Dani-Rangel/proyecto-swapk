@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -32,73 +32,42 @@ import {
   Plus,
   Search,
   BookOpen,
-  User,
   Calendar,
 } from "lucide-react"
+import { CourseDialog } from "./course-dialog"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+
 import type { Curso, CreateCursoData, UpdateCursoData } from "@/services/course"
 import type { Usuario } from "@/services/user"
-import { CourseDialog } from "./course-dialog"
-
-// Mock data para cursos
-const mockCursos: Curso[] = [
-  {
-    id: 1,
-    titulo: "Introducción a React",
-    descripcion: "Aprende los fundamentos de React desde cero.",
-    objetivo: "Dominar los conceptos básicos de React",
-    User_Id: 1,
-    img_Cursos: "https://placehold.co/300x200?text=React",
-    fecha_creacion: "2024-01-15T10:00:00Z",
-  },
-  {
-    id: 2,
-    titulo: "JavaScript Avanzado",
-    descripcion: "Profundiza en conceptos como closures y async.",
-    objetivo: "Convertirse en un desarrollador experto",
-    User_Id: 2,
-    img_Cursos: "https://placehold.co/300x200?text=JavaScript",
-    fecha_creacion: "2024-01-20T14:30:00Z",
-  },
-  {
-    id: 3,
-    titulo: "Diseño UX/UI",
-    descripcion: "Diseña interfaces intuitivas y experiencias excepcionales.",
-    objetivo: "Crear diseños centrados en el usuario",
-    User_Id: 1,
-    img_Cursos: "https://placehold.co/300x200?text=UX+UI",
-    fecha_creacion: "2024-02-01T09:15:00Z",
-  },
-]
-
-const mockUsuarios: Usuario[] = [
-  {
-    id: 1,
-    nombre: "Ana García",
-    correo: "ana@ejemplo.com",
-    rol: "Administrador" as any,
-    fecha_creacion: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: 2,
-    nombre: "Carlos López",
-    correo: "carlos@ejemplo.com",
-    rol: "Moderador" as any,
-    fecha_creacion: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: 3,
-    nombre: "María Rodríguez",
-    correo: "maria@ejemplo.com",
-    rol: "Usuario" as any,
-    fecha_creacion: "2024-01-01T00:00:00Z",
-  },
-]
+import {
+  getCursos,
+  createCurso,
+  updateCurso,
+  deleteCurso,
+} from "@/services/course"
+import { getUsers } from "@/services/user"
 
 export function CourseManagementTable() {
-  const [cursos, setCursos] = useState<Curso[]>(mockCursos)
+  const [cursos, setCursos] = useState<Curso[]>([])
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState<Curso | undefined>()
+  const [menuKey, setMenuKey] = useState<number>(0)
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [cursoData, userData] = await Promise.all([getCursos(), getUsers()])
+        setCursos(cursoData)
+        setUsuarios(userData)
+      } catch (error) {
+        console.error("Error al cargar datos:", error)
+      }
+    }
+
+    fetchData()
+  }, [])
 
   const filteredCursos = cursos.filter((curso) =>
     [curso.titulo, curso.descripcion, curso.objetivo]
@@ -107,31 +76,52 @@ export function CourseManagementTable() {
       .includes(searchTerm.toLowerCase())
   )
 
-  const getInstructorName = (userId: number) => {
-    const instructor = mockUsuarios.find((user) => user.id === userId)
-    return instructor ? instructor.nombre : "Instructor no encontrado"
-  }
-
-  const handleCreateCourse = (data: CreateCursoData) => {
-    const newCourse: Curso = {
-      id: Math.max(...cursos.map((c) => c.id)) + 1,
-      ...data,
-      fecha_creacion: new Date().toISOString(),
+  // ✅ Función mejorada: devuelve objeto con nombre, correo y avatar
+  const getInstructorInfo = (userId: number) => {
+    const instructor = usuarios.find((user) => user.id === userId)
+    if (!instructor) {
+      return {
+        nombre: "Instructor no asignado",
+        correo: "",
+        avatar: "/img/user.png",
+      }
     }
-    setCursos([...cursos, newCourse])
+    return {
+      nombre: instructor.nombre,
+      correo: instructor.correo,
+      // Si tienes fotos de perfil, usa: instructor.perfil?.foto
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(instructor.nombre)}`,
+    }
   }
 
-  const handleUpdateCourse = (data: UpdateCursoData) => {
+  const handleCreateCourse = async (data: CreateCursoData) => {
+    try {
+      const newCourse = await createCurso(data)
+      setCursos((prev) => [...prev, newCourse])
+    } catch (error) {
+      console.error("Error al crear curso:", error)
+    }
+  }
+
+  const handleUpdateCourse = async (data: UpdateCursoData) => {
     if (!selectedCourse) return
-    setCursos(
-      cursos.map((curso) =>
-        curso.id === selectedCourse.id ? { ...curso, ...data } : curso
+    try {
+      const updated = await updateCurso(selectedCourse.id, data)
+      setCursos((prev) =>
+        prev.map((curso) => (curso.id === updated.id ? updated : curso))
       )
-    )
+    } catch (error) {
+      console.error("Error al actualizar curso:", error)
+    }
   }
 
-  const handleDeleteCourse = (courseId: number) => {
-    setCursos(cursos.filter((curso) => curso.id !== courseId))
+  const handleDeleteCourse = async (courseId: number) => {
+    try {
+      await deleteCurso(courseId)
+      setCursos((prev) => prev.filter((curso) => curso.id !== courseId))
+    } catch (error) {
+      console.error("Error al eliminar curso:", error)
+    }
   }
 
   const openCreateDialog = () => {
@@ -144,10 +134,21 @@ export function CourseManagementTable() {
     setDialogOpen(true)
   }
 
+  const formatDate = (dateString?: string | null) => {
+  if (!dateString) return "Fecha no disponible"
+  const date = new Date(dateString)
+  if (isNaN(date.getTime())) return "Fecha inválida"
+  return date.toLocaleDateString("es-ES", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  })
+}
+
   return (
-    <Card>
+    <Card className="bg-[#121212] border-gray-700">
       <CardHeader>
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2 text-white">
               <BookOpen className="h-5 w-5" />
@@ -159,15 +160,15 @@ export function CourseManagementTable() {
           </div>
           <div className="w-full md:w-auto flex flex-col md:flex-row gap-2 md:items-center">
             <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground text-white" />
               <Input
                 placeholder="Buscar cursos..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 bg-[#1e1e1e] text-white border border-gray-700"
+                className="pl-9 bg-[#1e1e1e] text-white border border-blue-700 placeholder:text-gray-500"
               />
             </div>
-            <Button onClick={openCreateDialog} className="whitespace-nowrap">
+            <Button onClick={openCreateDialog} className="whitespace-nowrap bg-blue-600 hover:bg-blue-700">
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Curso
             </Button>
@@ -180,73 +181,92 @@ export function CourseManagementTable() {
           <Table>
             <TableHeader className="bg-[#2a2a2a]">
               <TableRow>
-                <TableHead>Curso</TableHead>
-                <TableHead>Instructor</TableHead>
-                <TableHead>Objetivo</TableHead>
-                <TableHead>Fecha</TableHead>
-                <TableHead className="w-[80px]">Acciones</TableHead>
+                <TableHead className="text-white">Curso</TableHead>
+                <TableHead className="text-white">User_Id</TableHead>
+                <TableHead className="text-white">Nombre</TableHead>
+                <TableHead className="text-white">Objetivo</TableHead>
+                <TableHead className="text-white">Fecha</TableHead>
+                <TableHead className="w-[80px] text-white">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCursos.map((curso) => (
-                <TableRow key={curso.id} className="hover:bg-[#2a2a2a]">
+              {filteredCursos.map((curso) => {  
+                console.log("Curso:", curso)
+                return (
+                <TableRow key={curso.id} className="hover:bg-[#2a2a2a] transition-colors">
                   <TableCell>
                     <div className="flex items-start gap-3">
                       <img
-                        src={curso.img_Cursos || "/placeholder.svg"}
+                        src={curso.img_Cursos || "/img/image.png"}
                         alt={curso.titulo}
-                        className="w-12 h-12 rounded-md object-cover"
+                        className="w-12 h-12 rounded-md object-cover border border-gray-700"
+                        onError={(e) => {
+                          e.currentTarget.src = "/img/image.png"
+                        }}
                       />
                       <div>
                         <div className="font-medium text-white">{curso.titulo}</div>
-                        <div className="text-sm text-muted-foreground line-clamp-2">
+                        <div className="text-sm text-gray-400 line-clamp-2">
                           {curso.descripcion}
                         </div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      {getInstructorName(curso.User_Id)}
-                    </div>
+                    <span className="text-white font-mono text-sm">{curso.user_id ?? "Sin instructor"}</span>
                   </TableCell>
+                  <span className="text-white font-mono text-sm">{curso.usuario?.nombre || "Sin instructor"}</span>
                   <TableCell>
-                    <Badge variant="outline" className="text-xs whitespace-nowrap">
+                    <Badge variant="outline" className="text-xs whitespace-nowrap bg-gray-800 text-white border-gray-700">
                       {curso.objetivo}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        {new Date(curso.fecha_creacion).toLocaleDateString()}
+                      <Calendar className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-300">
+                        {formatDate(curso.fecha_creacion)}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
+                    <DropdownMenu key={`${curso.id}-${menuKey}`}>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0 hover:bg-gray-800"
+                          onClick={() => setMenuKey(prev => prev + 1)} // ← ¡ESTA LÍNEA ES CLAVE!
+                        >
+                          <MoreHorizontal className="h-4 w-4 text-white" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="bg-[#2a2a2a] border-gray-700 text-white">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => openEditDialog(curso)}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            openEditDialog(curso)
+                            setMenuKey(prev => prev + 1) // Reinicia después de acción
+                          }}
+                          className="hover:bg-gray-700 cursor-pointer"
+                        >
                           Editar curso
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
+                          onClick={() => {
                             navigator.clipboard.writeText(curso.titulo)
-                          }
+                            setMenuKey(prev => prev + 1) // Reinicia después de acción
+                          }}
+                          className="hover:bg-gray-700 cursor-pointer"
                         >
                           Copiar título
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                        <DropdownMenuSeparator className="bg-gray-700" />
                         <DropdownMenuItem
-                          onClick={() => handleDeleteCourse(curso.id)}
-                          className="text-destructive"
+                          onClick={() => {
+                            handleDeleteCourse(curso.id)
+                            setMenuKey(prev => prev + 1) // Reinicia después de acción
+                          }}
+                          className="text-red-400 hover:bg-gray-700 cursor-pointer"
                         >
                           Eliminar curso
                         </DropdownMenuItem>
@@ -254,16 +274,18 @@ export function CourseManagementTable() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
+                )
+              })}
             </TableBody>
           </Table>
         </div>
 
         {filteredCursos.length === 0 && (
+          
           <div className="text-center py-8">
-            <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-2 text-sm font-semibold">No hay cursos</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <BookOpen className="mx-auto h-12 w-12 text-gray-600" />
+            <h3 className="mt-2 text-sm font-semibold text-gray-300">No hay cursos</h3>
+            <p className="mt-1 text-sm text-gray-500">
               {searchTerm
                 ? "No se encontraron cursos con ese término de búsqueda."
                 : "Comienza creando tu primer curso."}
@@ -275,8 +297,14 @@ export function CourseManagementTable() {
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           course={selectedCourse}
-          onSave={selectedCourse ? handleUpdateCourse : handleCreateCourse}
-          usuarios={mockUsuarios}
+          onSave={async (data) => {
+            if (selectedCourse) {
+              await handleUpdateCourse(data as UpdateCursoData)
+            } else {
+              await handleCreateCourse(data as CreateCursoData)
+            }
+          }}
+          usuarios={usuarios}
         />
       </CardContent>
     </Card>

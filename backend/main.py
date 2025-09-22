@@ -18,8 +18,12 @@ from backend.controllers.expediente_controller import router as expediente_route
 from backend.controllers.moderador_controller import router as moderador_router
 from backend.controllers.intercambio_controller import router as intercambio_router
 from backend.controllers import intercambio_habilidad_controller
-
-
+from backend.controllers import notificacion_controller
+from backend.controllers.chat_controller import router as chat_router 
+from backend.controllers.user_admin_controller import router as userA_router
+from backend.controllers import intercambio_admin_controller
+from backend.controllers import perfil_admin_controller
+from backend.controllers import publicaciones_admin_controller
 
 app = FastAPI()
 
@@ -58,4 +62,12 @@ app.include_router(expediente_router)
 app.include_router(moderador_router)
 app.include_router(intercambio_router)
 app.include_router(intercambio_habilidad_controller.router)
+app.include_router(notificacion_controller.router)
+app.include_router(chat_router)
+app.include_router(userA_router)
+app.include_router(curso_controller.router, prefix="/admin")
+app.include_router(intercambio_admin_controller.router)
+app.include_router(perfil_admin_controller.router)
+app.include_router(publicaciones_admin_controller.router)
+print("✅ Router publicaciones_admin_controller registrado")
 

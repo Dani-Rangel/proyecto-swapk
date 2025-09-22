@@ -1,129 +1,122 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Eye, EyeOff } from "lucide-react";
-import { toast } from "sonner";
-import SettingsLayout from "../../components/settings_layout";
-
-export default function ChangePassword() {
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [username, setUsername] = useState(""); // ✅ Nombre de usuario
+import { useTranslation } from "../../lib/useTranslations"
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Eye, EyeOff } from "lucide-react"
+import { toast } from "sonner"
+import SettingsLayout from "../../components/settings_layout"
+import ProtectedRoute from "@/components/protected_routes/protected_routes";
+function ChangePasswordComponent() {
+  const { t } = useTranslation()
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [username, setUsername] = useState("")
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
     confirm: false,
-  });
-  const [loading, setLoading] = useState(false);
+  })
+  const [loading, setLoading] = useState(false)
 
-  // 🔁 Cargar datos del usuario al iniciar
   useEffect(() => {
     const loadUserData = () => {
       try {
-        const savedUserStr = localStorage.getItem("user");
-        if (!savedUserStr) {
-          toast.error("No has iniciado sesión");
-          return;
-        }
-
-        const savedUser = JSON.parse(savedUserStr);
-        // Usa perfil.nombre o user.nombre
-        setUsername(savedUser.perfil?.nombre || savedUser.user?.nombre || "");
+        const savedUserStr = localStorage.getItem("user")
+        if (!savedUserStr) return
+        const savedUser = JSON.parse(savedUserStr)
+        setUsername(savedUser.perfil?.nombre || savedUser.user?.nombre || "")
       } catch (err) {
-        console.error("Error al cargar usuario:", err);
-        toast.error("Error al cargar tus datos");
+        console.error("Error al cargar usuario:", err)
       }
-    };
+    }
+    loadUserData()
+  }, [])
 
-    loadUserData();
-  }, []);
-
-  // ✅ Cambiar contraseña o nombre de usuario
   const handleSubmit = async () => {
-    // Validaciones
     if (!username.trim()) {
-      toast.error("El nombre de usuario no puede estar vacío");
-      return;
+      toast.error("El nombre de usuario no puede estar vacío")
+      return
     }
 
     if (newPassword && newPassword.length < 6) {
-      toast.error("La nueva contraseña debe tener al menos 6 caracteres");
-      return;
+      toast.error("La nueva contraseña debe tener al menos 6 caracteres")
+      return
     }
 
     if (newPassword && newPassword !== confirmPassword) {
-      toast.error("Las contraseñas no coinciden");
-      return;
+      toast.error("Las contraseñas no coinciden")
+      return
     }
 
-    setLoading(true);
+    setLoading(true)
 
     try {
-      const savedUserStr = localStorage.getItem("user");
-      if (!savedUserStr) {
-        toast.error("No has iniciado sesión");
-        setLoading(false);
-        return;
-      }
+      const savedUserStr = localStorage.getItem("user")
+      if (!savedUserStr) throw new Error("No hay sesión activa")
+      const savedUser = JSON.parse(savedUserStr)
+      const token = savedUser.token
 
-      const savedUser = JSON.parse(savedUserStr);
-      const token = savedUser.token;
-      const userId = savedUser.id;
-
-      // ✅ Enviar al backend
-      const res = await fetch(`http://localhost:8000/perfil/${userId}`, {
+      // 1️⃣ Actualizar solo nombre de usuario
+      await fetch(`http://localhost:8000/perfil/me`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          nombre: username, // ✅ Cambia el nombre de usuario
-          ...(newPassword && { contrasena: newPassword }), // ✅ Solo si cambia la contraseña
-        }),
-      });
+        body: JSON.stringify({ nombre: username }),
+      })
 
-      const data = await res.json();
+      // 2️⃣ Actualizar contraseña solo si hay nueva
+      if (newPassword) {
+        const res = await fetch("http://localhost:8000/users/me/change-password", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            old_password: currentPassword,
+            new_password: newPassword,
+          }),
+        })
 
-      if (!res.ok) {
-        throw new Error(data.detail || "Error al actualizar");
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.detail || "Error al cambiar contraseña")
       }
 
-      // ✅ Éxito: actualizar localStorage
+      // ✅ Actualizar localStorage
       const updatedUser = {
         ...savedUser,
         perfil: { ...savedUser.perfil, nombre: username },
         user: { ...savedUser.user, nombre: username },
-      };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      }
+      localStorage.setItem("user", JSON.stringify(updatedUser))
 
-      toast.success("✅ Datos actualizados correctamente");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      toast.success("Datos actualizados correctamente")
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
 
     } catch (err: any) {
-      toast.error(err.message);
+      console.error("Error al actualizar datos:", err)
+      toast.error(err.message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const togglePasswordVisibility = (field: "current" | "new" | "confirm") => {
-    setShowPasswords((prev) => ({
-      ...prev,
-      [field]: !prev[field],
-    }));
-  };
+    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }))
+  }
 
   return (
     <SettingsLayout>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Cambiar contraseña y usuario</h1>
+        <h1 className="text-2xl font-bold">Cambiar contraseña</h1>
 
         <Card className="bg-[#1a1a1a] border-[#1a1a1a]">
           <CardHeader>
@@ -137,7 +130,7 @@ export default function ChangePassword() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Tu nombre de usuario"
+                placeholder="Nombre de usuario"
                 className="bg-gray-700 border-gray-600 text-white"
               />
             </div>
@@ -151,7 +144,7 @@ export default function ChangePassword() {
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   className="bg-gray-700 border-gray-600 text-white pr-10"
-                  placeholder="Ingresa tu contraseña actual"
+                  placeholder="Contraseña actual"
                 />
                 <Button
                   type="button"
@@ -174,7 +167,7 @@ export default function ChangePassword() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="bg-gray-700 border-gray-600 text-white pr-10"
-                  placeholder="Mínimo 6 caracteres"
+                  placeholder="Nueva contraseña"
                 />
                 <Button
                   type="button"
@@ -197,7 +190,7 @@ export default function ChangePassword() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="bg-gray-700 border-gray-600 text-white pr-10"
-                  placeholder="Repite la nueva contraseña"
+                  placeholder="Confirmar nueva contraseña"
                 />
                 <Button
                   type="button"
@@ -225,5 +218,14 @@ export default function ChangePassword() {
         </Card>
       </div>
     </SettingsLayout>
-  );
+  )
+}
+
+// ✅ Exportamos el componente protegido
+export default function ChangePassword() {
+  return (
+    <ProtectedRoute>
+      <ChangePasswordComponent />
+    </ProtectedRoute>
+  )
 }

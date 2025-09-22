@@ -1,60 +1,94 @@
 "use client"
 
-import React, { createContext, useContext, useState } from "react"
+import React, { createContext, useContext, useEffect, useState } from "react"
+import notificacionAPI, { Notificacion, NotificacionCreate } from "@/services/notificacion"
+import { getCurrentUser } from "@/lib/auth"
 
-// ✅ Exportamos la interfaz para poder usarla fuera si se necesita
-export interface Notificacion {
-  id: number
-  contenido: string
-  tipo: string
-  leido: boolean
-  fecha: string
-}
-
-// ✅ Tipo del contexto
 interface NotificacionesContextType {
   notificaciones: Notificacion[]
-  agregarNotificacion: (nueva: Omit<Notificacion, "id" | "fecha" | "leido">) => void
-  marcarComoLeida: (id: number) => void
+  cargarNotificaciones: (userId: number) => void
+  agregarNotificacion: (data: NotificacionCreate) => void
+  marcarComoLeida: (id: number) => Promise<void>
+  eliminarNotificacion: (id: number) => Promise<void>
+  refrescarNotificaciones: () => void
 }
 
-// ✅ Contexto con tipo seguro
 const NotificacionesContext = createContext<NotificacionesContextType | undefined>(undefined)
 
-// ✅ Proveedor del contexto
 export const NotificacionesProvider = ({ children }: { children: React.ReactNode }) => {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
+  const [userId, setUserId] = useState<number | null>(null)
 
-  // ✅ Tipado de 'nueva' para que no dé error
-  const agregarNotificacion = (nueva: Omit<Notificacion, "id" | "fecha" | "leido">) => {
-    setNotificaciones((prev) => [
-      {
-        id: Date.now(), // Puedes cambiar esto por un UUID si prefieres
-        contenido: nueva.contenido,
-        tipo: nueva.tipo,
-        leido: false,
-        fecha: new Date().toISOString(),
-      },
-      ...prev,
-    ])
+  useEffect(() => {
+    const usuario = getCurrentUser()
+    if (usuario) {
+      setUserId(usuario.id)
+      cargarNotificaciones(usuario.id)
+    }
+  }, [])
+
+  const cargarNotificaciones = async (userId: number) => {
+    try {
+      const data = await notificacionAPI.getByUser(userId)
+      setNotificaciones(data)
+    } catch (error) {
+      console.error("Error al cargar notificaciones:", error)
+    }
   }
 
-  const marcarComoLeida = (id: number) => {
-    setNotificaciones((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, leido: true } : n))
-    )
+  const agregarNotificacion = async (nueva: NotificacionCreate) => {
+    try {
+      const response = await notificacionAPI.create(nueva)
+      setNotificaciones((prev) => [response, ...prev])
+    } catch (error) {
+      console.error("Error al crear notificación:", error)
+    }
+  }
+
+  const marcarComoLeida = async (id: number) => {
+    try {
+      const actualizada = await notificacionAPI.marcarLeida(id)
+      setNotificaciones((prev) =>
+        prev.map((n) => (n.id === id ? actualizada : n))
+      )
+    } catch (error) {
+      console.error("Error al marcar como leída:", error)
+      throw error
+    }
+  }
+
+  const eliminarNotificacion = async (id: number) => {
+    try {
+      await notificacionAPI.eliminar(id)
+      setNotificaciones((prev) => prev.filter((n) => n.id !== id))
+    } catch (error) {
+      console.error("Error al eliminar notificación:", error)
+      throw error
+    }
+  }
+
+  const refrescarNotificaciones = () => {
+    if (userId) {
+      cargarNotificaciones(userId)
+    }
   }
 
   return (
     <NotificacionesContext.Provider
-      value={{ notificaciones, agregarNotificacion, marcarComoLeida }}
+      value={{
+        notificaciones,
+        cargarNotificaciones,
+        agregarNotificacion,
+        marcarComoLeida,
+        eliminarNotificacion,
+        refrescarNotificaciones,
+      }}
     >
       {children}
     </NotificacionesContext.Provider>
   )
 }
 
-// ✅ Custom hook para usar el contexto
 export const useNotificaciones = () => {
   const context = useContext(NotificacionesContext)
   if (!context) {

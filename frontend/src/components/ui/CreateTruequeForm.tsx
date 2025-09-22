@@ -112,7 +112,7 @@ export default function CrearTruequeModal({
   // Enviar formulario
   // -------------------------------
   const handleSubmit = async () => {
-    if (!modalidad || !nivel || !idioma || !descripcion || !disponibilidad || [...ofreces, ...buscas].length === 0) {
+    if (!modalidad || !nivel || !idioma || !descripcion || !disponibilidad ) {
       alert("Completa todos los campos y agrega al menos una habilidad.")
       return
     }
@@ -283,7 +283,6 @@ export default function CrearTruequeModal({
                 !idioma,
                 !descripcion,
                 !disponibilidad,
-                [...ofreces, ...buscas].length === 0,
               ].some((cond) => cond)}
             >
               {isEditing ? "Actualizar trueque" : "Publicar trueque"}
