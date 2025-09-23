@@ -22,11 +22,15 @@ interface NewMessageModalProps {
 export default function NewMessageModal({ isOpen, onClose, onContactSelect, suggestedUsers }: NewMessageModalProps) {
   const { t } = useTranslation(); // ✅ Hook de traducción
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const filteredUsers = suggestedUsers.filter((user) => {
+    // ✅ Validar que name y username existan
+    if (!user.name || !user.username) return false;
 
-  const filteredUsers = suggestedUsers.filter((user) =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    const nameMatch = user.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const usernameMatch = user.username.toLowerCase().includes(searchQuery.toLowerCase());
+    return nameMatch || usernameMatch;
+  });
 
   if (!isOpen) return null;
 
