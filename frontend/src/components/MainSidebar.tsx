@@ -13,23 +13,21 @@ import {
   TrendingUp,
   RefreshCw,
   BookOpen,
-  X,
-  Menu,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useTranslation } from "@/lib/useTranslations"
 import { Notificaciones } from "@/components/ui/notificaciones/notifications"
 import toast from 'react-hot-toast'
-import { usePathname } from "next/navigation"
 
 interface MainSidebarProps {
   isDark: boolean
   toggleTheme: () => void
   isSidebarOpen: boolean
   setIsSidebarOpen: (open: boolean) => void
+  user: any // <-- Aquí recibimos el usuario para validar el rol
 }
 
 export function MainSidebar({
@@ -37,11 +35,13 @@ export function MainSidebar({
   toggleTheme,
   isSidebarOpen,
   setIsSidebarOpen,
+  user
 }: MainSidebarProps) {
   const { t } = useTranslation()
   const router = useRouter()
   const pathname = usePathname()
 
+  // Rutas visibles para todos los usuarios
   const navItems = [
     { icon: Home, label: t("home"), href: "/dashboard/index_dashboard" },
     { icon: TrendingUp, label: t("popular"), href: "/message/messages" },
@@ -59,7 +59,8 @@ export function MainSidebar({
     >
       {/* Header del Sidebar */}
       <div className={`p-3 border-b ${isDark ? "border-[#2E2E2E]" : "border-gray-200"}`}>
-        {/* Logo y tema */}
+        
+        {/* Logo y cambio de tema */}
         <div className="flex items-center gap-2 mb-3">
           <img src="/img/logoswapk.png" alt="Swapk Logo" className="w-7 h-auto" />
           <span className={`text-sm ${isDark ? "text-[#F5F5F5]" : "text-gray-700"}`}>SWAPK</span>
@@ -159,6 +160,55 @@ export function MainSidebar({
             )
           })}
         </nav>
+
+        {/* ======================= */}
+        {/* Sección exclusiva para Moderador */}
+        {user?.rol === "Moderador" && (
+          <div className="mt-4">
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Moderador
+            </h4>
+            <Link href="/moderador/moderador" passHref>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`w-full justify-start h-8 cursor-pointer transition-colors ${
+                  pathname === "/moderador/panel"
+                    ? "bg-green-600 text-white hover:bg-green-700"
+                    : isDark
+                      ? "text-[#A0A0A0] hover:bg-[#2E2E2E]"
+                      : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                Panel de Moderador
+              </Button>
+            </Link>
+          </div>
+        )}
+
+        {/* Sección exclusiva para Administrador */}
+        {user?.rol === "Administrador" && (
+          <div className="mt-4">
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Administrador
+            </h4>
+            <Link href="/admin/admin" passHref>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`w-full justify-start h-8 cursor-pointer transition-colors ${
+                  pathname === "/admin/panel"
+                    ? "bg-red-600 text-white hover:bg-red-700"
+                    : isDark
+                      ? "text-[#A0A0A0] hover:bg-[#2E2E2E]"
+                      : "text-gray-700 hover:bg-gray-100"
+                }`}
+              >
+                Panel de Administrador
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Botón de cerrar sesión (fijado abajo) */}
