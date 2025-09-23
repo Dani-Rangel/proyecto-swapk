@@ -3,8 +3,19 @@
 import { useState, useEffect } from "react";
 import { Phone, MessageCircle, Video, MoreVertical, Search, MessageSquare, ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslations";
-import { useRouter } from "next/navigation"; // ✅ CORRECTO para App Router
+import { useRouter } from "next/navigation";
+import { useVideoCall } from "@/components/state/video_call_provider";
 
+// ✅ Interfaz para los chats que vienen del backend
+interface BackendChat {
+  chat_id: number;
+  tipo: string;
+  usuarios: { id: string; nombre: string }[];
+  ultimo_mensaje: string | null;
+  fecha_ultimo_mensaje: string | null;
+}
+
+// ✅ Interfaz de Contacto para mostrar en el UI
 interface Contact {
   id: string;
   name: string;
@@ -20,9 +31,8 @@ interface ContactsSidebarProps {
   onContactSelect: (contact: string) => void;
   onViewChange: (view: "video-call" | "chat" | "screen-share") => void;
   currentView: string;
-  contacts?: Contact[];
   currentUser?: string;
-  // ✅ Ya no necesitamos onBackToDashboard como prop — lo manejamos internamente
+  onOpenNewChatModal: () => void;
 }
 
 export function ContactsSidebar({
@@ -30,27 +40,182 @@ export function ContactsSidebar({
   onContactSelect,
   onViewChange,
   currentView,
-  contacts = [],
   currentUser = "Tú",
+  onOpenNewChatModal,
 }: ContactsSidebarProps) {
-  const router = useRouter(); // ✅ Correcto en App Router
+  const router = useRouter();
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
-
   const [enhancedContacts, setEnhancedContacts] = useState<Contact[]>([]);
+  const [loadingChats, setLoadingChats] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { startCall } = useVideoCall();
 
-  // ✅ Función interna — no depende de props
+  // Función interna — no depende de props
   const handleBackToDashboard = () => {
-    router.push("/dashboard/index_dashboard"); 
+    if (typeof window !== "undefined") {
+      router.push("/dashboard/index_dashboard");
+    }
+  };
+
+  // Cargar chats reales del backend al montar
+  const fetchUserChats = async () => {
+    let token: string | null = null;
+    let myUserId: string | null = null;
+
+    if (typeof window !== "undefined") {
+      const userData = localStorage.getItem("user");
+      if (userData) {
+        try {
+          const parsed = JSON.parse(userData);
+          token = parsed.token;
+          myUserId = String(parsed.id);
+        } catch (error) {
+          console.error("Error al parsear datos de usuario:", error);
+          setLoadingChats(false);
+          return;
+        }
+      }
+    }
+
+    if (!token || !myUserId) {
+      setLoadingChats(false);
+      return;
+    }
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const res = await fetch(`${API_URL}/chats`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Error ${res.status}: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+
+      if (!data || !Array.isArray(data.chats)) {
+        setEnhancedContacts([]);
+        setLoadingChats(false);
+        return;
+      }
+
+      // ✅ Convertir chats en contactos únicos — USAR ID COMO CLAVE (¡CORREGIDO!)
+      const contactMap = new Map<string, Contact>();
+
+      data.chats.forEach((chat: BackendChat) => {
+        // ✅ Buscar al otro usuario (que no soy yo)
+        const otherUser = chat.usuarios.find((u: any) => String(u.id) !== String(myUserId));
+        if (!otherUser) return;
+
+        const key = otherUser.id; // ✅ ¡USAR ID, NO NOMBRE!
+
+        if (!contactMap.has(key)) {
+          contactMap.set(key, {
+            id: otherUser.id,
+            name: otherUser.nombre,
+            status: "online",
+            lastMessage: chat.ultimo_mensaje || undefined,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+              otherUser.nombre
+            )}&background=random&size=128`,
+            isVerified: false,
+            hasNewMessage: !!chat.ultimo_mensaje,
+          });
+        } else {
+          // ✅ Actualizar si ya existe (por ejemplo, nuevo mensaje)
+          const existing = contactMap.get(key)!;
+          existing.lastMessage = chat.ultimo_mensaje || existing.lastMessage;
+          existing.hasNewMessage = !!chat.ultimo_mensaje;
+        }
+      });
+
+      const contactsFromChats = Array.from(contactMap.values());
+      setEnhancedContacts(contactsFromChats);
+    } catch (err) {
+      console.error("Error al cargar chats:", err);
+      setError("No se pudieron cargar tus contactos. Verifica tu conexión.");
+    } finally {
+      setLoadingChats(false);
+    }
   };
 
   useEffect(() => {
-    const simulated = contacts.map((contact, index) => ({
-      ...contact,
-      hasNewMessage: index === 0 && contact.name !== currentContact,
-    }));
-    setEnhancedContacts(simulated);
-  }, [contacts, currentContact]);
+    fetchUserChats();
+  }, []);
+
+  // --- Escuchar actualizaciones de chats en tiempo real ---
+  useEffect(() => {
+    let websocket: WebSocket | null = null;
+    let retryTimeout: NodeJS.Timeout | null = null;
+
+    const connectWebSocket = () => {
+      let token: string | null = null;
+      let myUserId: string | null = null;
+
+      if (typeof window !== "undefined") {
+        const userData = localStorage.getItem("user");
+        if (userData) {
+          try {
+            const parsed = JSON.parse(userData);
+            token = parsed.token;
+            myUserId = String(parsed.id);
+          } catch (error) {
+            console.error("Error al parsear datos de usuario:", error);
+          }
+        }
+      }
+
+      if (!token || !myUserId) {
+        console.log("⏳ Token no disponible, reintentando en 2s...");
+        retryTimeout = setTimeout(connectWebSocket, 2000);
+        return;
+      }
+
+      const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'}/chats/ws/0?token=${encodeURIComponent(token)}`;
+      websocket = new WebSocket(wsUrl);
+
+      websocket.onopen = () => {
+        console.log("✅ WebSocket GLOBAL conectado para actualizaciones de chats");
+        if (retryTimeout) {
+          clearTimeout(retryTimeout);
+          retryTimeout = null;
+        }
+      };
+
+      websocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "chat_update" || data.type === "new_message") {
+            console.log("🌍 Recibida actualización global, recargando chats...");
+            fetchUserChats(); // ✅ Refresca contactos completos
+          }
+        } catch (err) {
+          console.error("❌ Error al parsear mensaje del WebSocket global:", err);
+        }
+      };
+
+      websocket.onclose = () => {
+        console.log("🔌 WebSocket GLOBAL desconectado. Reintentando...");
+        if (retryTimeout) clearTimeout(retryTimeout);
+        retryTimeout = setTimeout(connectWebSocket, 3000);
+      };
+
+      websocket.onerror = (err) => {
+        console.error("❌ Error en WebSocket GLOBAL:", err);
+      };
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (websocket) websocket.close();
+      if (retryTimeout) clearTimeout(retryTimeout);
+    };
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -69,15 +234,24 @@ export function ContactsSidebar({
     contact.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // ✅ Función segura para seleccionar contacto
+  const handleContactClick = (name: string) => {
+    const contact = enhancedContacts.find(c => c.name === name);
+    if (!contact) {
+      console.warn(`❌ Intento de abrir chat con contacto no existente: ${name}`);
+      return;
+    }
+    onContactSelect(name);
+  };
+
   return (
     <div className="w-80 bg-[#0f0f0f] border-r border-gray-700 flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            {/* ✅ Flecha visible y funcional — usa handleBackToDashboard directamente */}
             <button
-              onClick={handleBackToDashboard} // ✅ ¡Aquí está la clave!
+              onClick={handleBackToDashboard}
               className="p-2 rounded-full hover:bg-gray-700 text-white hover:text-blue-400 transition-all duration-200 transform hover:scale-105"
               aria-label={t("back_to_dashboard") || "Volver al dashboard"}
             >
@@ -96,7 +270,7 @@ export function ContactsSidebar({
           <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder={t("search_contacts_placeholder")}
+            placeholder={t("search_contacts_placeholder") || "Buscar contactos..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-[#1a1a1a] border border-gray-600 rounded-lg pl-10 pr-4 py-2 text-sm text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
@@ -116,7 +290,7 @@ export function ContactsSidebar({
         >
           <div className="flex flex-col items-center">
             <Video className="w-4 h-4 mb-1" />
-            <span>{t("calls")}</span>
+            <span>{t("calls") || "Llamadas"}</span>
           </div>
         </button>
         <button
@@ -129,14 +303,30 @@ export function ContactsSidebar({
         >
           <div className="flex flex-col items-center">
             <MessageCircle className="w-4 h-4 mb-1" />
-            <span>{t("messages")}</span>
+            <span>{t("messages") || "Mensajes"}</span>
           </div>
         </button>
       </div>
 
       {/* Contacts List */}
       <div className="flex-1 overflow-y-auto">
-        {filteredContacts.length === 0 ? (
+        {loadingChats ? (
+          <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm p-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+            <p>{t("loading_contacts") || "Cargando contactos..."}</p>
+            <p className="text-xs mt-2">Verifica tu conexión y token</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center h-full text-red-500 text-sm p-4">
+            <p>⚠️ {error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : filteredContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm p-4">
             <div className="w-16 h-16 mb-4 text-gray-600">
               <svg
@@ -154,15 +344,17 @@ export function ContactsSidebar({
                 />
               </svg>
             </div>
-            <p className="text-center font-medium">{t("no_contacts")}</p>
-            <p className="text-center text-gray-400 mt-1">{t("start_new_conversation")}</p>
+            <p className="text-center font-medium">{t("no_contacts") || "Sin contactos"}</p>
+            <p className="text-center text-gray-400 mt-1">
+              {t("start_new_conversation") || "Empieza una nueva conversación"}
+            </p>
           </div>
         ) : (
           <div className="p-2">
             {filteredContacts.map((contact) => (
               <div
-                key={contact.id}
-                onClick={() => onContactSelect(contact.name)}
+                key={contact.id} // ✅ Usar ID como key
+                onClick={() => handleContactClick(contact.name)}
                 className={`p-3 rounded-xl mb-2 cursor-pointer transition-all duration-200 relative ${
                   currentContact === contact.name
                     ? "bg-blue-600/20 border border-blue-500/30"
@@ -177,7 +369,15 @@ export function ContactsSidebar({
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-medium text-white text-lg">
-                      {contact.avatar || contact.name.charAt(0).toUpperCase()}
+                      {contact.avatar ? (
+                        <img
+                          src={contact.avatar}
+                          alt={contact.name}
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : (
+                        contact.name.charAt(0).toUpperCase()
+                      )}
                     </div>
                     <div
                       className={`absolute -bottom-1 -right-1 w-3 h-3 ${getStatusColor(
@@ -217,7 +417,7 @@ export function ContactsSidebar({
                   </div>
 
                   <div className="flex flex-col items-end">
-                    <span className="text-xs text-gray-500">13:20</span>
+                    <span className="text-xs text-gray-500">—</span>
                     {contact.status === "online" && (
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                     )}
@@ -229,35 +429,63 @@ export function ContactsSidebar({
         )}
       </div>
 
-      {/* Quick Actions */}
+      {/* ✅ NUEVO FOOTER CON 3 BOTONES */}
       <div className="p-4 border-t border-gray-700">
-        <div className="grid grid-cols-3 gap-2">
+        <div className="flex gap-2 justify-center">
+          {/* Botón Llamada */}
           <button
-            onClick={() => onViewChange("video-call")}
-            className="bg-green-600 hover:bg-green-700 p-3 rounded-xl transition-colors group"
+            onClick={() => {
+              if (currentContact) {
+                const otherUser = enhancedContacts.find(c => c.name === currentContact);
+                if (otherUser) {
+                  onViewChange("video-call");
+                  startCall(otherUser.id, otherUser.name, false);
+                } else {
+                  alert("Usuario no encontrado. Por favor, selecciona un contacto válido.");
+                }
+              } else {
+                alert("Selecciona un contacto primero.");
+              }
+            }}
+            className="cursor-pointer flex-1 bg-green-600 hover:bg-green-700 p-3 rounded-lg transition-colors flex items-center justify-center gap-2"
           >
-            <div className="flex flex-col items-center">
-              <Phone className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
-              <span className="text-xs text-white mt-1">{t("call")}</span>
-            </div>
+            <Phone className="w-4 h-4 text-white" />
+            <span className="text-xs font-medium text-white">Call</span>
           </button>
+
+          {/* Botón Nuevo Chat */}
           <button
-            onClick={() => onViewChange("video-call")}
-            className="bg-blue-600 hover:bg-blue-700 p-3 rounded-xl transition-colors group"
+            onClick={onOpenNewChatModal}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 p-3 rounded-lg transition-colors flex items-center justify-center gap-2"
           >
-            <div className="flex flex-col items-center">
-              <Video className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
-              <span className="text-xs text-white mt-1">{t("video")}</span>
+            <div className="relative">
+              <MessageCircle className="w-4 h-4 text-white" />
+              <div className="absolute -top-1 -left-1 w-4 h-4 bg-white text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+                N
+              </div>
             </div>
+            <span className="cursor-pointer text-xs font-medium text-white">New Chat</span>
           </button>
+
+          {/* Botón Video */}
           <button
-            onClick={() => onViewChange("chat")}
-            className="bg-gray-600 hover:bg-gray-700 p-3 rounded-xl transition-colors group"
+            onClick={() => {
+              if (currentContact) {
+                const otherUser = enhancedContacts.find(c => c.name === currentContact);
+                if (otherUser) {
+                  onViewChange("video-call");
+                  startCall(otherUser.id, otherUser.name, true);
+                } else {
+                  alert("Usuario no encontrado. Por favor, selecciona un contacto válido.");
+                }
+              } else {
+                alert("Selecciona un contacto primero.");
+              }
+            }}
+            className="cursor-pointer flex-1 bg-blue-600 hover:bg-blue-700 p-3 rounded-lg transition-colors flex items-center justify-center gap-2"
           >
-            <div className="flex flex-col items-center">
-              <MessageCircle className="w-5 h-5 text-white group-hover:scale-110 transition-transform" />
-              <span className="text-xs text-white mt-1">{t("chat")}</span>
-            </div>
+            <Video className="w-4 h-4 text-white" />
+            <span className="text-xs font-medium text-white">Video</span>
           </button>
         </div>
       </div>
