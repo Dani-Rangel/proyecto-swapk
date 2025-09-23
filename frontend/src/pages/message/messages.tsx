@@ -15,6 +15,7 @@ function MessagesPageComponent() {
 // ✅ Exportamos el componente protegido
 export default function MessagesPage() {
   return (
+    
     <ProtectedRoute>
       <MessagesPageComponent />
     </ProtectedRoute>
