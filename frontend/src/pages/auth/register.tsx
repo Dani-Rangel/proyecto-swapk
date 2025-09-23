@@ -36,6 +36,7 @@ export default function RegisterPage() {
           nombre: formData.nombre,
           email: formData.correo, 
           password: formData.password,
+          rol: data.user.rol,
         }),
       })
 
@@ -228,6 +229,7 @@ export default function RegisterPage() {
                       nombre: data.nombre,
                       correo: data.correo,
                       perfil: data.perfil,
+                      rol: data.user.rol,
                     }
                     localStorage.setItem("user", JSON.stringify(userData))
                     document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
