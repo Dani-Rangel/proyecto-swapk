@@ -4,7 +4,7 @@ import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import NewMessageModal from "./new_message_modal";
-import { Send, Paperclip, Smile, MessageSquare } from "lucide-react";
+import { Send, Paperclip, Smile, MessageSquare, Edit2, Trash2, Plus } from "lucide-react";
 import { useTranslation } from "../../lib/useTranslations";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
@@ -27,7 +27,6 @@ interface Message {
   fileName?: string;
 }
 
-// ✅ Nueva interfaz para el chat del backend
 interface BackendChat {
   chat_id: number;
   tipo: string;
@@ -40,33 +39,51 @@ interface ChatAreaProps {
   currentContact: string | null;
   onContactSelect?: (contact: string) => void;
   onViewChange?: (view: "chat" | "video-call" | "screen-share") => void;
+  isModalOpen?: boolean;
+  setIsModalOpen?: (open: boolean) => void;
 }
 
-export function ChatArea({ currentContact, onContactSelect, onViewChange }: ChatAreaProps) {
+export function ChatArea({
+  currentContact,
+  onContactSelect,
+  onViewChange,
+  isModalOpen,
+  setIsModalOpen,
+}: ChatAreaProps) {
   const { t } = useTranslation();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<Map<string, User>>(new Map()); // ✅ Usar Map
   const [loading, setLoading] = useState(true);
 
-  // --- Estados para WebSocket y conexión ---
+  // --- Estados para el modal ---
+  const modalOpen = isModalOpen || false;
+  const setModalOpen = setIsModalOpen || (() => {});
+
+  // --- WebSocket ---
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // --- ✅ NUEVO: Estado para almacenar los chats del usuario ---
+  // --- Chats del usuario ---
   const [userChats, setUserChats] = useState<BackendChat[]>([]);
   const [loadingChats, setLoadingChats] = useState(true);
 
+  // --- Edición/eliminación ---
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [contextMenuOpen, setContextMenuOpen] = useState<string | null>(null);
+
+  // --- Refs ---
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  // --- Obtener token y user ID desde localStorage ---
+  // --- Obtener token y user ID ---
   let token: string | null = null;
   let myUserId: string | null = null;
 
@@ -78,45 +95,68 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
         token = parsed.token;
         myUserId = String(parsed.id);
       } catch (error) {
-        console.error("Error parsing auth data from localStorage:", error);
+        console.error("Error parsing auth data:", error);
       }
     }
   }
 
-  // --- Cargar todos los usuarios ---
+  // --- Cargar usuarios de /users/all + chats ---
   useEffect(() => {
     const fetchUsers = async () => {
+      if (!myUserId) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`${API_URL}/users/all`);
         if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
         const data = await res.json();
-        setAllUsers(
-          data.map((user: any) => ({
+
+        const usersFromApi = data
+          .filter((user: any) => String(user.id) !== myUserId)
+          .map((user: any) => ({
             id: String(user.id),
             name: user.name,
             username: user.username,
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&size=128`,
-          }))
-        );
+          }));
+
+        // ✅ Combinar con usuarios de chats
+        const combinedUsers = new Map<string, User>();
+
+        // Agregar usuarios de chats
+        userChats.forEach(chat => {
+          chat.usuarios.forEach(u => {
+            if (String(u.id) !== String(myUserId)) {
+              combinedUsers.set(u.id, {
+                id: u.id,
+                name: u.nombre,
+                username: u.nombre,
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nombre)}&background=random&size=128`,
+              });
+            }
+          });
+        });
+
+        // Agregar usuarios de API (sobrescriben si ya existen)
+        usersFromApi.forEach(user => {
+          combinedUsers.set(user.id, user);
+        });
+
+        setAllUsers(combinedUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
-        setAllUsers([
-          {
-            id: "1",
-            name: "Usuario de prueba",
-            username: "prueba",
-            avatar: "https://ui-avatars.com/api/?name=Prueba&background=random&size=128",
-          },
-        ]);
+        setAllUsers(new Map());
       } finally {
         setLoading(false);
       }
     };
 
     fetchUsers();
-  }, []);
+  }, [myUserId, userChats]); // ✅ Dependencia crítica
 
-  // --- ✅ Cargar los chats del usuario al montar ---
+  // --- Cargar chats del usuario ---
   useEffect(() => {
     const fetchUserChats = async () => {
       if (!token || !myUserId) {
@@ -131,24 +171,20 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
           },
         });
 
-        if (!res.ok) {
-          throw new Error(`Error ${res.status}: ${res.statusText}`);
-        }
-
+        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
         const data = await res.json();
-        setUserChats(data.chats || []);
-        console.log("✅ Chats del usuario cargados:", data.chats);
 
-        // --- ✅ Opción: Seleccionar automáticamente el primer chat ---
+        setUserChats(data.chats || []);
+
         if (data.chats && data.chats.length > 0 && !currentContact && onContactSelect) {
           const firstChat = data.chats[0];
-          const otherUser = firstChat.usuarios.find((u: any) => u.id !== myUserId);
+          const otherUser = firstChat.usuarios.find((u: any) => String(u.id) !== String(myUserId));
           if (otherUser) {
             onContactSelect(otherUser.nombre);
           }
         }
       } catch (err) {
-        console.error("❌ Error al cargar los chats del usuario:", err);
+        console.error("❌ Error al cargar chats:", err);
         setError("No se pudieron cargar tus chats");
       } finally {
         setLoadingChats(false);
@@ -160,23 +196,6 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
 
   // --- Conectar WebSocket cuando cambia el contacto ---
   useEffect(() => {
-    // Obtener token y user ID
-    let token: string | null = null;
-    let myUserId: string | null = null;
-
-    if (typeof window !== "undefined") {
-      const authData = localStorage.getItem("user");
-      if (authData) {
-        try {
-          const parsed = JSON.parse(authData);
-          token = parsed.token;
-          myUserId = String(parsed.id);
-        } catch (error) {
-          console.error("Error parsing auth data from localStorage:", error);
-        }
-      }
-    }
-
     if (!currentContact || !token || !myUserId) {
       if (ws) {
         ws.close();
@@ -187,15 +206,47 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
       return;
     }
 
-    const otherUser = allUsers.find((u) => u.name === currentContact);
+    // ✅ Buscar contacto en `allUsers` o en `userChats`
+    const findUserInChats = (): User | null => {
+      for (const chat of userChats) {
+        const otherUser = chat.usuarios.find(
+          (u: any) => 
+            String(u.id) !== String(myUserId) && 
+            u.nombre === currentContact &&
+            u.id !== undefined
+        );
+        if (otherUser) {
+          return {
+            id: otherUser.id,
+            name: otherUser.nombre,
+            username: otherUser.nombre,
+            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.nombre)}&background=random&size=128`,
+          };
+        }
+      }
+      return null;
+    };
+
+    const otherUser = Array.from(allUsers.values()).find(
+      (u) => u.name === currentContact
+    ) || findUserInChats();
+
     if (!otherUser) {
       setError("Usuario no encontrado");
       return;
     }
 
+    // ✅ Validación explícita antes de iniciar el chat
+    if (String(otherUser.id) === String(myUserId)) {
+      setError("No puedes chatear contigo mismo");
+      console.warn("⚠️ Bloqueado intento de chat consigo mismo:", { otherUser, myUserId });
+      return;
+    }
+
+    setMessages([]);
+    
     const initializeChat = async () => {
       try {
-        // 1. Crear o obtener el chat_id
         const res = await fetch(`${API_URL}/chats/start/${otherUser.id}`, {
           method: "POST",
           headers: {
@@ -205,38 +256,59 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
         });
 
         if (!res.ok) {
-          throw new Error(`Error al iniciar chat: ${res.status}`);
+          let errorMessage = `Error ${res.status}`;
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.detail || errorMessage;
+          } catch (e) {}
+          throw new Error(errorMessage);
         }
 
         const data = await res.json();
         const chatId = data.chat_id;
         setCurrentChatId(chatId);
 
-        // 2. Cargar mensajes previos desde el backend
-        const messagesRes = await fetch(`${API_URL}/chats/${chatId}/messages`);
+        const messagesRes = await fetch(`${API_URL}/chats/${chatId}/messages`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
         if (!messagesRes.ok) {
-          throw new Error(`Error al cargar mensajes: ${messagesRes.status}`);
+          let msgError = `Error ${messagesRes.status}`;
+          try {
+            const errorData = await messagesRes.json();
+            msgError = errorData.detail || msgError;
+          } catch (e) {}
+          throw new Error(msgError);
         }
+
         const messagesData = await messagesRes.json();
 
-        // Convertir mensajes del backend al formato del frontend
-        const loadedMessages = messagesData.messages.map((msg: any) => ({
-          id: msg.id.toString(),
-          sender: msg.id_usuario.toString() === myUserId ? "Tú" : otherUser.name || "Otro Usuario",
-          content: msg.contenido,
-          timestamp: new Date(msg.fecha).toLocaleTimeString("es-ES", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-          isOwn: msg.id_usuario.toString() === myUserId,
-          type: msg.tipo === "imagen" || msg.tipo === "archivo" ? "file" : "text",
-          fileUrl: msg.url_archivo || undefined,
-          fileName: msg.url_archivo ? "Archivo" : undefined,
-        }));
+        const validMessages = messagesData.messages.filter(
+          (msg: any) => msg.contenido !== null && msg.contenido !== ""
+        );
+
+        // ✅ CORREGIDO: Usar `allUsers` para encontrar el nombre real
+        const loadedMessages = validMessages.map((msg: any) => {
+          const isOwn = msg.id_usuario.toString() === myUserId;
+          const senderUser = allUsers.get(String(msg.id_usuario)); // ✅ Usar Map
+          return {
+            id: msg.id.toString(),
+            sender: isOwn ? "Tú" : (senderUser?.name || "Usuario desconocido"), // ✅ .name, no .nombre
+            content: msg.contenido,
+            timestamp: new Date(msg.fecha).toLocaleTimeString("es-ES", {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            isOwn,
+            type: msg.tipo === "imagen" || msg.tipo === "archivo" ? "file" : "text",
+            fileUrl: msg.url_archivo || undefined,
+            fileName: msg.url_archivo ? "Archivo" : undefined,
+          };
+        });
 
         setMessages(loadedMessages);
 
-        // 3. Conectar al WebSocket
         const wsUrl = `ws://localhost:8000/chats/ws/${chatId}?token=${token}`;
         const websocket = new WebSocket(wsUrl);
 
@@ -252,9 +324,15 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
             const receivedMsg = data.message;
             const isOwnMessage = receivedMsg.id_usuario.toString() === myUserId;
 
+            if (!receivedMsg.contenido) {
+              console.warn("⚠️ Mensaje recibido con contenido null, ignorado");
+              return;
+            }
+
+            const senderUser = allUsers.get(String(receivedMsg.id_usuario)); // ✅ Usar Map
             const newMessage: Message = {
               id: receivedMsg.id.toString(),
-              sender: isOwnMessage ? "Tú" : otherUser.name || "Otro Usuario",
+              sender: isOwnMessage ? "Tú" : (senderUser?.name || "Usuario desconocido"), // ✅ .name
               content: receivedMsg.contenido,
               timestamp: new Date(receivedMsg.fecha).toLocaleTimeString("es-ES", {
                 hour: "2-digit",
@@ -266,7 +344,11 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
               fileName: receivedMsg.url_archivo ? "Archivo" : undefined,
             };
 
-            setMessages((prev) => [...prev, newMessage]);
+            setMessages((prev) => {
+              const exists = prev.some(msg => msg.id === newMessage.id);
+              if (exists) return prev;
+              return [...prev, newMessage];
+            });
           }
         };
 
@@ -282,21 +364,16 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
         };
 
         setWs(websocket);
-
-        // Cleanup
-        return () => {
-          websocket.close();
-        };
       } catch (err) {
         console.error("❌ Error al inicializar chat:", err);
-        setError("No se pudo iniciar el chat");
+        setError(err instanceof Error ? err.message : "No se pudo iniciar el chat");
       }
     };
 
     initializeChat();
-  }, [currentContact, allUsers]);
+  }, [currentContact, allUsers, userChats, myUserId, token]);
 
-  // Auto-scroll al final de los mensajes
+  // Auto-scroll
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -304,18 +381,17 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
   }, [messages]);
 
   const currentUser = "Jefferson Correa";
-  const chatHistory: User[] = messages.length > 0 ? allUsers.slice(0, 3) : [];
 
-  // --- Enviar mensaje al backend ---
-    const handleSendMessage = () => {
+  // Enviar mensaje
+  const handleSendMessage = () => {
     if (!message.trim() || !ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn("⚠️ WebSocket no está listo para enviar");
+      console.warn("⚠️ WebSocket no listo");
       return;
     }
 
     const payload = {
       type: "message",
-      content: message,
+      content: message.trim(),
       chat_id: currentChatId,
       user_id: myUserId,
       tipo: "texto",
@@ -323,14 +399,11 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
 
     try {
       ws.send(JSON.stringify(payload));
-      console.log("✅ Mensaje enviado:", payload);
-
-      // Limpiar mensaje local
       setMessage("");
       setShowEmojiPicker(false);
     } catch (err) {
       console.error("❌ Error al enviar mensaje:", err);
-      setError("Error al enviar mensaje. Intenta nuevamente.");
+      setError("Error al enviar mensaje");
     }
   };
 
@@ -341,12 +414,10 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
     }
   };
 
-  // Seleccionar emoji
   const handleEmojiSelect = (emojiData: any) => {
     setMessage((prev) => prev + emojiData.emoji);
   };
 
-  // Subir archivo (simulado)
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -354,7 +425,7 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
     const fileUrl = URL.createObjectURL(file);
     const newMessage: Message = {
       id: Date.now().toString(),
-      sender: t("default_user"),
+      sender: "Tú",
       content: "",
       timestamp: new Date().toLocaleTimeString("es-ES", {
         hour: "2-digit",
@@ -370,16 +441,98 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Mostrar loader mientras se cargan datos
+  // Editar mensaje
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    if (!token || !currentChatId) return;
+
+    try {
+      const res = await fetch(`${API_URL}/chats/messages/${messageId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ new_content: newContent }),
+      });
+
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+
+      const updatedMsg = await res.json();
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? {
+                ...msg,
+                content: updatedMsg.contenido,
+                timestamp: new Date(updatedMsg.fecha).toLocaleTimeString("es-ES", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              }
+            : msg
+        )
+      );
+
+      setEditingMessageId(null);
+      setEditContent("");
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(
+          JSON.stringify({
+            type: "edit_message",
+            message_id: messageId,
+            new_content: updatedMsg.contenido,
+            fecha: updatedMsg.fecha,
+          })
+        );
+      }
+    } catch (err) {
+      console.error("❌ Error al editar mensaje:", err);
+      setError("No se pudo editar el mensaje");
+    }
+  };
+
+  // Eliminar mensaje
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!token || !currentChatId) return;
+
+    try {
+      const res = await fetch(`${API_URL}/chats/messages/${messageId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+      setShowDeleteConfirm(null);
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(
+          JSON.stringify({
+            type: "delete_message",
+            message_id: messageId,
+          })
+        );
+      }
+    } catch (err) {
+      console.error("❌ Error al eliminar mensaje:", err);
+      setError("No se pudo eliminar el mensaje");
+    }
+  };
+
+  // Renderizado condicional
   if (loading || loadingChats) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#141414]">
-        <div className="text-white">Cargando tus chats...</div>
+        <div className="text-white">Cargando...</div>
       </div>
     );
   }
 
-  // --- Pantalla de lista de chats (cuando no hay contacto seleccionado) ---
   if (!currentContact) {
     return (
       <div className="flex-1 flex flex-col items-center justify-start bg-[#141414] p-6 sm:p-8 pt-16">
@@ -390,7 +543,7 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
             </h2>
             <div className="space-y-3">
               {userChats.map((chat) => {
-                const otherUser = chat.usuarios.find((u: any) => u.id !== myUserId);
+                const otherUser = chat.usuarios.find((u: any) => String(u.id) !== String(myUserId));
                 if (!otherUser) return null;
                 return (
                   <div
@@ -418,7 +571,6 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
             </div>
           </div>
         ) : (
-          // --- Pantalla de "empezar nuevo chat" ---
           <div className="flex flex-col items-center text-center max-w-md mx-auto animate-fadeIn">
             <div className="w-20 h-20 sm:w-24 sm:h-24 mb-6 rounded-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center shadow-lg border border-gray-700">
               <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400" />
@@ -430,26 +582,22 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
               {t("private_chat_description")}
             </p>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => setModalOpen(true)}
               className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-all duration-300"
             >
               {t("send_message")}
             </button>
 
-            {isModalOpen && (
+            {modalOpen && (
               <NewMessageModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
                 onContactSelect={(contactName) => {
                   onContactSelect?.(contactName);
                   onViewChange?.("chat");
-                  setIsModalOpen(false);
+                  setModalOpen(false);
                 }}
-                suggestedUsers={
-                  chatHistory.length > 0
-                    ? chatHistory
-                    : allUsers.filter((u) => u.name !== currentUser)
-                }
+                suggestedUsers={Array.from(allUsers.values()).filter((u) => u.name !== currentUser)}
               />
             )}
           </div>
@@ -458,20 +606,27 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
     );
   }
 
-  // --- Chat activo ---
+  // Chat activo
   return (
-    <div className="flex h-full">
-      <div className="flex-1 flex flex-col bg-[#141414]">
-        {/* Lista de mensajes */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-120px)]">
+    <div className="flex h-full relative">
+      <div className="flex-1 flex flex-col bg-[#141414] h-full">
+        {/* Mensajes */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-160px)]">
           {messages.length === 0 ? (
             <div className="text-gray-500 text-sm text-center mt-10">
               {t("no_messages_yet")}
             </div>
           ) : (
             messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.isOwn ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-xs lg:max-w-md ${msg.isOwn ? "order-2" : "order-1"}`}>
+              <div
+                key={msg.id}
+                className={`flex ${msg.isOwn ? "justify-end" : "justify-start"} group relative`}
+              >
+                <div
+                  className={`max-w-xs lg:max-w-md ${msg.isOwn ? "order-2" : "order-1"} ${
+                    msg.isOwn ? "mr-12" : "ml-12"
+                  }`}
+                >
                   {!msg.isOwn && (
                     <div className="flex items-center gap-2 mb-1">
                       <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-xs">
@@ -481,9 +636,8 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
                     </div>
                   )}
 
-                  {/* Si es archivo */}
                   {msg.type === "file" ? (
-                    <div className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-white">
+                    <div className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-white relative">
                       {msg.fileUrl && msg.fileName?.match(/\.(jpg|jpeg|png|gif)$/i) ? (
                         <img
                           src={msg.fileUrl}
@@ -503,38 +657,134 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
                       <p className="text-xs mt-1 text-gray-400">{msg.timestamp}</p>
                     </div>
                   ) : (
-                    // Si es texto
-                    <div
-                      className={`px-4 py-2 rounded-lg ${
-                        msg.isOwn ? "bg-blue-600 text-white" : "bg-[#1a1a1a] text-white"
-                      }`}
-                    >
-                      <p className="text-sm">{msg.content}</p>
-                      <p
-                        className={`text-xs mt-1 ${
-                          msg.isOwn ? "text-blue-200" : "text-gray-400"
+                      <div
+                        className={`px-4 py-2 rounded-lg relative ${
+                          msg.isOwn 
+                            ? "bg-blue-800 text-white shadow-sm" 
+                            : "bg-[#1a1a1a] text-white"
                         }`}
                       >
-                        {msg.timestamp}
-                      </p>
+                      {msg.isOwn && (
+                        <div className="absolute -top-2 -right-9 z-10">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setContextMenuOpen(msg.id);
+                            }}
+                            className="p-1 bg-gray-700 hover:bg-gray-600 rounded-full text-white transition-all duration-200"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="1"></circle>
+                              <circle cx="19" cy="12" r="1"></circle>
+                              <circle cx="5" cy="12" r="1"></circle>
+                            </svg>
+                          </button>
+
+                          {contextMenuOpen === msg.id && (
+                            <div className="absolute top-8 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-48 message-options-menu overflow-hidden">
+                              <button
+                                onClick={() => {
+                                  setEditingMessageId(msg.id);
+                                  setEditContent(msg.content);
+                                  setContextMenuOpen(null);
+                                }}
+                                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-800 hover:bg-gray-50 transition-colors"
+                              >
+                                <Edit2 className="w-4 h-4 text-blue-600" />
+                                <span className="font-medium">Editar</span>
+                              </button>
+                              <div className="border-t border-gray-100"></div>
+                              <button
+                                onClick={() => {
+                                  setShowDeleteConfirm(msg.id);
+                                  setContextMenuOpen(null);
+                                }}
+                                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span className="font-medium">Eliminar</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {editingMessageId === msg.id ? (
+                        <div className="flex flex-col gap-1">
+                          <textarea
+                            value={editContent}
+                            onChange={(e) => setEditContent(e.target.value)}
+                            className="w-full bg-gray-800 text-white text-sm p-2 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+                            rows={2}
+                            autoFocus
+                          />
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => handleEditMessage(msg.id, editContent)}
+                              className="text-xs bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-white transition-colors"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingMessageId(null);
+                                setEditContent("");
+                              }}
+                              className="text-xs bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-white transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm break-words">{msg.content}</p>
+                          <p
+                            className={`text-xs mt-1 ${
+                              msg.isOwn ? "text-blue-200" : "text-gray-400"
+                            }`}
+                          >
+                            {msg.timestamp}
+                          </p>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
+
+                {showDeleteConfirm === msg.id && (
+                  <div className="absolute top-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-30 p-4 min-w-64">
+                    <p className="text-gray-800 text-sm font-medium mb-3">¿Quieres eliminar este mensaje?</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleDeleteMessage(msg.id)}
+                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(null)}
+                        className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium py-2 px-3 rounded-lg transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input de mensaje */}
-        <div className="p-4 border-t border-gray-700 bg-[#1a1a1a] relative">
+        {/* Input */}
+        <div className="p-4 border-t border-gray-700 bg-[#1a1a1a] relative h-20">
           <div className="flex items-center gap-3">
-            {/* Subir archivo */}
             <button
               onClick={() => fileInputRef.current?.click()}
               className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <Paperclip className="w-5 h-5 text-gray-400" />
+              <Paperclip className="cursor-pointer w-5 h-5 text-gray-400" />
             </button>
             <input
               type="file"
@@ -543,7 +793,6 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
               onChange={handleFileUpload}
             />
 
-            {/* Input texto */}
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -551,9 +800,7 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={
-                  isConnected
-                    ? t("write_message_placeholder")
-                    : "Conectando..."
+                  isConnected ? t("write_message_placeholder") : "Conectando..."
                 }
                 disabled={!isConnected}
                 className="w-full bg-[#141414] border border-gray-600 rounded-lg px-4 py-2 pr-12 focus:outline-none focus:border-blue-500 text-white placeholder-gray-400"
@@ -562,31 +809,25 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
                 onClick={() => setShowEmojiPicker((prev) => !prev)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:bg-gray-700 rounded p-1 transition-colors"
               >
-                <Smile className="w-4 h-4 text-gray-400" />
+                <Smile className="cursor-pointer w-4 h-4 text-gray-400" />
               </button>
             </div>
 
-            {/* Botón enviar */}
             <button
               onClick={handleSendMessage}
               disabled={!message.trim() || !isConnected}
-              className="p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
+              className="cursor-pointer p-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg transition-colors"
             >
               <Send className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Picker de emojis */}
           {showEmojiPicker && (
             <div className="absolute bottom-16 right-4 bg-[#1a1a1a] border border-gray-700 rounded-lg shadow-lg z-50">
-              <EmojiPicker
-                onEmojiClick={handleEmojiSelect}
-                searchDisabled={true}
-              />
+              <EmojiPicker onEmojiClick={handleEmojiSelect} searchDisabled={true} />
             </div>
           )}
 
-          {/* Mostrar error si existe */}
           {error && (
             <div className="mt-2 text-red-500 text-sm text-center">
               {error}
@@ -594,6 +835,19 @@ export function ChatArea({ currentContact, onContactSelect, onViewChange }: Chat
           )}
         </div>
       </div>
+
+      {modalOpen && (
+        <NewMessageModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onContactSelect={(contactName) => {
+            onContactSelect?.(contactName);
+            onViewChange?.("chat");
+            setModalOpen(false);
+          }}
+          suggestedUsers={Array.from(allUsers.values()).filter((u) => u.name !== currentUser)}
+        />
+      )}
     </div>
   );
 }
