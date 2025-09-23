@@ -61,6 +61,7 @@ const Login: React.FC = () => {
           nombre: data.user.nombre,
           correo: data.user.correo,
           perfil: data.perfil,
+          rol: data.user.rol,
         }
         localStorage.setItem("user", JSON.stringify(userData))
         document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
@@ -162,6 +163,7 @@ const Login: React.FC = () => {
                     nombre: data.nombre,
                     correo: data.correo,
                     perfil: data.perfil,
+                    rol: data.user.rol,
                   }
                   localStorage.setItem("user", JSON.stringify(userData))
                   document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
