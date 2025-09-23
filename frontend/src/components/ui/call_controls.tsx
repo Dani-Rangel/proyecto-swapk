@@ -1,21 +1,21 @@
-// call_controlls.tsx
-"use client"
+// components/ui/call_controls.tsx
+"use client";
 
-import { Mic, MicOff, Video, VideoOff, Phone, Monitor, MoreHorizontal, Square } from "lucide-react"
+import { Mic, MicOff, Video, VideoOff, Phone, Monitor, MoreHorizontal, Square } from "lucide-react";
+import { useVideoCall } from "@/components/state/video_call_provider";
 
 interface CallState {
-  isInCall: boolean
-  isMuted: boolean
-  isCameraOff: boolean
-  isRecording: boolean
-  isScreenSharing: boolean
-  currentContact?: string
-  callDuration: number
+  isInCall: boolean;
+  isMuted: boolean;
+  isCameraOff: boolean;
+  isRecording: boolean;
+  isScreenSharing: boolean;
+  currentContact: string;
 }
 
 interface CallControlsProps {
-  callState: CallState
-  onAction: (action: string) => void
+  callState: CallState;
+  onAction: (action: string) => void;
 }
 
 export function CallControls({ callState, onAction }: CallControlsProps) {
@@ -92,5 +92,5 @@ export function CallControls({ callState, onAction }: CallControlsProps) {
         </button>
       </div>
     </div>
-  )
+  );
 }
