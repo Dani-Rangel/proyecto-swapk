@@ -54,9 +54,7 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
       category: t("privacy_security"),
       items: [
         { id: "certifications", label: t("certifications"), icon: Award },
-        { id: "upload_documents", label: t("upload_documents"), icon: Upload },
-        { id: "verification_status", label: t("verification_status"), icon: CheckCircle },
-      ],
+        { id: "upload_documents", label: t("upload_documents"), icon: Upload },      ],
     },
     {
       category: t("extra_options"),

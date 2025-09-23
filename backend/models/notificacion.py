@@ -1,16 +1,15 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
 import enum
+from sqlalchemy.orm import relationship
 
 class TipoNotificacion(str, enum.Enum):
-    Recordatorio_Aceptado = "Recordatorio Aceptado"
-    Recordatorio_Cancelado = "Recordatorio Cancelado"
-    Curso_Aceptado = "Curso Aceptado"
-    Curso_Cancelado = "Curso Cancelado"
-    Recordatorio_Trueque = "Recordatorio Trueque"
-    Recordatorio_Curso = "Recordatorio Curso"
+    Curso = "Curso"
+    Intercambio = "Intercambio"
     Mensaje = "Mensaje"
-    Personalizada = "Personalizada"
+    Publicacion = "Publicacion"
+    comentario = "comentario"
+
 
 class Notificacion(Base):
     __tablename__ = "notificaciones"
@@ -20,3 +19,5 @@ class Notificacion(Base):
     tipo = Column(Enum(TipoNotificacion))
     fecha = Column(DateTime)
     leido = Column(Boolean, default=False)
+
+usuario = relationship("Usuario")    

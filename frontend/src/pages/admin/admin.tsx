@@ -2,32 +2,25 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
-import Image from "next/image"
+import { Shield, ShieldAlert, Users, BookOpen, RefreshCw, FileText, LogOut } from "lucide-react"
 
 import { UserManagementTable } from "@/components/ui/admin/user-management-table"
 import { CourseManagementTable } from "@/components/ui/admin/course-management-table"
-import { Card, CardContent } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Shield, ShieldAlert } from "lucide-react"
-import { RolUsuario } from "@/services/user"
 import { IntercambioManagementTable } from "@/components/ui/admin/intercambio-management-table"
 import { PublicacionManagementTable } from "@/components/ui/admin/publicacion-management-table"
 
-
-
-import {
-  X, Search, HomeIcon, Star, Camera, Plus, Settings,
-  LogOut, User, Bell, MessageSquare, Menu
-} from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { RolUsuario } from "@/services/user"
 
 export default function AdminPage() {
   const [currentUserRole, setCurrentUserRole] = useState<RolUsuario | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [activeTab, setActiveTab] = useState("users") // pestaña activa
   const router = useRouter()
 
+  // Simula la verificación de permisos
   useEffect(() => {
     const checkUserRole = async () => {
       try {
@@ -44,15 +37,9 @@ export default function AdminPage() {
     checkUserRole()
   }, [])
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    console.log("Buscando:", searchQuery)
-  }
-
   const handleLogout = () => {
-    // Aquí deberías limpiar la sesión/token y redirigir
-    console.log("Cerrando sesión...")
-    router.push("/login")
+    localStorage.removeItem("user")
+    router.push("/auth/login")
   }
 
   if (loading) {
@@ -84,132 +71,108 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#141414] flex">
-      {/* Sidebar */}
-      <nav
-        className={`fixed md:relative h-screen bg-[rgb(30,30,30)] border-[#2E2E2E] backdrop-blur-md border-r flex flex-col transition-all duration-300
-        ${isSidebarOpen ? "w-60 fixed" : "w-14 fixed"}`}
-      >
-        <div className="flex justify-end p-2 left-0.5">
+    <div className="relative min-h-screen flex bg-[#141414] text-white">
+      {/* ====================== */}
+      {/* Sidebar interna */}
+      {/* ====================== */}
+      <aside className="w-64 bg-[#1e1e1e] border-r border-gray-800 flex flex-col p-4">
+        <div className="flex items-center gap-2 mb-8">
+          <Shield className="h-6 w-6 text-blue-400" />
+          <span className="text-lg font-bold">Admin Panel</span>
+        </div>
+
+        <nav className="space-y-2">
           <button
-            className="flex justify-end text-white hover:text-blue-400 transition-colors left-2.5"
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            onClick={() => setActiveTab("users")}
+            className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors ${
+              activeTab === "users" ? "bg-blue-600 text-white" : "hover:bg-gray-700"
+            }`}
           >
-            {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+            <Users className="h-5 w-5" />
+            Gestión de Usuarios
           </button>
-        </div>
 
-        {isSidebarOpen && (
-          <div className="flex items-center mb-8 px-4">
-            <Image
-              src="/img/logoswapk.png"
-              alt="Logo Swapk"
-              width={22}
-              height={22}
-              className="w-6 h-6 mr-3"
-            />
-            <span className="text-white font-bold text-rm">Swapk</span>
-          </div>
-        )}
+          <button
+            onClick={() => setActiveTab("courses")}
+            className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors ${
+              activeTab === "courses" ? "bg-blue-600 text-white" : "hover:bg-gray-700"
+            }`}
+          >
+            <BookOpen className="h-5 w-5" />
+            Gestión de Cursos
+          </button>
 
-        {isSidebarOpen && (
-          <div className="flex gap-12 justify-center mb-12">
-            <User className="w-6 h-6 text-white hover:text-blue-400 cursor-pointer transition-colors" />
-            <Bell className="w-6 h-6 text-white hover:text-blue-400 cursor-pointer transition-colors" />
-            <MessageSquare className="w-6 h-6 text-white hover:text-blue-400 cursor-pointer transition-colors" />
-          </div>
-        )}
+          <button
+            onClick={() => setActiveTab("intercambios")}
+            className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors ${
+              activeTab === "intercambios" ? "bg-blue-600 text-white" : "hover:bg-gray-700"
+            }`}
+          >
+            <RefreshCw className="h-5 w-5" />
+            Gestión de Intercambios
+          </button>
 
-        {isSidebarOpen && (
-          <div className="mb-20 px-3">
-            <form onSubmit={handleSearch} className="flex flex-col gap-6">
-              <input
-                type="text"
-                placeholder="¿Qué aprenderás hoy?"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="bg-gray-800/80 text-white px-4 py-3 rounded-lg border border-gray-600 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-emerald-400/20 w-full transition-all duration-200"
-              />
-              <button
-                type="submit"
-                className="cursor-pointer bg-gradient-to-r bg-blue-600 px-4 py-3 rounded-lg hover:bg-blue-500 hover:to-blue-600 transition-all duration-200 flex items-center justify-center gap-2 text-white font-medium shadow-lg hover:shadow-emerald-500/25"
-              >
-                <Search className="w-4 h-4" />
-                Buscar
-              </button>
-            </form>
-          </div>
-        )}
+          <button
+            onClick={() => setActiveTab("publicaciones")}
+            className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors ${
+              activeTab === "publicaciones" ? "bg-blue-600 text-white" : "hover:bg-gray-700"
+            }`}
+          >
+            <FileText className="h-5 w-5" />
+            Gestión de Publicaciones
+          </button>
+        </nav>
 
-        <div className="flex flex-col gap-4 mb-8 px-5">
-          <button className="cursor-pointer flex items-center gap-3 text-white font-medium py-3 px-2 rounded-lg hover:bg-blue-500/20 hover:text-blue-400 transition-all duration-200">
-            <HomeIcon className="w-5 h-5" />
-            {isSidebarOpen && "INICIO"}
-          </button>
-          <button className="cursor-pointer flex items-center gap-3 text-white font-medium py-3 px-2 rounded-lg hover:bg-blue-500/20 hover:text-blue-400 transition-all duration-200">
-            <Search className="w-5 h-5" />
-            {isSidebarOpen && "EXPLORAR"}
-          </button>
-          <button className="cursor-pointer flex items-center gap-3 text-white font-medium py-3 px-2 rounded-lg hover:bg-blue-500/20 hover:text-blue-400 transition-all duration-200">
-            <Star className="w-5 h-5" />
-            {isSidebarOpen && "MIS TRUEQUES"}
-          </button>
-          <button className="cursor-pointer flex items-center gap-3 text-white font-medium py-3 px-2 rounded-lg hover:bg-blue-500/20 hover:text-blue-400 transition-all duration-200">
-            <Camera className="w-5 h-5" />
-            {isSidebarOpen && "MIS CURSOS"}
-          </button>
-          <button className="cursor-pointer flex items-center gap-3 text-white font-medium py-3 px-2 rounded-lg hover:bg-blue-500/20 hover:text-blue-400 transition-all duration-200">
-            <Plus className="w-5 h-5" />
-            {isSidebarOpen && "COMUNIDAD"}
-          </button>
-          <button className="cursor-pointer flex items-center gap-3 text-white font-medium py-3 px-2 rounded-lg hover:bg-blue-500/20 hover:text-blue-400 transition-all duration-200">
-            <Settings className="w-5 h-5" />
-            {isSidebarOpen && "AJUSTES"}
-          </button>
-        </div>
-
-        <div className="mt-auto px-2 mb-4">
+        <div className="mt-auto pt-4 border-t border-gray-800">
           <button
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 text-red-500 hover:text-red-400 transition w-full"
+            className="flex items-center gap-2 w-full px-3 py-2 text-red-400 hover:bg-red-900 hover:text-white rounded-lg transition-colors"
           >
-            <LogOut className="w-5 h-5" />
-            {isSidebarOpen && <span>Cerrar sesión</span>}
+            <LogOut className="h-5 w-5" />
+            Cerrar sesión
           </button>
         </div>
-      </nav>
+      </aside>
 
-      {/* Main content */}
-      <div className="container mx-auto py-2 space-y-8 ">
-        <div className="flex items-center gap-2 ">
+      {/* ====================== */}
+      {/* Contenido principal */}
+      {/* ====================== */}
+      <main className="flex-1 p-8">
+        <div className="flex items-center gap-2 mb-6">
           <Shield className="h-6 w-6 text-white" />
-          <h1 className="text-3xl font-bold text-white">Panel de Administración</h1>
+          <h1 className="text-3xl font-bold">Panel de Administración</h1>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6 bg-[#2a2a2a] rounded p-6 text-white">
-          <TabsList className="grid w-full grid-cols-4 bg-[#3e3e3e] p-1 rounded-lg">
-            <TabsTrigger value="users">Gestión de Usuarios</TabsTrigger>
-            <TabsTrigger value="courses">Gestión de Cursos</TabsTrigger>
-            <TabsTrigger value="intercambios">Gestión de Intercambios</TabsTrigger>
-            <TabsTrigger value="publicaciones">Gestión de Publicaciones</TabsTrigger>
-          </TabsList>
-          <TabsContent value="users" className="space-y-6">
-            <UserManagementTable />
-          </TabsContent>
+        <div className="bg-[#2a2a2a] rounded p-6 text-white">
+          {activeTab === "users" && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Gestión de Usuarios</h2>
+              <UserManagementTable />
+            </div>
+          )}
 
-          <TabsContent value="courses" className="space-y-6">
-            <CourseManagementTable />
-          </TabsContent>
+          {activeTab === "courses" && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Gestión de Cursos</h2>
+              <CourseManagementTable />
+            </div>
+          )}
 
-          <TabsContent value="intercambios" className="space-y-6">
-            <IntercambioManagementTable />
-          </TabsContent>
+          {activeTab === "intercambios" && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Gestión de Intercambios</h2>
+              <IntercambioManagementTable />
+            </div>
+          )}
 
-          <TabsContent value="publicaciones" className="space-y-6">
-            <PublicacionManagementTable />
-          </TabsContent>
-        </Tabs>
-      </div>
+          {activeTab === "publicaciones" && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Gestión de Publicaciones</h2>
+              <PublicacionManagementTable />
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   )
 }

@@ -42,6 +42,10 @@ export const translations = {
     "mission_vision": "Misión y Visión",
     "testimonials": "Testimonios",
 
+    // ==== Chats ====
+    back_to_dashboard: "Volver al dashboard",
+    loading_contacts: "Cargando contactos...",
+
     // ===== Intercambios =====
     exchanges_title: "Intercambios",
     create_exchange: "Crear trueque",
@@ -59,7 +63,19 @@ export const translations = {
     propose_exchange: "Proponer trueque",
     confirm_delete_exchange: "¿Seguro que quieres eliminar este intercambio?",
     login_required_exchange: "Debes iniciar sesión para crear un intercambio",
+    // ==== Publicaciones ====
 
+    viewLikes: "Ver quién dio like",
+    likedBy: "Dado like por",
+    postUpdated: "Publicación actualizada",
+    errorUpdating: "Error al actualizar",
+    postCreated: "Publicación creada",
+    errorCreating: "Error al crear",
+    confirmDeletePost: "¿Confirmar eliminación de publicación?",
+    postDeleted: "Publicación eliminada",
+    confirmDeleteComment: "¿Confirmar eliminación de comentario?",
+    commentDeleted: "Comentario eliminado",
+    errorLoadingLikes: "Error al cargar likes",
     // ===== Cursos Comunidad =====
     loading_courses: "Cargando cursos...",
     retry: "Reintentar",
@@ -422,6 +438,21 @@ export const translations = {
     rating: "Rating",
     connections: "Connections",
 
+    // ==== Publicaciones ====
+
+    // ===== Missing for index_dashboard.tsx =====
+    viewLikes: "View who liked",
+    likedBy: "Liked by",
+    postUpdated: "Post updated",
+    errorUpdating: "Error updating",
+    postCreated: "Post created",
+    errorCreating: "Error creating",
+    confirmDeletePost: "Confirm post deletion?",
+    postDeleted: "Post deleted",
+    confirmDeleteComment: "Confirm comment deletion?",
+    commentDeleted: "Comment deleted",
+    errorLoadingLikes: "Error loading likes",
+
     // ===== Dates =====
     justNow: "just now",
     minutesAgo: "minutes ago",
@@ -635,6 +666,10 @@ export const translations = {
     propose_exchange: "Propose Exchange",
     confirm_delete_exchange: "Are you sure you want to delete this exchange?",
     login_required_exchange: "You must be logged in to create an exchange",
+
+    
+    "loading_contacts": "Loading contacts...",
+
 
   },
 } as const;

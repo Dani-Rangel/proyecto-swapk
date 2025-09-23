@@ -13,3 +13,5 @@ class ComentarioCreate(BaseModel):
     id_publicacion: int
     id_comentario_padre: int = None
 
+class ComentarioUpdate(BaseModel):
+    contenido: str    

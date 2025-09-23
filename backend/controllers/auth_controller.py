@@ -65,7 +65,8 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
         "user": {
             "id": new_user.id,
             "nombre": new_user.nombre,
-            "correo": new_user.correo
+            "correo": new_user.correo,
+            "rol": user.rol.value
         },
         "perfil": {
             "id": new_profile.id,
@@ -94,9 +95,12 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 
     return {
-        "message": "Login exitoso",
-        "token": token,
-        "user": {
-            "id": user.id,
-        }
+    "message": "Login exitoso",
+    "token": token,
+    "user": {
+        "id": user.id,
+        "nombre": user.nombre, 
+        "correo": user.correo,
+        "rol": user.rol.value 
     }
+}

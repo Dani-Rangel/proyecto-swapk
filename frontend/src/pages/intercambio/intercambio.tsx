@@ -48,12 +48,15 @@ import {
   obtenerTodasHabilidades,
 } from "@/services/intercambio"
 import { actualizarIntercambio } from "@/services/intercambio"
+import { useNotificaciones } from "../../components/context/notificaciones_context"
 import { getCurrentUser } from "@/lib/auth"
 import ProtectedRoute from "@/components/protected_routes/protected_routes";
+import { MainSidebar } from "@/components/MainSidebar"
 
 function SwapkPlatformComponent() {
   const router = useRouter()
   const { t } = useTranslation()
+  const { agregarNotificacion } = useNotificaciones()
 
   // Tema oscuro
   const [isDark, setIsDark] = useState(true)
@@ -170,7 +173,21 @@ function SwapkPlatformComponent() {
 
       try {
         const saved = await crearIntercambio(newTrueque)
-        if (saved) setTrueques((prev) => [...prev, saved])
+        if (saved) {
+        setTrueques((prev) => [...prev, saved])
+
+        // 🚀 Solo si es una NUEVA publicación (no edición), crear notificación
+        if (!truequeEditando) {
+          const user = getCurrentUser()
+          const nombreUsuario = user?.nombre || "Un usuario"
+
+          agregarNotificacion({
+            tipo: "Intercambio", // ✅ Coincide con tu enum en el backend
+            contenido: `El usuario ${nombreUsuario} ha creado un nuevo intercambio: ${formData.modalidad} - ${formData.nivel}.`,
+            id_usuario: user?.id || 0,
+          })
+        }
+      }
       } catch (error) {
         console.error("❌ Error al crear intercambio:", error)
       }
@@ -245,84 +262,12 @@ function SwapkPlatformComponent() {
       </div>
 
       {/* Sidebar Izquierdo */}
-      <div className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static md:flex flex-col border-r ${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"}`}>
-        <div className={`p-3 border-b ${isDark ? "border-[#2E2E2E]" : "border-gray-200"}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <img src="/img/logoswapk.png" alt="Swapk Logo" className="w-7 h-auto" />
-            <span className={`text-sm ${isDark ? "text-[#F5F5F5]" : "text-gray-700"}`}>SWAPK</span>
-            <Button variant="ghost" size="sm" onClick={toggleTheme} className={`ml-auto h-6 w-6 p-0 ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-600 hover:text-gray-900"}`}>
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </Button>
-          </div>
-
-          <div className="relative mb-3">
-            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`} />
-            <Input placeholder={t("search")} className={`pl-10 w-full h-8 border-none shadow-none focus-visible:ring-0 cursor-pointer ${isDark ? "bg-[#1E1E1E] text-[#F5F5F5] placeholder-[#A0A0A0]" : "bg-gray-100 text-gray-900 placeholder-gray-500"}`} />
-          </div>
-
-          <div className="flex gap-1 mb-3">
-            {[
-              { icon: MessageSquare, label: t("messages"), href: "/message/messages" },
-              { icon: Bell, label: t("notifications"), href: "/notifications" },
-              { icon: User, label: t("profile"), href: "/profile/profile" },
-              { icon: Settings, label: t("settings"), href: "/settings/profile_edit" },
-            ].map(({ icon: Icon, label, href }, idx) => (
-              <Button
-                key={idx}
-                variant="ghost"
-                size="sm"
-                className={`flex-1 h-8 cursor-pointer ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-600 hover:text-gray-900"}`}
-                onClick={() => href && router.push(href)}
-                title={label}
-              >
-                <Icon className="w-4 h-4" />
-              </Button>
-            ))}
-          </div>
-
-          <nav className="space-y-1">
-            {[
-              { icon: Home, label: t("home"), active: false, href: "/dashboard/index_dashboard" },
-              { icon: TrendingUp, label: t("popular"), active: false, href: "/message/messages" },
-              { icon: RefreshCw, label: t("exchanges"), active: true, href: "/intercambio/intercambio" },
-              { icon: BookOpen, label: t("myCourses"), active: false, href: "/cursos/community_courses" },
-            ].map((item, idx) => (
-              <Link key={idx} href={item.href} passHref>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={`w-full justify-start h-8 cursor-pointer transition-colors ${
-                    item.active
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : isDark
-                      ? "text-[#A0A0A0] hover:bg-[#2E2E2E]"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  <item.icon className="w-4 h-4 mr-2" /> {item.label}
-                </Button>
-              </Link>
-            ))}
-          </nav>
-        </div>
-
-        {/* Botón Cerrar Sesión */}
-        <div className={`mt-auto p-3 border-t ${isDark ? "border-[#2E2E2E]" : "border-gray-200"}`}>
-          <Button
-            variant="ghost"
-            className={`w-full justify-start ${isDark ? "text-red-400 hover:bg-red-900 hover:text-white" : "text-red-600 hover:bg-red-100 hover:text-red-800"} transition-colors duration-200 cursor-pointer`}
-            onClick={() => {
-              localStorage.removeItem("user")
-              setUser(null)
-              setPerfil(null)
-              toast.success(t("sessionClosed"))
-              setTimeout(() => router.push("/auth/login"), 1000)
-            }}
-          >
-            {t("logout")}
-          </Button>
-        </div>
-      </div>
+       <MainSidebar
+                  isDark={isDark}
+                  toggleTheme={toggleTheme}
+                  isSidebarOpen={isSidebarOpen}
+                  setIsSidebarOpen={setIsSidebarOpen}
+                />
 
       {/* Main */}
       <div className="flex-1 transition-all duration-300 ml-2">
@@ -493,13 +438,22 @@ function SwapkPlatformComponent() {
                   {currentUser?.id !== trueque.id_usuario1 && (
                     <div className="mt-4">
                       <Button
-                        className={sidebarButtonClass}
-                        onClick={() => {
-                          alert(`Propuesta enviada a ${trueque.usuario1?.nombre}`)
-                        }}
-                      >
-                        {t("propose_exchange")}
-                      </Button>
+                      className={sidebarButtonClass}
+                      onClick={() => {
+                        const user = getCurrentUser()
+                        const nombreUsuario = user?.nombre || "Un usuario"
+
+                        agregarNotificacion({
+                          tipo: "Intercambio",
+                          contenido: `El usuario ${nombreUsuario} está interesado en tu intercambio: ${trueque.modo} - ${trueque.nivel}.`,
+                          id_usuario: trueque.id_usuario1, // ✅ Notificar al autor del intercambio
+                        })
+
+                        alert(`Propuesta enviada a ${trueque.usuario1?.nombre}`)
+                      }}
+                    >
+                      {t("propose_exchange")}
+                    </Button>
                     </div>
                   )}
                 </div>

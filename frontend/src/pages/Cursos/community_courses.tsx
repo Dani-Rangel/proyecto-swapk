@@ -42,11 +42,12 @@ import { MultiValue } from "react-select"
 import { skillsAPI } from "@/services/api_Skills";
 import { cursoHabilidadAPI } from '@/services/api_cursoHabilidad'
 import { Notificaciones } from "@/components/ui/notificaciones/notifications"
-import { useNotificaciones } from "@/components/context/notificaciones_context"
+import { useNotificaciones } from "../../components/context/notificaciones_context"
 import { useTranslation } from "@/lib/useTranslations"
 import { useRouter } from "next/navigation"; // ✅ Corregido: next/router → next/navigation
 import Link from "next/link";
 import ProtectedRoute from "@/components/protected_routes/protected_routes"; // ✅ Importamos el componente de protección
+import { MainSidebar } from "@/components/MainSidebar"
 
 interface NewCourseData {
   title: string
@@ -72,6 +73,7 @@ interface CourseDetailViewProps {
 
 interface UserData {
   id: number
+  nombre: string
 }
 
 function CursosComunidadComponent() {
@@ -154,70 +156,82 @@ function CursosComunidadComponent() {
   }, [selectedCourse]);
 
   // 🔹 Crear curso
-  const handleSubmitCourse = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormSubmitting(true);
-    const currentUserId = getCurrentUser()?.id;
-    if (!currentUserId) {
-      alert(t("must_login_to_create_course"));
-      setFormSubmitting(false);
-      return;
+ // 🔹 Crear curso
+const handleSubmitCourse = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setFormSubmitting(true);
+  const currentUserId = getCurrentUser()?.id;
+  if (!currentUserId) {
+    alert(t("must_login_to_create_course"));
+    setFormSubmitting(false);
+    return;
+  }
+  try {
+    // 1. Preparo los datos comunes
+    const cursoPayload = {
+      titulo: newCourse.title,
+      descripcion: newCourse.description,
+      objetivo: newCourse.objective,
+      img_Cursos: newCourse.courseImage
+        ? await convertImageToBase64(newCourse.courseImage)
+        : editingCourse?.img_Cursos || "",
+      user_id: currentUserId,
+      habilidades_ids: newCourse.skills.map((h) => h.id),
+    };
+    let cursoId: number;
+    // 2. Crear o editar
+    if (editingCourse) {
+      // 🟢 EDITAR
+      const updatedCurso = await updateCurso(editingCourse.id, cursoPayload);
+      cursoId = updatedCurso.id;
+      // 🧹 Eliminar habilidades anteriores
+      await cursoHabilidadAPI.deleteAllForCurso(cursoId);
+      // Actualizar lista
+      setCursos((prev) =>
+        prev.map((c) => (c.id === cursoId ? updatedCurso : c))
+      );
+    } else {
+      // 🟢 CREAR
+      const createdCurso = await createCurso(cursoPayload);
+      cursoId = createdCurso.id;
+      // Agregar a la lista
+      setCursos((prev) => [createdCurso, ...prev]);
+
+      // 🚨 Obtener el nombre directamente de localStorage (no del estado)
+      const userFromStorage = getCurrentUser();
+      const nombreUsuario = userFromStorage?.nombre || "Un usuario";
+
+      // 🚨 Depuración
+      console.log("🚀 Usuario desde storage:", userFromStorage);
+      console.log("🚀 Nombre del usuario:", nombreUsuario);
+
+      // ✅ Notificación con el nombre correcto
+      agregarNotificacion({
+        tipo: "Curso",
+        contenido: `El usuario ${nombreUsuario} ha creado el curso "${newCourse.title}".`,
+        id_usuario: currentUserId,
+      });
     }
-    try {
-      // 1. Preparo los datos comunes
-      const cursoPayload = {
-        titulo: newCourse.title,
-        descripcion: newCourse.description,
-        objetivo: newCourse.objective,
-        img_Cursos: newCourse.courseImage
-          ? await convertImageToBase64(newCourse.courseImage)
-          : editingCourse?.img_Cursos || "",
-        user_id: currentUserId,
-        habilidades_ids: newCourse.skills.map((h) => h.id),
-      };
-      let cursoId: number;
-      // 2. Crear o editar
-      if (editingCourse) {
-        // 🟢 EDITAR
-        const updatedCurso = await updateCurso(editingCourse.id, cursoPayload);
-        cursoId = updatedCurso.id;
-        // 🧹 Eliminar habilidades anteriores
-        await cursoHabilidadAPI.deleteAllForCurso(cursoId);
-        // Actualizar lista
-        setCursos((prev) =>
-          prev.map((c) => (c.id === cursoId ? updatedCurso : c))
-        );
-      } else {
-        // 🟢 CREAR
-        const createdCurso = await createCurso(cursoPayload);
-        cursoId = createdCurso.id;
-        // Agregar a la lista
-        setCursos((prev) => [createdCurso, ...prev]);
-        agregarNotificacion({
-          tipo: "curso_creado",
-          contenido: `El usuario ${currentUserId} ha creado el curso "${newCourse.title}".`,
-        });
-      }
-      // 3. Asociar habilidades seleccionadas
-      for (const habilidad of newCourse.skills) {
-        await cursoHabilidadAPI.associateHabilidad({
-          curso_id: cursoId,
-          habilidad_id: habilidad.id,
-        });
-      }
-      // 4. Subir archivos si hay
-      if (newCourse.attachments.length > 0) {
-        await uploadAttachments(cursoId, newCourse.attachments);
-      }
-      // 5. Resetear formulario
-      handleCloseForm();
-    } catch (error) {
-      console.error("❌ Error al procesar el curso:", error);
-      alert(t("error_occurred_try_again"));
-    } finally {
-      setFormSubmitting(false);
+    // 3. Asociar habilidades seleccionadas
+    for (const habilidad of newCourse.skills) {
+      await cursoHabilidadAPI.associateHabilidad({
+        curso_id: cursoId,
+        habilidad_id: habilidad.id,
+      });
     }
-  };
+    // 4. Subir archivos si hay
+    if (newCourse.attachments.length > 0) {
+      await uploadAttachments(cursoId, newCourse.attachments);
+    }
+    // 5. Resetear formulario
+    handleCloseForm();
+  } catch (error) {
+    console.error("❌ Error al procesar el curso:", error);
+    alert(t("error_occurred_try_again"));
+  } finally {
+    setFormSubmitting(false);
+  }
+};
 
   // 🔹 Convertir imagen a base64 para enviar a la API
   const convertImageToBase64 = (file: File): Promise<string> => {
@@ -578,80 +592,12 @@ function CursosComunidadComponent() {
             </Button>
           </div>
           {/* Sidebar Izquierdo */}
-          <div className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:static md:flex flex-col border-r ${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"}`}>
-            <div className={`p-3 border-b ${isDark ? "border-[#2E2E2E]" : "border-gray-200"}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <img src="/img/logoswapk.png" alt="Swapk Logo" className="w-7 h-auto" />
-                <span className={`text-sm ${isDark ? "text-[#F5F5F5]" : "text-gray-700"}`}>SWAPK</span>
-                <Button variant="ghost" size="sm" onClick={toggleTheme} className={`ml-auto h-6 w-6 p-0 ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-600 hover:text-gray-900"}`}>
-                  {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                </Button>
-              </div>
-              <div className="relative mb-3">
-                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`} />
-                <Input placeholder={t("search")} className={`pl-10 w-full h-8 border-none shadow-none focus-visible:ring-0 cursor-pointer ${isDark ? "bg-[#1E1E1E] text-[#F5F5F5] placeholder-[#A0A0A0]" : "bg-gray-100 text-gray-900 placeholder-gray-500"}`} />
-              </div>
-              <div className="flex gap-1 mb-3">
-                {[
-                  { icon: MessageSquare, label: t("messages"), href: "/message/messages" },
-                  { icon: Bell, label: t("notifications"), href: "/notifications" },
-                  { icon: User, label: t("profile"), href: "/profile/profile" },
-                  { icon: Settings, label: t("settings"), href: "/settings/profile_edit" },
-                ].map(({ icon: Icon, label, href }, idx) => (
-                  <Button
-                    key={idx}
-                    variant="ghost"
-                    size="sm"
-                    className={`flex-1 h-8 cursor-pointer ${isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-600 hover:text-gray-900"}`}
-                    onClick={() => href && router.push(href)}
-                    title={label}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </Button>
-                ))}
-              </div>
-              <nav className="space-y-1">
-                {[
-                  { icon: Home, label: t("home"), active: false, href: "/dashboard/index_dashboard" },
-                  { icon: TrendingUp, label: t("popular"), active: false, href: "/message/messages" },
-                  { icon: RefreshCw, label: t("exchanges"), active: false, href: "/intercambio/intercambio" },
-                  { icon: BookOpen, label: t("myCourses"), active: true, href: "/cursos/community_courses" },
-                ].map((item, idx) => (
-                  <Link key={idx} href={item.href} passHref>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className={`w-full justify-start h-8 cursor-pointer transition-colors ${
-                        item.active
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : isDark
-                            ? "text-[#A0A0A0] hover:bg-[#2E2E2E]"
-                            : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      <item.icon className="w-4 h-4 mr-2" /> {item.label}
-                    </Button>
-                  </Link>
-                ))}
-              </nav>
-            </div>
-            {/* Botón Cerrar Sesión */}
-            <div className={`mt-auto p-3 border-t ${isDark ? "border-[#2E2E2E]" : "border-gray-200"}`}>
-              <Button
-                variant="ghost"
-                className={`w-full justify-start ${isDark ? "text-red-400 hover:bg-red-900 hover:text-white" : "text-red-600 hover:bg-red-100 hover:text-red-800"} transition-colors duration-200 cursor-pointer`}
-                onClick={() => {
-                  localStorage.removeItem("user")
-                  setUser(null)
-                  setPerfil(null)
-                  toast.success(t("sessionClosed"))
-                  setTimeout(() => router.push("/auth/login"), 1000)
-                }}
-              >
-                {t("logout")}
-              </Button>
-            </div>
-          </div>
+          <MainSidebar
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+          />
           {/* Main Content */}
           <div className="flex-1 overflow-auto">
             {selectedCourse ? (
@@ -719,7 +665,7 @@ function CursosComunidadComponent() {
                             </div>
                             <div className="relative h-40 rounded-md overflow-hidden border">
                               <img
-                                src={URL.createObjectURL(newCourse.courseImage) || "/placeholder.svg"}
+                                src={URL.createObjectURL(newCourse.courseImage) || "/img/image.png"}
                                 alt="Vista previa del curso"
                                 className="absolute inset-0 w-full h-full object-cover"
                               />
@@ -920,7 +866,7 @@ function CursosComunidadComponent() {
                           <div className="relative pb-48 overflow-hidden rounded-t-lg">
                             <img
                               className="absolute inset-0 h-full w-full object-cover"
-                              src={curso.img_Cursos || "/default-course.png"}
+                              src={curso.img_Cursos || "/img/image.png"}
                               alt={curso.titulo}
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement
@@ -931,7 +877,7 @@ function CursosComunidadComponent() {
                               <div className="relative">
                                 <img
                                   className="h-10 w-10 rounded-full border-2 border-white"
-                                  src="/default-avatar.png"
+                                  src="/img/user.png"
                                   alt={curso.usuario?.nombre || "Usuario"}
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement

@@ -16,8 +16,8 @@ def get_my_perfil(db: Session = Depends(get_db), current_user: Usuario = Depends
     return {
         "id": perfil.id,
         "id_usuario": perfil.id_usuario,
-        "nombre": perfil.usuario.nombre,   # corregido
-        "correo": perfil.usuario.correo,   # corregido
+        "nombre": perfil.usuario.nombre,
+        "correo": perfil.usuario.correo,
         "descripcion": perfil.descripcion or "",
         "ubicacion": perfil.ubicacion or "",
         "Tel": perfil.Tel,
@@ -30,13 +30,13 @@ def get_perfil_by_user_id(id: int, db: Session = Depends(get_db)):
     if not perfil:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
-    from backend.models.perfil_habilidad import perfilHabilidad
+    from backend.models.perfil_habilidad import PerfilHabilidad  # ✅ ¡CORREGIDO! (P mayúscula)
     from backend.models.habilidad import Habilidad
 
     habilidades_query = (
-        db.query(perfilHabilidad, Habilidad.nombre)
-        .join(Habilidad, perfilHabilidad.habilidad_id == Habilidad.id)
-        .filter(perfilHabilidad.Perfil_id == perfil.id)
+        db.query(PerfilHabilidad, Habilidad.nombre)  # ✅ ¡CORREGIDO! (P mayúscula)
+        .join(Habilidad, PerfilHabilidad.habilidad_id == Habilidad.id)
+        .filter(PerfilHabilidad.Perfil_id == perfil.id)
         .all()
     )
 
@@ -54,8 +54,8 @@ def get_perfil_by_user_id(id: int, db: Session = Depends(get_db)):
     return {
         "id": perfil.id,
         "id_usuario": perfil.id_usuario,
-        "nombre": perfil.usuario.nombre,   # corregido
-        "correo": perfil.usuario.correo,   # corregido
+        "nombre": perfil.usuario.nombre,
+        "correo": perfil.usuario.correo,
         "descripcion": perfil.descripcion or "",
         "ubicacion": perfil.ubicacion or "",
         "Tel": perfil.Tel,
@@ -77,7 +77,7 @@ def get_perfil(id: int, db: Session = Depends(get_db), current_user: Usuario = D
     return {
         "id": perfil.id,
         "id_usuario": perfil.id_usuario,
-        "nombre": perfil.usuario.nombre,  # corregido
+        "nombre": perfil.usuario.nombre,
         "descripcion": perfil.descripcion,
         "ubicacion": perfil.ubicacion,
         "foto_perfil": perfil.foto_perfil,
@@ -101,30 +101,24 @@ def update_perfil(
     if not perfil or not usuario:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
-    # Actualizar nombre (solo en usuario, no en perfil porque no existe en modelo perfil)
     if "nombre" in data:
         nuevo_nombre = data["nombre"].strip()
         if not nuevo_nombre:
             raise HTTPException(status_code=400, detail="El nombre no puede estar vacío")
         usuario.nombre = nuevo_nombre
 
-    # Actualizar descripción
     if "descripcion" in data:
         perfil.descripcion = data["descripcion"]
 
-    # Actualizar ubicación
     if "ubicacion" in data:
         perfil.ubicacion = data["ubicacion"]
 
-    # Actualizar Teléfono
     if "Tel" in data:
         perfil.Tel = data["Tel"]
 
-    # Actualizar foto de perfil
     if "foto_perfil" in data:
         perfil.foto_perfil = data["foto_perfil"]
 
-    # Actualizar contraseña
     if "contrasena" in data:
         contrasena = data["contrasena"]
         if len(contrasena) < 6:

@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { Sun, Moon } from "lucide-react"
+import React, { useState } from "react"
+import { Sun, Moon, X } from "lucide-react"
 import Image from "next/image"
-import { useRouter } from "next/router"
+import { useRouter } from "next/navigation"
 import { GoogleLogin } from "@react-oauth/google"
 import axios from "axios"
 
@@ -12,11 +12,45 @@ export default function RegisterPage() {
     nombre: "",
     correo: "",
     password: "",
-    acceptOffers: false,
+    acceptTerms: false,
   })
   const [darkMode, setDarkMode] = useState(true)
-  const [error, setError] = useState("")
+  const [error, setError] = useState<string[]>([])
+  const [showModal, setShowModal] = useState(false)
   const router = useRouter()
+
+  const TERMS_TEXT = `
+Swapk - Términos y Condiciones
+
+1. Introducción
+Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos términos y condiciones. Swapk es una plataforma para el intercambio de conocimientos y servicios entre usuarios.
+
+2. Registro y cuenta
+— Debes proporcionar información veraz y mantener tus datos actualizados.
+— Eres responsable de la seguridad de tu cuenta y de cualquier actividad que ocurra bajo ella.
+
+3. Uso permitido
+— Está prohibido publicar contenido ilegal, fraudulento, que infrinja derechos de terceros o que viole las normas comunitarias.
+— Los usuarios deben comportarse con respeto y honradez.
+
+4. Contenido e intellectual property
+— Cada usuario conserva la propiedad de su contenido. Al publicar en Swapk, otorgas una licencia no exclusiva para mostrar ese contenido en la plataforma.
+
+5. Privacidad y datos
+— Tratamos tus datos conforme a la ley y nuestra política de privacidad. Al aceptar los términos también aceptas el tratamiento básico de datos para proveer el servicio.
+
+6. Cancelación y suspensión
+— Swapk puede suspender cuentas que violen estos términos. El usuario puede dar de baja su cuenta en cualquier momento siguiendo el proceso disponible en la plataforma.
+
+7. Limitación de responsabilidad
+— Swapk actúa como intermediario y no se hace responsable por la veracidad, desempeño o calidad del trabajo ofrecido por terceros.
+
+8. Cambios a los términos
+— Podemos actualizar estos términos; notificaremos cambios relevantes.
+
+9. Contacto
+— Para consultas: swapk.soporte@gmail.com
+`
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -28,18 +62,23 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
+    setError([])
+
+    if (!formData.acceptTerms) {
+      setError(["Debes aceptar los términos y condiciones para registrar tu cuenta."])
+      return
+    }
+
     try {
       const res = await fetch("http://localhost:8000/auth/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              nombre: formData.nombre,
-              email: formData.correo,
-              password: formData.password,
-            }),
-          })
-
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nombre: formData.nombre,
+          email: formData.correo,
+          password: formData.password,
+        }),
+      })
 
       const data = await res.json()
 
@@ -49,7 +88,7 @@ export default function RegisterPage() {
           id: data.usuario?.id || data.user?.id,
           nombre: data.usuario?.nombre || data.user?.nombre,
           correo: data.usuario?.correo || data.user?.correo,
-          perfil: data.perfil,
+          rol: data.user?.rol,
         }
 
         localStorage.setItem("user", JSON.stringify(userData))
@@ -57,22 +96,17 @@ export default function RegisterPage() {
 
         router.push("/dashboard/index_dashboard")
       } else {
-        // Manejo de error para evitar objetos en React
-        if (Array.isArray(data)) {
-          const mensajes = data.map((err: any) => err.msg).join(", ")
-          setError(mensajes)
+        if (Array.isArray(data.detail)) {
+          setError(data.detail.map((e: any) => e.msg))
         } else if (typeof data.detail === "string") {
-          setError(data.detail)
-        } else if (Array.isArray(data.detail)) {
-          const mensajes = data.detail.map((err: any) => err.msg).join(", ")
-          setError(mensajes)
+          setError([data.detail])
         } else {
-          setError("Error desconocido")
+          setError(["Error desconocido"])
         }
       }
     } catch (err) {
       console.error("Error en el registro:", err)
-      setError("Error en el registro. Revisa tu conexión.")
+      setError(["Error en el registro. Revisa tu conexión."])
     }
   }
 
@@ -90,15 +124,26 @@ export default function RegisterPage() {
       >
         <div className="flex items-center gap-3">
           <a href="./">
-            <Image src="/img/logoswapk.png" alt="Logo Swapk" width={35} height={35} className="rounded-lg" />
+            <Image
+              src="/img/logoswapk.png"
+              alt="Logo Swapk"
+              width={35}
+              height={35}
+              className="rounded-lg"
+            />
           </a>
           <span className="text-xl font-bold">SWAPK</span>
         </div>
         <button
           onClick={() => setDarkMode(!darkMode)}
           className="p-2 rounded-lg border hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+          aria-label="Toggle dark mode"
         >
-          {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-700" />}
+          {darkMode ? (
+            <Sun className="w-5 h-5 text-yellow-400" />
+          ) : (
+            <Moon className="w-5 h-5 text-gray-700" />
+          )}
         </button>
       </header>
 
@@ -106,15 +151,28 @@ export default function RegisterPage() {
       <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-6 py-12">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center">
-            <Image src="/img/logoswapk.png" alt="Logo Swapk" width={35} height={35} className="mx-auto rounded-lg mb-4" />
+            <Image
+              src="/img/logoswapk.png"
+              alt="Logo Swapk"
+              width={35}
+              height={35}
+              className="mx-auto rounded-lg mb-4"
+            />
             <h1 className="text-3xl font-bold">
               Sw<span className="text-blue-600">a</span>pk
             </h1>
           </div>
 
-          {error && <p className="text-red-500 text-sm text-center whitespace-pre-wrap">{error}</p>}
+          {/* Mostrar errores en lista */}
+          {error.length > 0 && (
+            <ul className="text-red-500 text-sm text-center list-disc list-inside mb-4">
+              {error.map((msg, i) => (
+                <li key={i}>{msg}</li>
+              ))}
+            </ul>
+          )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             <input
               type="text"
               name="nombre"
@@ -123,7 +181,9 @@ export default function RegisterPage() {
               onChange={handleInputChange}
               required
               className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 ${
-                darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-900 border-gray-300"
+                darkMode
+                  ? "bg-gray-800 text-white border-gray-700"
+                  : "bg-white text-gray-900 border-gray-300"
               }`}
             />
             <input
@@ -134,7 +194,9 @@ export default function RegisterPage() {
               onChange={handleInputChange}
               required
               className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 ${
-                darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-900 border-gray-300"
+                darkMode
+                  ? "bg-gray-800 text-white border-gray-700"
+                  : "bg-white text-gray-900 border-gray-300"
               }`}
             />
             <input
@@ -145,29 +207,54 @@ export default function RegisterPage() {
               onChange={handleInputChange}
               required
               className={`w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 ${
-                darkMode ? "bg-gray-800 text-white border-gray-700" : "bg-white text-gray-900 border-gray-300"
+                darkMode
+                  ? "bg-gray-800 text-white border-gray-700"
+                  : "bg-white text-gray-900 border-gray-300"
               }`}
             />
 
-            {/* Checkbox ofertas */}
+            {/* Checkbox términos */}
             <label className="flex items-start gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
-                name="acceptOffers"
-                checked={formData.acceptOffers}
+                name="acceptTerms"
+                checked={formData.acceptTerms}
                 onChange={handleInputChange}
                 className="mt-1 cursor-pointer"
               />
-              <span>Quiero recibir ofertas especiales, recomendaciones personalizadas y consejos de aprendizaje.</span>
+              <span>
+                Acepto los <strong>términos y condiciones</strong>.{' '}
+                <button
+                  type="button"
+                  onClick={() => setShowModal(true)}
+                  className="text-blue-600 hover:underline ml-1"
+                >
+                  Leer más
+                </button>
+              </span>
             </label>
 
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700"
+              disabled={!formData.acceptTerms}
+              className={`w-full py-3 px-4 rounded-lg font-medium transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                !formData.acceptTerms ? "bg-gray-400 text-gray-800" : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
             >
               Registrarte
             </button>
           </form>
+
+          {/* Link login */}
+          <div className="text-center text-sm">
+            ¿Ya tienes una cuenta?{' '}
+            <a
+              href="./login"
+              className="text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Inicia sesión aquí
+            </a>
+          </div>
 
           {/* Google login */}
           <div className="space-y-4">
@@ -177,11 +264,14 @@ export default function RegisterPage() {
                 onSuccess={async (credentialResponse) => {
                   const token = credentialResponse.credential
                   if (!token) {
-                    setError("No se obtuvo el token de Google ❌")
+                    setError(["No se obtuvo el token de Google ❌"])
                     return
                   }
                   try {
-                    const res = await axios.post("http://localhost:8000/auth/google/login", { token })
+                    const res = await axios.post(
+                      "http://localhost:8000/auth/google/login",
+                      { token }
+                    )
                     const data = res.data
                     const userData = {
                       token: data.token,
@@ -195,26 +285,42 @@ export default function RegisterPage() {
                     router.push("/dashboard/index_dashboard")
                   } catch (err: any) {
                     console.error(err.response || err)
-                    setError(err.response?.data?.detail || "Error al registrarse con Google ❌")
+                    setError([
+                      err.response?.data?.detail || "Error al registrarse con Google ❌",
+                    ])
                   }
                 }}
-                onError={() => setError("Error en Google Register ❌")}
+                onError={() => setError(["Error en Google Register ❌"]) }
                 useOneTap
                 theme="filled_blue"
                 shape="circle"
               />
             </div>
           </div>
-
-          {/* Link login */}
-          <div className="text-center text-sm">
-            ¿Ya tienes una cuenta?{" "}
-            <a href="./login" className="text-blue-600 hover:text-blue-700 font-medium">
-              Inicia sesión aquí
-            </a>
-          </div>
         </div>
       </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowModal(false)} />
+          <div className={`relative w-full max-w-2xl mx-auto rounded-2xl shadow-lg ${darkMode ? 'bg-[#0f1724] text-white' : 'bg-white text-gray-900'}`}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Términos y Condiciones — Swapk</h3>
+              <button aria-label="Cerrar" onClick={() => setShowModal(false)} className="p-2 rounded hover:bg-gray-200/30">
+                <X />
+              </button>
+            </div>
+            <div className="p-6 max-h-[60vh] overflow-auto prose prose-sm">
+              <pre className="whitespace-pre-wrap">{TERMS_TEXT}</pre>
+            </div>
+            <div className="flex items-center justify-end gap-3 p-4 border-t">
+              <button onClick={() => { setShowModal(false) }} className="px-4 py-2 rounded-lg border">Cerrar</button>
+              <button onClick={() => { setFormData(prev => ({ ...prev, acceptTerms: true })); setShowModal(false) }} className="px-4 py-2 rounded-lg bg-blue-600 text-white">Aceptar y continuar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -60,7 +60,7 @@ const Login: React.FC = () => {
           id: data.user.id,
           nombre: data.user.nombre,
           correo: data.user.correo,
-          perfil: data.perfil,
+          rol: data.user.rol,
         }
         localStorage.setItem("user", JSON.stringify(userData))
         document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
