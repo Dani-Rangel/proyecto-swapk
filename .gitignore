@@ -6,3 +6,4 @@ out/
 .env
 .env.local
 venv/
+backend/services/firebase/firebase_credentials.json

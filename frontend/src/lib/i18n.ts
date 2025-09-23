@@ -337,6 +337,16 @@ export const translations = {
     likedBy: "Le dieron like:",
     errorLoadingLikes: "Error al cargar la lista de likes.",
 
+    // ===== Inscripción a Cursos =====
+    cancel_enrollment: "Cancelar inscripción",
+    already_enrolled: "Ya estás inscrito",
+    enrollment_status: "Estado: {estado}",
+    enroll_success: "¡Te has inscrito en el curso!",
+    cancel_enrollment_success: "Inscripción cancelada",
+    view_enrollment_status: "Ver estado de inscripción",
+
+    volver: "Volver"
+
   },
 
   en: {
@@ -680,6 +690,16 @@ export const translations = {
     viewLikes: "View Likes",
     likedBy: "Liked by:",
     errorLoadingLikes: "Error loading likes list.",
+
+    // ===== Course Enrollment =====
+    cancel_enrollment: "Cancel enrollment",
+    already_enrolled: "You are already enrolled",
+    enrollment_status: "Status: {estado}",
+    enroll_success: "You have enrolled in the course!",
+    cancel_enrollment_success: "Enrollment canceled",
+    view_enrollment_status: "View enrollment status",
+
+    volver: "return"
 
   },
 } as const;

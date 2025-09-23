@@ -11,6 +11,7 @@ interface NotificacionesContextType {
   marcarComoLeida: (id: number) => Promise<void>
   eliminarNotificacion: (id: number) => Promise<void>
   refrescarNotificaciones: () => void
+  notificacionesNoLeidas: number // ✅ Nuevo: Contador de notificaciones no leídas
 }
 
 const NotificacionesContext = createContext<NotificacionesContextType | undefined>(undefined)
@@ -18,6 +19,10 @@ const NotificacionesContext = createContext<NotificacionesContextType | undefine
 export const NotificacionesProvider = ({ children }: { children: React.ReactNode }) => {
   const [notificaciones, setNotificaciones] = useState<Notificacion[]>([])
   const [userId, setUserId] = useState<number | null>(null)
+  const [dropdownAbierto, setDropdownAbierto] = useState(false) // ✅ Nuevo: Estado para saber si el dropdown está abierto
+
+  // ✅ Calculamos el contador de notificaciones no leídas
+  const notificacionesNoLeidas = notificaciones.filter((n) => !n.leido).length
 
   useEffect(() => {
     const usuario = getCurrentUser()
@@ -73,6 +78,17 @@ export const NotificacionesProvider = ({ children }: { children: React.ReactNode
     }
   }
 
+  // ✅ Cuando el dropdown se abre, marcamos todas las notificaciones como leídas
+  useEffect(() => {
+    if (dropdownAbierto && userId) {
+      notificaciones
+        .filter((n) => !n.leido)
+        .forEach(async (n) => {
+          await marcarComoLeida(n.id)
+        })
+    }
+  }, [dropdownAbierto, userId])
+
   return (
     <NotificacionesContext.Provider
       value={{
@@ -82,6 +98,7 @@ export const NotificacionesProvider = ({ children }: { children: React.ReactNode
         marcarComoLeida,
         eliminarNotificacion,
         refrescarNotificaciones,
+        notificacionesNoLeidas, // ✅ Exponemos el contador
       }}
     >
       {children}

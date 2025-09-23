@@ -5,12 +5,10 @@ import { Bell, X } from "lucide-react"
 import { useNotificaciones } from "@/context/notificacionesContext"
 
 export function Notificaciones() {
-  const { notificaciones, marcarComoLeida, eliminarNotificacion } = useNotificaciones()
+  const { notificaciones, marcarComoLeida, eliminarNotificacion, notificacionesNoLeidas } = useNotificaciones()
   const [showNotifications, setShowNotifications] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadingId, setLoadingId] = useState<number | null>(null)
-
-  const notificacionesNoLeidas = notificaciones.filter((n) => !n.leido).length
 
   const handleMarcarComoLeida = async (id: number) => {
     setLoadingId(id)
@@ -36,12 +34,21 @@ export function Notificaciones() {
     }
   }
 
+  // ✅ Cuando se abre el dropdown, marcamos todas como leídas
+  const toggleDropdown = () => {
+    setShowNotifications(!showNotifications)
+    if (!showNotifications) {
+      // Aquí podrías marcar todas como leídas si lo deseas
+      // notificaciones.filter(n => !n.leido).forEach(n => marcarComoLeida(n.id))
+    }
+  }
+
   return (
     <div className="relative">
       <button
         title="Notificaciones"
         aria-label="Mostrar notificaciones"
-        onClick={() => setShowNotifications(!showNotifications)}
+        onClick={toggleDropdown}
         className="inline-flex cursor-pointer h-8 items-center justify-center text-gray-600 hover:text-gray-900 dark:text-[#A0A0A0] dark:hover:text-[#F5F5F5] transition-colors duration-300"
       >
         <Bell className="h-4 w-4" />

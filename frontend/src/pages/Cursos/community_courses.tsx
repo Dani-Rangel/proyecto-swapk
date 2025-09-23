@@ -48,6 +48,8 @@ import { useRouter } from "next/navigation"; // ✅ Corregido: next/router → n
 import Link from "next/link";
 import ProtectedRoute from "@/components/protected_routes/protected_routes"; // ✅ Importamos el componente de protección
 import { MainSidebar } from "@/components/MainSidebar"
+import { inscripcionCursoAPI } from "@/services/inscripcionCursoApi"
+
 
 interface NewCourseData {
   title: string
@@ -106,6 +108,8 @@ function CursosComunidadComponent() {
   const [user, setUser] = useState<any>(null)
   const router = useRouter()
   const [perfil, setPerfil] = useState<any>(null)
+  const [inscrito, setInscrito] = useState<boolean>(false)
+  const [estadoInscripcion, setEstadoInscripcion] = useState<string | null>(null)
 
   const loadCursos = async () => {
     try {
@@ -410,153 +414,225 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
   }
 
   // Componente para mostrar detalles del curso
-  const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailViewProps) => {
-    const [isCreator, setIsCreator] = useState<boolean>(false)
-    useEffect(() => {
-      const user = getCurrentUser()
-      console.log("[v0] Current user loaded:", user)
-      console.log("[v0] Course User_Id:", course.user_id)
-      console.log("[v0] Course object:", course)
-      if (user && course.user_id !== undefined && course.user_id !== null) {
-        const userIdNum = Number(user.id)
-        const courseUserIdNum = Number(course.user_id)
-        const creatorCheck = userIdNum === courseUserIdNum
-        console.log("[v0] Creator verification:", {
-          userId: userIdNum,
-          courseUserId: courseUserIdNum,
-          isCreator: creatorCheck,
-        })
-        setIsCreator(creatorCheck)
-      } else {
-        console.log("[v0] Cannot verify creator - missing data:", {
-          hasUser: !!user,
-          courseUserId: course.user_id,
-          userType: typeof course.user_id,
-        })
-        setIsCreator(false)
+ // Componente para mostrar detalles del curso
+const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailViewProps) => {
+  const [isCreator, setIsCreator] = useState<boolean>(false)
+  const [inscrito, setInscrito] = useState<boolean>(false)
+  const [estadoInscripcion, setEstadoInscripcion] = useState<string | null>(null)
+
+  useEffect(() => {
+  const user = getCurrentUser()
+  console.log("[v0] Current user loaded:", user)
+  console.log("[v0] Course User_Id:", course.user_id)
+  console.log("[v0] Course object:", course)
+  if (user && course.user_id !== undefined && course.user_id !== null) {
+    const userIdNum = Number(user.id)
+    const courseUserIdNum = Number(course.user_id)
+    const creatorCheck = userIdNum === courseUserIdNum
+    console.log("[v0] Creator verification:", {
+      userId: userIdNum,
+      courseUserId: courseUserIdNum,
+      isCreator: creatorCheck,
+    })
+    setIsCreator(creatorCheck)
+  } else {
+    console.log("[v0] Cannot verify creator - missing data:", {
+      hasUser: !!user,
+      courseUserId: course.user_id,
+      userType: typeof course.user_id,
+    })
+    setIsCreator(false)
+  }
+
+  // Verificar si el usuario está inscrito
+  const verificarInscripcion = async () => {
+    const user = getCurrentUser()
+    if (!user) return
+    try {
+      const inscrito = await inscripcionCursoAPI.checkInscripcion(course.id, user.id)
+      setInscrito(inscrito)
+      if (inscrito) {
+        const inscripciones = await inscripcionCursoAPI.getByUser(user.id)
+        const inscripcion = inscripciones.find(i => i.curso_id === course.id)
+        setEstadoInscripcion(inscripcion?.estado || null)
       }
-    }, [course])
-    return (
-      <div className="max-w-4xl mx-auto p-6">
-        <Button onClick={onBack} variant="outline" className="mb-6 flex items-center gap-2 bg-transparent">
-          <ArrowLeft className="w-4 h-4" />
-          {t("view_more")}
-        </Button>
-        <div className="bg-card rounded-lg shadow-lg overflow-hidden">
-          {/* Mostrar la imagen del curso si existe */}
-          {course.img_Cursos && (
-            <div className="w-full h-64 bg-muted flex items-center justify-center">
-              <img
-                className="w-full h-full object-cover"
-                src={course.img_Cursos}
-                alt={course.titulo}
-              />
-            </div>
-          )}
-          <div className="p-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <h1 className="text-3xl font-bold text-foreground mb-2">{course.titulo}</h1>
-                <p className="text-muted-foreground">{t("by_author").replace("{author}", course.usuario?.nombre || "Usuario desconocido")}</p>
-              </div>
-            </div>
-            {course.descripcion && (
-              <section>
-                <h2 className="text-xl font-semibold mb-2 w-full">{t("description")}</h2>
-                <p className="text-sm mb-1 w-full break-words line-clamp-2">{course.descripcion}</p>
-              </section>
-            )}
-            {course.objetivo && (
-              <section>
-                <h2 className="text-xl font-semibold mb-2">{t("objective")}</h2>
-                <p className="text-sm mb-1">{course.objetivo}</p>
-              </section>
-            )}
-            {course.habilidades && course.habilidades.length > 0 && (
-              <section>
-                <h2 className="text-xl font-semibold mb-2">{t("required_skills")}</h2>
-                <div className="flex flex-wrap gap-1 mb-4">
-                  {course.habilidades.slice(0, 3).map((h, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                    >
-                      {h.habilidad_nombre}
-                    </span>
-                  ))}
-                  {course.habilidades.length > 3 && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
-                      +{course.habilidades.length - 3}
-                    </span>
-                  )}
-                </div>
-              </section>
-            )}
-            <section>
-              <h2 className="text-xl font-semibold mb-4">{t("attachments")}</h2>
-              <div className="space-y-3">
-                {course.attachments && course.attachments.length > 0 ? (
-                  course.attachments.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border">
-                      <div className="flex items-center">
-                        <Paperclip size={18} className="mr-3 text-gray-500" />
-                        <div>
-                          <span className="text-sm font-medium text-gray-700">{file.file_name}</span>
-                          <p className="text-xs text-gray-500">
-                            {Math.round(file.file_size / 1024)} KB • {new Date(file.fecha_subida).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <a
-                        href={file.url}
-                        download
-                        className="text-sm px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                      >
-                        {t("download")}
-                      </a>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">{t("no_attachments")}</p>
-                )}
-              </div>
-            </section>
-            <section>
-              <h2 className="text-xl font-semibold mb-2">{t("actions")}</h2>
-              <div className="flex flex-wrap gap-4">
-                <Button className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">{t("enroll")}</Button>
-                <Button className="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-300">
-                  {t("send_message")}
-                </Button>
-                {isCreator && (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => onEdit(course)}
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Edit className="w-4 h-4" />
-                      {t("edit_course")}
-                    </Button>
-                    <Button
-                      onClick={() => onDelete(course.id)}
-                      variant="destructive"
-                      size="sm"
-                      className="flex items-center gap-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      {t("delete")}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </section>
+    } catch (error) {
+      console.error("Error al verificar inscripción:", error)
+    }
+  }
+  verificarInscripcion()
+}, [course])
+
+  return (
+    <div className="max-w-4xl mx-auto p-6">
+      <Button onClick={onBack} variant="outline" className={`mb-6 flex items-center gap-2 ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E] hover:bg-[#4E4E4E]" : "bg-white text-gray-900 border-gray-300 hover:bg-gray-50"}`}>
+        <ArrowLeft className="w-4 h-4" />
+        {t("volver")}
+      </Button>
+      <div className={`rounded-lg shadow-lg overflow-hidden ${isDark ? "bg-[#2E2E2E] border-[#3E3E3E]" : "bg-white border-gray-200"} border`}>
+        {/* Mostrar la imagen del curso si existe */}
+        {course.img_Cursos && (
+          <div className="w-full h-64 bg-muted flex items-center justify-center">
+            <img
+              className="w-full h-full object-cover"
+              src={`http://localhost:8000/${course.img_Cursos}` || "/img/image.png"}
+              alt={course.titulo}
+            />
           </div>
+        )}
+        <div className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h1 className={`text-3xl font-bold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{course.titulo}</h1>
+              <p className={`${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>{t("by_author").replace("{author}", course.usuario?.nombre || "Usuario desconocido")}</p>
+            </div>
+          </div>
+          {course.descripcion && (
+            <section>
+              <h2 className={`text-xl font-semibold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("description")}</h2>
+              <p className={`text-sm mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"} w-full break-words line-clamp-2`}>{course.descripcion}</p>
+            </section>
+          )}
+          {course.objetivo && (
+            <section>
+              <h2 className={`text-xl font-semibold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("objective")}</h2>
+              <p className={`text-sm mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>{course.objetivo}</p>
+            </section>
+          )}
+          {course.habilidades && course.habilidades.length > 0 && (
+            <section>
+              <h2 className={`text-xl font-semibold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("required_skills")}</h2>
+              <div className="flex flex-wrap gap-1 mb-4">
+                {course.habilidades.slice(0, 3).map((h, index) => (
+                  <span
+                    key={index}
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5]" : "bg-blue-100 text-blue-800"}`}
+                  >
+                    {h.habilidad_nombre}
+                  </span>
+                ))}
+                {course.habilidades.length > 3 && (
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5]" : "bg-gray-200 text-gray-600"}`}>
+                    +{course.habilidades.length - 3}
+                  </span>
+                )}
+              </div>
+            </section>
+          )}
+          <section>
+            <h2 className={`text-xl font-semibold mb-4 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("attachments")}</h2>
+            <div className="space-y-3">
+              {course.attachments && course.attachments.length > 0 ? (
+                course.attachments.map((file, index) => (
+                  <div key={index} className={`flex items-center justify-between p-4 rounded-lg ${isDark ? "bg-[#3E3E3E] border-[#4E4E4E]" : "bg-gray-50 border"} border`}>
+                    <div className="flex items-center">
+                      <Paperclip size={18} className={`mr-3 ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`} />
+                      <div>
+                        <span className={`text-sm font-medium ${isDark ? "text-[#F5F5F5]" : "text-gray-700"}`}>{file.file_name}</span>
+                        <p className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`}>
+                          {Math.round(file.file_size / 1024)} KB • {new Date(file.fecha_subida).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={file.url}
+                      download
+                      className={`text-sm px-4 py-2 rounded-md ${isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"} text-white transition-colors`}
+                    >
+                      {t("download")}
+                    </a>
+                  </div>
+                ))
+              ) : (
+                <p className={`text-sm ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`}>{t("no_attachments")}</p>
+              )}
+            </div>
+          </section>
+          <section>
+            <h2 className={`text-xl font-semibold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("actions")}</h2>
+            <div className="flex flex-wrap gap-4">
+              {!isCreator && (
+                <div className="mt-4 flex gap-6">
+                  <Button
+                    className={`px-4 py-2 rounded text-white ${
+                      inscrito ? (isDark ? "bg-red-700 hover:bg-red-600" : "bg-red-600 hover:bg-red-700") : (isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700")
+                    }`}
+                    onClick={async () => {
+                      const user = getCurrentUser()
+                      if (!user) {
+                        toast.error(t("mustLogin"))
+                        return
+                      }
+                      try {
+                        if (inscrito) {
+                          // Obtener el ID de la inscripción
+                          const inscripciones = await inscripcionCursoAPI.getByUser(user.id)
+                          const inscripcion = inscripciones.find(i => i.curso_id === course.id)
+                          if (inscripcion) {
+                            await inscripcionCursoAPI.eliminar(inscripcion.id)
+                            setInscrito(false)
+                            setEstadoInscripcion(null)
+                            toast.success(t("cancel_enrollment_success"))
+                          }
+                        } else {
+                          const inscrito = await inscripcionCursoAPI.checkInscripcion(course.id, user.id)
+                          if (inscrito) {
+                            const inscripciones = await inscripcionCursoAPI.getByUser(user.id)
+                            const inscripcion = inscripciones.find(i => i.curso_id === course.id)
+                            toast.success(`Ya estás inscrito. Estado: ${inscripcion?.estado}`)
+                            setEstadoInscripcion(inscripcion?.estado || null)
+                            return
+                          }
+                          await inscripcionCursoAPI.create({
+                            curso_id: course.id,
+                            usuario_id: user.id
+                          })
+                          setInscrito(true)
+                          setEstadoInscripcion("Pendiente")
+                          toast.success(t("enroll_success"))
+                        }
+                      } catch (error) {
+                        console.error("Error al inscribirse:", error)
+                        toast.error("Error al inscribirse en el curso")
+                      }
+                    }}
+                  >
+                    {inscrito ? t("cancel_enrollment") : t("enroll")}
+                  </Button>
+                  <Button className={`px-4 py-2 rounded ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E] hover:bg-[#4E4E4E]" : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"}`}>
+                    {t("send_message")}
+                  </Button>
+                </div>
+              )}
+              {isCreator && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => onEdit(course)}
+                    variant="outline"
+                    size="sm"
+                    className={`flex items-center gap-2 ${isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+                  >
+                    <Edit className="w-4 h-4" />
+                    {t("edit_course")}
+                  </Button>
+                  <Button
+                    onClick={() => onDelete(course.id)}
+                    variant="destructive"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {t("delete")}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
+}
 
   return (
     <div className={`min-h-screen bg-background flex ${isDark ? "bg-[#1A1A1A]" : "bg-gray-50"}`}>
@@ -866,7 +942,7 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
                           <div className="relative pb-48 overflow-hidden rounded-t-lg">
                             <img
                               className="absolute inset-0 h-full w-full object-cover"
-                              src={curso.img_Cursos || "/img/image.png"}
+                              src={`http://localhost:8000/${curso.img_Cursos}` || "/img/image.png"}
                               alt={curso.titulo}
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement

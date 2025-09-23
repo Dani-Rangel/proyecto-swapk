@@ -6,17 +6,53 @@ from backend.models.habilidad import Habilidad
 from backend.models.usuarios import Usuario
 from backend.models.attachments import Attachment
 from backend.schemas.curso_schema import CursoCreate, CursoUpdate
+import base64
+import uuid
+import os
 
 # =========================
 # Crear curso
 # =========================
 def create_curso_service(curso: CursoCreate, db: Session) -> dict:
+    # Manejar la imagen si se proporciona
+    img_url = None
+    if curso.img_Cursos:
+        try:
+            # Decodificar la imagen base64
+            if curso.img_Cursos.startswith("data:image"):
+                # Extraer solo la parte base64 (después de la coma)
+                header, encoded = curso.img_Cursos.split(",", 1)
+                image_data = base64.b64decode(encoded)
+                
+                # Generar nombre único para el archivo
+                filename = f"curso_{uuid.uuid4().hex[:8]}.jpg"
+                
+                # Crear carpeta uploads si no existe
+                upload_dir = "uploads"
+                if not os.path.exists(upload_dir):
+                    os.makedirs(upload_dir)
+                
+                # Guardar la imagen en el servidor
+                filepath = os.path.join(upload_dir, filename)
+                with open(filepath, "wb") as f:
+                    f.write(image_data)
+                
+                # Generar URL de la imagen
+                img_url = f"/uploads/{filename}"
+            else:
+                # Si no es base64, asumimos que es una URL externa
+                img_url = curso.img_Cursos
+        except Exception as e:
+            print(f"Error al guardar la imagen: {e}")
+            img_url = None
+
+    # Crear el curso
     new_curso = Curso(
         titulo=curso.titulo,
         descripcion=curso.descripcion,
         objetivo=curso.objetivo,
-        img_Cursos=curso.img_Cursos,
-        User_Id=curso.user_id,  # corregido a user_id
+        img_Cursos=img_url,  # Guardar la URL de la imagen
+        User_Id=curso.user_id,
     )
     db.add(new_curso)
     db.commit()
@@ -32,7 +68,7 @@ def create_curso_service(curso: CursoCreate, db: Session) -> dict:
         db.commit()
 
     # Asociar archivos (si se proporcionan)
-    if curso.attachments:  # corregido de archivos a attachments
+    if curso.attachments:
         nuevos_archivos = [
             Attachment(
                 course_id=new_curso.id,

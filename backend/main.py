@@ -24,6 +24,7 @@ from backend.controllers.user_admin_controller import router as userA_router
 from backend.controllers import intercambio_admin_controller
 from backend.controllers import perfil_admin_controller
 from backend.controllers import publicaciones_admin_controller
+from backend.controllers.inscripcion_curso_controller import router as inscripcion_curso_router
 
 app = FastAPI()
 
@@ -69,5 +70,6 @@ app.include_router(curso_controller.router, prefix="/admin")
 app.include_router(intercambio_admin_controller.router)
 app.include_router(perfil_admin_controller.router)
 app.include_router(publicaciones_admin_controller.router)
+app.include_router(inscripcion_curso_router,  tags=["inscripciones_cursos"])
 print("✅ Router publicaciones_admin_controller registrado")
 
