@@ -2,34 +2,25 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/router"
-import Image from "next/image"
+import { Shield, ShieldAlert, Users, BookOpen, RefreshCw, FileText, LogOut } from "lucide-react"
 
 import { UserManagementTable } from "@/components/ui/admin/user-management-table"
 import { CourseManagementTable } from "@/components/ui/admin/course-management-table"
+import { IntercambioManagementTable } from "@/components/ui/admin/intercambio-management-table"
+import { PublicacionManagementTable } from "@/components/ui/admin/publicacion-management-table"
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Shield, ShieldAlert } from "lucide-react"
 import { RolUsuario } from "@/services/user"
-import { IntercambioManagementTable } from "@/components/ui/admin/intercambio-management-table"
-import { PublicacionManagementTable } from "@/components/ui/admin/publicacion-management-table"
-import { MainSidebar } from "@/components/MainSidebar"
-
-
-
-import {
-  X, Search, HomeIcon, Star, Camera, Plus, Settings,
-  LogOut, User, Bell, MessageSquare, Menu
-} from "lucide-react"
 
 export default function AdminPage() {
   const [currentUserRole, setCurrentUserRole] = useState<RolUsuario | null>(null)
   const [loading, setLoading] = useState(true)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [activeTab, setActiveTab] = useState("users") // pestaña activa
   const router = useRouter()
-  const [isDark, setIsDark] = useState<boolean>(true)
 
+  // Simula la verificación de permisos
   useEffect(() => {
     const checkUserRole = async () => {
       try {
@@ -46,19 +37,9 @@ export default function AdminPage() {
     checkUserRole()
   }, [])
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    console.log("Buscando:", searchQuery)
-  }
-
   const handleLogout = () => {
-    // Aquí deberías limpiar la sesión/token y redirigir
-    console.log("Cerrando sesión...")
-    router.push("/login")
-  }
-
-  const toggleTheme = () => {
-    setIsDark(!isDark)
+    localStorage.removeItem("user")
+    router.push("/auth/login")
   }
 
   if (loading) {
@@ -90,46 +71,108 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-[#141414] flex">
-      {/* Sidebar */}
-      <MainSidebar
-                  isDark={isDark}
-                  toggleTheme={toggleTheme}
-                  isSidebarOpen={isSidebarOpen}
-                  setIsSidebarOpen={setIsSidebarOpen}
-                />
-
-      {/* Main content */}
-      <div className="container mx-auto py-2 space-y-8 ">
-        <div className="flex items-center gap-2 ">
-          <Shield className="h-6 w-6 text-white" />
-          <h1 className="text-3xl font-bold text-white">Panel de Administración</h1>
+    <div className="relative min-h-screen flex bg-[#141414] text-white">
+      {/* ====================== */}
+      {/* Sidebar interna */}
+      {/* ====================== */}
+      <aside className="w-64 bg-[#1e1e1e] border-r border-gray-800 flex flex-col p-4">
+        <div className="flex items-center gap-2 mb-8">
+          <Shield className="h-6 w-6 text-blue-400" />
+          <span className="text-lg font-bold">Admin Panel</span>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6 bg-[#2a2a2a] rounded p-6 text-white">
-          <TabsList className="grid w-full grid-cols-4 bg-[#3e3e3e] p-1 rounded-lg">
-            <TabsTrigger value="users">Gestión de Usuarios</TabsTrigger>
-            <TabsTrigger value="courses">Gestión de Cursos</TabsTrigger>
-            <TabsTrigger value="intercambios">Gestión de Intercambios</TabsTrigger>
-            <TabsTrigger value="publicaciones">Gestión de Publicaciones</TabsTrigger>
-          </TabsList>
-          <TabsContent value="users" className="space-y-6">
-            <UserManagementTable />
-          </TabsContent>
+        <nav className="space-y-2">
+          <button
+            onClick={() => setActiveTab("users")}
+            className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors ${
+              activeTab === "users" ? "bg-blue-600 text-white" : "hover:bg-gray-700"
+            }`}
+          >
+            <Users className="h-5 w-5" />
+            Gestión de Usuarios
+          </button>
 
-          <TabsContent value="courses" className="space-y-6">
-            <CourseManagementTable />
-          </TabsContent>
+          <button
+            onClick={() => setActiveTab("courses")}
+            className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors ${
+              activeTab === "courses" ? "bg-blue-600 text-white" : "hover:bg-gray-700"
+            }`}
+          >
+            <BookOpen className="h-5 w-5" />
+            Gestión de Cursos
+          </button>
 
-          <TabsContent value="intercambios" className="space-y-6">
-            <IntercambioManagementTable />
-          </TabsContent>
+          <button
+            onClick={() => setActiveTab("intercambios")}
+            className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors ${
+              activeTab === "intercambios" ? "bg-blue-600 text-white" : "hover:bg-gray-700"
+            }`}
+          >
+            <RefreshCw className="h-5 w-5" />
+            Gestión de Intercambios
+          </button>
 
-          <TabsContent value="publicaciones" className="space-y-6">
-            <PublicacionManagementTable />
-          </TabsContent>
-        </Tabs>
-      </div>
+          <button
+            onClick={() => setActiveTab("publicaciones")}
+            className={`flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors ${
+              activeTab === "publicaciones" ? "bg-blue-600 text-white" : "hover:bg-gray-700"
+            }`}
+          >
+            <FileText className="h-5 w-5" />
+            Gestión de Publicaciones
+          </button>
+        </nav>
+
+        <div className="mt-auto pt-4 border-t border-gray-800">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 w-full px-3 py-2 text-red-400 hover:bg-red-900 hover:text-white rounded-lg transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+
+      {/* ====================== */}
+      {/* Contenido principal */}
+      {/* ====================== */}
+      <main className="flex-1 p-8">
+        <div className="flex items-center gap-2 mb-6">
+          <Shield className="h-6 w-6 text-white" />
+          <h1 className="text-3xl font-bold">Panel de Administración</h1>
+        </div>
+
+        <div className="bg-[#2a2a2a] rounded p-6 text-white">
+          {activeTab === "users" && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Gestión de Usuarios</h2>
+              <UserManagementTable />
+            </div>
+          )}
+
+          {activeTab === "courses" && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Gestión de Cursos</h2>
+              <CourseManagementTable />
+            </div>
+          )}
+
+          {activeTab === "intercambios" && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Gestión de Intercambios</h2>
+              <IntercambioManagementTable />
+            </div>
+          )}
+
+          {activeTab === "publicaciones" && (
+            <div>
+              <h2 className="text-xl font-bold mb-4">Gestión de Publicaciones</h2>
+              <PublicacionManagementTable />
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   )
 }
