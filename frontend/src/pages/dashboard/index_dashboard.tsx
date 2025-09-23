@@ -36,7 +36,7 @@ import Link from "next/link"
 import ProtectedRoute from "@/components/protected_routes/protected_routes"
 import { Heart } from "lucide-react"
 import { MainSidebar } from "@/components/MainSidebar"
-import { useNotificaciones } from "@/context/notificacionesContext"
+import { useNotificaciones } from "../../components/context/notificaciones_context"
 import { getCurrentUser } from "@/lib/auth"
 
 // ✅ Tipos basados en tus modelos SQLAlchemy
@@ -115,29 +115,49 @@ function ForumLayoutComponent() {
 
   // 🧠 Cargar usuario desde localStorage (memoizado para evitar renders innecesarios)
   useEffect(() => {
-    isMountedRef.current = true
-    
-    const savedUser = localStorage.getItem("user")
+    isMountedRef.current = true;
+
+    const savedUser = localStorage.getItem("user");
+
     if (savedUser && isMountedRef.current) {
-      const parsed = JSON.parse(savedUser)
-      const usuario: Usuario = parsed.usuario || { id: parsed.id, nombre: parsed.nombre, correo: "", rol: "Usuario" }
-      const perfilData: Perfil | null = parsed.perfil
+      try {
+        const parsed = JSON.parse(savedUser);
 
-      setUser((prev: Usuario | null) => {
-        if (prev?.id === usuario.id) return prev;
-        return usuario;
-      });
+        // Asegurar que el rol siempre exista y tenga un valor válido
+        const usuario: Usuario = parsed.usuario || { 
+          id: parsed.id, 
+          nombre: parsed.nombre, 
+          correo: parsed.correo, 
+          rol: parsed.rol || "Usuario" // <- Por defecto "Usuario" si no viene
+        };
 
-      setPerfil((prev: Perfil | null) => {
-        if (JSON.stringify(prev) === JSON.stringify(perfilData)) return prev;
-        return perfilData;
-      });
+        const perfilData: Perfil | null = parsed.perfil || null;
+
+        // Evitar actualizaciones innecesarias en el estado del usuario
+        setUser((prev: Usuario | null) => {
+          if (prev?.id === usuario.id && prev?.rol === usuario.rol) return prev;
+          return usuario;
+        });
+
+        // Evitar actualizaciones innecesarias en el estado del perfil
+        setPerfil((prev: Perfil | null) => {
+          if (JSON.stringify(prev) === JSON.stringify(perfilData)) return prev;
+          return perfilData;
+        });
+      } catch (error) {
+        console.error("Error al parsear usuario desde localStorage:", error);
+        // Limpieza en caso de datos corruptos
+        localStorage.removeItem("user");
+        setUser(null);
+        setPerfil(null);
+      }
     }
 
     return () => {
-      isMountedRef.current = false
-    }
-  }, [])
+      isMountedRef.current = false;
+    };
+  }, []);
+
 
   // Cleanup para el menú de compartir
   useEffect(() => {
@@ -971,6 +991,7 @@ const handleVerLikes = async (postId: number) => {
                   toggleTheme={toggleTheme}
                   isSidebarOpen={isSidebarOpen}
                   setIsSidebarOpen={setIsSidebarOpen}
+                  user={user}
                 />
 
         {/* Main Content */}
