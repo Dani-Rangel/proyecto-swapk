@@ -1,133 +1,105 @@
 // settings/profile_edit.tsx
-"use client"
+"use client";
 
-import { useTranslation } from "../../lib/useTranslations"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import SettingsLayout from "../../components/settings_layout"
+import { useTranslation } from "../../lib/useTranslations";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import SettingsLayout from "../../components/settings_layout";
 import ProtectedRoute from "@/components/protected_routes/protected_routes";
 
-// Interfaces para los datos del usuario y perfil
-interface Usuario {
-  id: number;
-  nombre: string;
-  correo: string;
-  rol: string;
-  fecha_creacion: string;
-}
-
-interface Perfil {
-  id: number;
-  id_usuario: number;
-  nombre: string;
-  descripcion: string;
-  ubicacion: string;
-  foto_perfil: string;
-  informacion_Id: number;
-  historial_Id: number;
-  habilidad_Id: number;
-  detalle_Intercambio: number;
-  detalle_Curso: number;
-}
-
 function ProfileEditComponent() {
-  const { t } = useTranslation()
-  const [description, setDescription] = useState("")
-  const [email, setEmail] = useState("")
-  const [phone, setPhone] = useState("")
-  const [location, setLocation] = useState("")
-  const [username, setUsername] = useState("")
-  const [fullName, setFullName] = useState("")
-  const [profileImage, setProfileImage] = useState("")
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState("")
+  const { t } = useTranslation();
+  const [description, setDescription] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [location, setLocation] = useState("");
+  const [username, setUsername] = useState("");
+  const [profileImage, setProfileImage] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // Cargar datos del usuario desde API
   useEffect(() => {
     const fetchUserData = async () => {
-      setIsLoading(true)
-      setError("")
+      setIsLoading(true);
+      setError("");
 
       try {
-        // Leer token y userId desde la clave "user"
-        const userStr = localStorage.getItem("user")
-        let token: string | null = null
-        let userId: number | null = null
+        const userStr = localStorage.getItem("user");
+        if (!userStr) throw new Error("No hay usuario en localStorage");
 
-        if (userStr) {
-          const user = JSON.parse(userStr)
-          token = user.token || null
-          userId = user.id || user.perfil?.id_usuario || null
-        }
+        const user = JSON.parse(userStr);
+        const token = user.token;
+        const userId = user.id;
 
-        console.log("Token:", token, "User ID:", userId)
-
-        if (!token || !userId) throw new Error("No se encontró token o ID de usuario")
+        if (!token || !userId) throw new Error("Token o ID faltante");
 
         const response = await fetch("http://localhost:8000/perfil/me", {
           headers: { Authorization: `Bearer ${token}` },
-        })
+        });
 
         if (!response.ok) {
-          const err = await response.text()
-          throw new Error(err || "Error al cargar perfil")
+          const errText = await response.text();
+          throw new Error(errText || "Error al cargar perfil");
         }
 
-        const data = await response.json()
-        setEmail(data.correo || "")
-        setFullName(data.nombre_usuario || "")
-        setUsername(data.nombre || "")
-        setDescription(data.descripcion || "")
-        setLocation(data.ubicacion || "")
-        setPhone(data.telefono || "")
-        setProfileImage(data.foto_perfil || "")
+        const data = await response.json();
+        setEmail(data.correo || "");
+        setUsername(data.nombre || "");
+        setDescription(data.descripcion || "");
+        setLocation(data.ubicacion || "");
+        setPhone(data.Tel ? String(data.Tel) : "");
+        setProfileImage(data.foto_perfil || "/img/user.png");
       } catch (err: any) {
-        setError(`No se pudo cargar el perfil: ${err.message}`)
+        setError(`No se pudo cargar el perfil: ${err.message}`);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchUserData()
-  }, [])
+    fetchUserData();
+  }, []);
 
-  // Función para redirigir al login
   const redirectToLogin = () => {
-    window.location.href = "/auth/login"
-  }
+    window.location.href = "/auth/login";
+  };
 
-  // Función para guardar cambios en el perfil
   const handleSaveChanges = async () => {
     try {
-      setIsLoading(true)
-      setError("")
+      setIsLoading(true);
+      setError("");
 
-      const userStr = localStorage.getItem("user")
-      let token: string | null = null
-      let userId: number | null = null
+      const userStr = localStorage.getItem("user");
+      if (!userStr) throw new Error("Usuario no autenticado");
 
-      if (userStr) {
-        const user = JSON.parse(userStr)
-        token = user.token || null
-        userId = user.id || user.perfil?.id_usuario || null
-      }
-
-      console.log("Token al guardar:", token, "User ID:", userId)
+      const user = JSON.parse(userStr);
+      const token = user.token;
+      const userId = user.id;
 
       if (!token || !userId) {
-        setError("No se pudo autenticar la solicitud")
-        setIsLoading(false)
-        return
+        throw new Error("Credenciales inválidas");
+      }
+
+      // Validar y parsear teléfono
+      let TelValue: number | null = null;
+      if (phone.trim()) {
+        const parsed = parseInt(phone, 10);
+        if (isNaN(parsed)) {
+          throw new Error("El teléfono debe ser un número válido");
+        }
+        TelValue = parsed;
       }
 
       const updatedProfile = {
         nombre: username,
         descripcion: description,
         ubicacion: location,
-      }
+        Tel: TelValue,
+      };
 
       const response = await fetch(`http://localhost:8000/perfil/${userId}`, {
         method: "PUT",
@@ -136,38 +108,34 @@ function ProfileEditComponent() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(updatedProfile),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`Error ${response.status}: ${response.statusText}`)
+        const errorText = await response.text();
+        throw new Error(errorText || "Error al guardar");
       }
-
-      const result = await response.json()
-      console.log("Perfil actualizado:", result)
 
       // Actualizar localStorage
-      const updatedUserData = {
-        ...JSON.parse(userStr),
+      const updatedUser = {
+        ...user,
         nombre: username,
-        descripcion: description,
-        ubicacion: location,
         perfil: {
-          ...JSON.parse(userStr).perfil,
-          nombre: username,
+          ...user.perfil,
           descripcion: description,
           ubicacion: location,
+          Tel: TelValue,
         },
-      }
-      localStorage.setItem("user", JSON.stringify(updatedUserData))
+      };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
 
-      alert("Perfil actualizado exitosamente")
-    } catch (error) {
-      console.error("Error al guardar cambios:", error)
-      setError("Error al guardar los cambios. Intenta nuevamente.")
+      alert("Perfil actualizado exitosamente");
+    } catch (err: any) {
+      console.error("Error al guardar cambios:", err);
+      setError(err.message || "Error al guardar los cambios.");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -176,7 +144,7 @@ function ProfileEditComponent() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       </SettingsLayout>
-    )
+    );
   }
 
   if (error) {
@@ -185,10 +153,10 @@ function ProfileEditComponent() {
         <div className="flex justify-center items-center h-64">
           <div className="text-center">
             <p className="text-red-400 mb-4">{error}</p>
-            <div className="space-y-2">
+            <div className="space-x-2">
               <Button
                 onClick={() => window.location.reload()}
-                className="bg-blue-600 hover:bg-blue-700 mr-2"
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 Reintentar
               </Button>
@@ -202,7 +170,7 @@ function ProfileEditComponent() {
           </div>
         </div>
       </SettingsLayout>
-    )
+    );
   }
 
   return (
@@ -225,18 +193,19 @@ function ProfileEditComponent() {
           <CardContent className="p-6">
             <div className="flex items-center gap-4 mb-6">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={profileImage || "/diverse-user-avatars.png"} />
+                <AvatarImage src={profileImage} />
                 <AvatarFallback className="bg-blue-600 text-white">
                   {username ? username.charAt(0).toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{username || "Usuario"}</h3>
-                <p className="text-gray-400">{fullName || "Nombre completo"}</p>
+                <p className="text-gray-400">{email || "Correo no disponible"}</p>
               </div>
               <Button
                 variant="outline"
-                className="border-blue-500 text-blue-400 hover:bg-blue-600 hover:text-white bg-transparent"
+                className="border-blue-500 text-blue-400 hover:bg-blue-600 hover:text-white"
+                disabled
               >
                 Cambiar foto
               </Button>
@@ -256,48 +225,28 @@ function ProfileEditComponent() {
                   {description.length}/255
                 </p>
               </div>
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle>Datos personales</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between py-3 border-b border-gray-700">
               <div>
-                <p className="font-medium">Correo electrónico</p>
-                <p className="text-gray-400">{email || "No especificado"}</p>
+                <label className="block text-sm font-medium mb-2">Ubicación</label>
+                <Input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Ej: Ciudad, País"
+                  className="bg-gray-700 border-gray-600 text-white"
+                />
               </div>
-              <Button variant="ghost" size="sm" className="text-blue-400">
-                {'>'}
-              </Button>
-            </div>
 
-            <div className="flex items-center justify-between py-3 border-b border-gray-700">
               <div>
-                <p className="font-medium">Nombre de usuario</p>
-                <p className="text-gray-400">{username || "No especificado"}</p>
+                <label className="block text-sm font-medium mb-2">Teléfono</label>
+                <Input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Ej: 123456789"
+                  className="bg-gray-700 border-gray-600 text-white"
+                />
               </div>
-              <Button variant="ghost" size="sm" className="text-blue-400">
-                {'>'}
-              </Button>
             </div>
-
-            <div className="flex items-center justify-between py-3 border-b border-gray-700">
-              <div>
-                <p className="font-medium">Ubicación</p>
-                <p className="text-gray-400">{location || "No especificada"}</p>
-              </div>
-              <Button variant="ghost" size="sm" className="text-blue-400">
-                {'>'}
-              </Button>
-            </div>
-
-            <Button variant="link" className="text-blue-400 p-0">
-              Ver más...
-            </Button>
           </CardContent>
         </Card>
 
@@ -308,14 +257,13 @@ function ProfileEditComponent() {
         )}
       </div>
     </SettingsLayout>
-  )
+  );
 }
 
-// ✅ Exportamos el componente protegido
 export default function ProfileEdit() {
   return (
     <ProtectedRoute>
       <ProfileEditComponent />
     </ProtectedRoute>
-  )
+  );
 }

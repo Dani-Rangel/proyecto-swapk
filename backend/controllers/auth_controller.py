@@ -66,7 +66,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
             "id": new_user.id,
             "nombre": new_user.nombre,
             "correo": new_user.correo,
-            "rol": user.rol.value
+            "rol": new_user.rol.value   # ✅ aquí estaba el error
         },
         "perfil": {
             "id": new_profile.id,
@@ -75,6 +75,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
             "correo": new_profile.usuario.correo
         }
     }
+
 
 @router.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):

@@ -36,7 +36,7 @@ import Link from "next/link"
 import ProtectedRoute from "@/components/protected_routes/protected_routes"
 import { Heart } from "lucide-react"
 import { MainSidebar } from "@/components/MainSidebar"
-import { useNotificaciones } from "../../components/context/notificaciones_context"
+import { useNotificaciones } from "../../context/notificacionesContext"
 import { getCurrentUser } from "@/lib/auth"
 
 // ✅ Tipos basados en tus modelos SQLAlchemy

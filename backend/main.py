@@ -26,6 +26,9 @@ from backend.controllers import intercambio_admin_controller
 from backend.controllers import perfil_admin_controller
 from backend.controllers import publicaciones_admin_controller
 from backend.controllers import notificacion_controller
+from backend.controllers import help_controller
+from backend.controllers import inscripcion_curso_controller
+
 
 
 app = FastAPI()
@@ -75,6 +78,9 @@ app.include_router(curso_controller.router, prefix="/admin")
 app.include_router(intercambio_admin_controller.router)
 app.include_router(perfil_admin_controller.router)
 app.include_router(publicaciones_admin_controller.router)
+app.include_router(help_controller.router)
+app.include_router(inscripcion_curso_controller.router)
+
 
 
 # Servir archivos estáticos

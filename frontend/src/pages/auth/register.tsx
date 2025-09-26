@@ -26,49 +26,52 @@ export default function RegisterPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError([])
-    try {
-      const res = await fetch("http://localhost:8000/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: formData.nombre,
-          email: formData.correo, 
-          password: formData.password,
-          rol: data.user.rol,
-        }),
-      })
+  e.preventDefault()
+  setError([])
 
-      const data = await res.json()
+  try {
+    const res = await fetch("http://localhost:8000/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: formData.nombre,
+        email: formData.correo, 
+        password: formData.password,
+        rol: "usuario", // ✅ define un rol por defecto aquí
+      }),
+    })
 
-      if (res.ok) {
-        const userData = {
-          token: data.token,
-          id: data.usuario?.id || data.user?.id,
-          nombre: data.usuario?.nombre || data.user?.nombre,
-          correo: data.usuario?.correo || data.user?.correo,
-          perfil: data.perfil,
-        }
+    const data = await res.json()
 
-        localStorage.setItem("user", JSON.stringify(userData))
-        document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
-
-        router.push("/dashboard/index_dashboard")
-      } else {
-        if (Array.isArray(data.detail)) {
-          setError(data.detail.map((e: any) => e.msg))
-        } else if (typeof data.detail === "string") {
-          setError([data.detail])
-        } else {
-          setError(["Error desconocido"])
-        }
+    if (res.ok) {
+      const userData = {
+        token: data.token,
+        id: data.usuario?.id || data.user?.id,
+        nombre: data.usuario?.nombre || data.user?.nombre,
+        correo: data.usuario?.correo || data.user?.correo,
+        perfil: data.perfil,
+        rol: data.usuario?.rol || data.user?.rol, // ✅ lo traes después del backend
       }
-    } catch (err) {
-      console.error("Error en el registro:", err)
-      setError(["Error en el registro. Revisa tu conexión."])
+
+      localStorage.setItem("user", JSON.stringify(userData))
+      document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
+
+      router.push("/dashboard/index_dashboard")
+    } else {
+      if (Array.isArray(data.detail)) {
+        setError(data.detail.map((e: any) => e.msg))
+      } else if (typeof data.detail === "string") {
+        setError([data.detail])
+      } else {
+        setError(["Error desconocido"])
+      }
     }
+  } catch (err) {
+    console.error("Error en el registro:", err)
+    setError(["Error en el registro. Revisa tu conexión."])
   }
+}
+
 
   return (
     <div

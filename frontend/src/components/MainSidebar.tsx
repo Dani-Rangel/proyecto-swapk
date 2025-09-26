@@ -168,7 +168,7 @@ export function MainSidebar({
             <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400">
               Moderador
             </h4>
-            <Link href="/moderador/moderador" passHref>
+            <Link href="/Moderador/moderador" passHref>
               <Button
                 variant="ghost"
                 size="sm"

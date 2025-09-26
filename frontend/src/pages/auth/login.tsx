@@ -193,7 +193,7 @@ const Login: React.FC = () => {
             </p>
             <p className="text-sm">
               <button
-                onClick={() => router.push("/auth/forgot-password")}
+                onClick={() => router.push("/auth/forgot_password")}
                 className="text-gray-500 hover:underline"
               >
                 ¿Olvidaste tu contraseña?

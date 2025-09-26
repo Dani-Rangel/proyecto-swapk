@@ -208,11 +208,12 @@ function ProfilePageComponent() {
 
       {/* Sidebar Izquierdo */}
        <MainSidebar
-                  isDark={isDark}
-                  toggleTheme={toggleTheme}
-                  isSidebarOpen={isSidebarOpen}
-                  setIsSidebarOpen={setIsSidebarOpen}
-                />
+                        isDark={isDark}
+                        toggleTheme={toggleTheme}
+                        isSidebarOpen={isSidebarOpen}
+                        setIsSidebarOpen={setIsSidebarOpen}
+                        user={user}
+                      />
 
       {/* Main Content */}
       <div className={`min-h-screen transition-all duration-300 w-full ${isSidebarOpen ? "pl-6" : "pl-14"} pr-6 py-6`}>

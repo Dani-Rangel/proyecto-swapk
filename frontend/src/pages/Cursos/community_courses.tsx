@@ -475,8 +475,12 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
           <div className="w-full h-64 bg-muted flex items-center justify-center">
             <img
               className="w-full h-full object-cover"
-              src={`http://localhost:8000/${course.img_Cursos}` || "/img/image.png"}
+              src={`http://localhost:8000${course.img_Cursos}` || "/img/image.png"}
               alt={course.titulo}
+              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                 target.src = "/img/image.png";
+                              }}
             />
           </div>
         )}
@@ -546,6 +550,12 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
               ) : (
                 <p className={`text-sm ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`}>{t("no_attachments")}</p>
               )}
+            </div>
+          </section>
+          <section>
+            <h2 className={`text-xl font-semibold mb-2 mt-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>Contenido del Curso</h2>
+            <div className={`p-5 rounded h-50 w-full mt-2 mb-2 ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E] hover:bg-[#4E4E4E]" : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"}`}>
+              <div className="h-40 w-full p-6 bg-[#8e1600] m-full flex items-center justify-center border rounded">Acceso Restrigido</div>
             </div>
           </section>
           <section>
@@ -669,11 +679,12 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
           </div>
           {/* Sidebar Izquierdo */}
           <MainSidebar
-            isDark={isDark}
-            toggleTheme={toggleTheme}
-            isSidebarOpen={isSidebarOpen}
-            setIsSidebarOpen={setIsSidebarOpen}
-          />
+                  isDark={isDark}
+                  toggleTheme={toggleTheme}
+                  isSidebarOpen={isSidebarOpen}
+                  setIsSidebarOpen={setIsSidebarOpen}
+                  user={user}
+                />
           {/* Main Content */}
           <div className="flex-1 overflow-auto">
             {selectedCourse ? (
@@ -942,11 +953,11 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                           <div className="relative pb-48 overflow-hidden rounded-t-lg">
                             <img
                               className="absolute inset-0 h-full w-full object-cover"
-                              src={`http://localhost:8000/${curso.img_Cursos}` || "/img/image.png"}
+                              src={`http://localhost:8000${curso.img_Cursos}` || "/img/image.png"}
                               alt={curso.titulo}
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement
-                                // target.src = "/default-course.png";
+                                 target.src = "/img/image.png";
                               }}
                             />
                             <div className="absolute bottom-4 left-4">
