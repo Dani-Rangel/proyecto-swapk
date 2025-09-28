@@ -24,7 +24,7 @@ export interface NotificacionCreate {
 }
 
 const notificacionAPI = {
-  // Obtener todas las notificaciones de un usuario
+  // Obtenemos todas las notificaciones de un usuario
   getByUser: async (userId: number): Promise<Notificacion[]> => {
     const response = await axios.get(`${API_BASE_URL}/notificaciones/${userId}`);
     return response.data;

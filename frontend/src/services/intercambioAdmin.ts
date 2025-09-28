@@ -75,7 +75,7 @@ export interface IntercambioForm {
   estado: EstadoIntercambio;
 }
 
-export type IntercambioUpdateForm = Partial<IntercambioForm>;// todos opcionales
+export type IntercambioUpdateForm = Partial<IntercambioForm>; // todos opcionales
 
 /** Servicio **/
 export const IntercambioService = {
