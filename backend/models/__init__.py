@@ -4,7 +4,7 @@ from .perfil_habilidad import perfilHabilidad
 from .habilidad import Habilidad
 from .intercambio import Intercambio
 from .Intercambio_Habilidad import IntercambioHabilidad
-from .condicion_Intercambio import CondicionIntercambio
+from .Propuesta_Intercambio import PropuestaIntercambio
 from .cursos import Curso
 from .Inscripciones_Cursos import InscripcionCurso
 from .Curso_Habilidad import CursoHabilidad

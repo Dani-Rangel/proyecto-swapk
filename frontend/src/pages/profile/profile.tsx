@@ -1,4 +1,3 @@
-// pages/profile/profile.tsx (actualizado)
 "use client";
 
 // Importación de funcionalidad "change_language"
@@ -7,12 +6,14 @@ import { useTranslation } from "../../lib/useTranslations";
 // Importación de componentes 
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 // Importación para alertas
 import toast, { Toaster } from 'react-hot-toast';
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
 import {
   X, 
   Search, 
@@ -34,16 +35,15 @@ import {
   Home,
   BookOpen,
   Moon,
-  Sun
+  Sun,
+  Award
 } from "lucide-react";
 import { skillsAPI, SkillAssociation, Skill, SkillAssociationResponse } from "@/services/api_Skills";
 import { AddSkillForm } from "../../components/ui/AddSkillForm";
-import Image from "next/image";
-import axios from "axios";
 import ProtectedRoute from "@/components/protected_routes/protected_routes"; 
 import { getCurrentUser, clearCurrentUser } from "@/lib/auth";
-import Link from "next/link";
-import { MainSidebar } from "@/components/MainSidebar"
+import { MainSidebar } from "@/components/MainSidebar";
+import { expedienteService, TipoExpedienteEnum, TipoEstadoEnum } from "@/services/expediente";
 
 interface Perfil {
   id: number; 
@@ -58,9 +58,7 @@ interface Perfil {
 }
 
 function ProfilePageComponent() {
-  // Cambio de tema
   const [isDark, setIsDark] = useState(true);
-  // Cambio de lenguaje 
   const { t } = useTranslation();
   
   const [perfil, setPerfil] = useState<Perfil | null>(null);
@@ -75,7 +73,37 @@ function ProfilePageComponent() {
   const router = useRouter();
   const [habilidadesDisponibles, setHabilidadesDisponibles] = useState<Skill[]>([]);
   const [habilidadesPerfil, setHabilidadesPerfil] = useState<SkillAssociationResponse[]>([]);
+  const [imageSrc, setImageSrc] = useState<string>("/img/user.png");
 
+  // ✅ Estado para certificados
+  const [certificaciones, setCertificaciones] = useState<any[]>([]);
+  const [loadingCertificados, setLoadingCertificados] = useState(true);
+
+  // ✅ Función para obtener URL completa de la foto
+  const getProfileImageUrl = (foto_perfil?: string): string => {
+    if (!foto_perfil) return "/img/user.png";
+    if (foto_perfil.startsWith("http")) return foto_perfil;
+    if (foto_perfil.startsWith("/")) return `http://localhost:8000${foto_perfil}`;
+    return "/img/user.png";
+  };
+
+  // ✅ Función para colores de estado de certificados
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case TipoEstadoEnum.VERIFICADO:
+        return "bg-green-600";
+      case TipoEstadoEnum.PENDIENTE:
+        return "bg-yellow-600";
+      case TipoEstadoEnum.EN_PROCESO:
+        return "bg-blue-600";
+      case TipoEstadoEnum.RECHAZADO:
+        return "bg-red-600";
+      default:
+        return "bg-gray-600";
+    }
+  };
+
+  // ✅ Cargar perfil del usuario
   useEffect(() => {
     const currentUser = getCurrentUser();
     
@@ -88,7 +116,6 @@ function ProfilePageComponent() {
     console.log("✅ Usuario cargado:", currentUser);
     setUser(currentUser);
 
-    // Cargar el perfil del usuario
     axios.get(`http://localhost:8000/perfil/usuario/${currentUser.id}`, {
       headers: {
         Authorization: `Bearer ${currentUser.token}`
@@ -111,6 +138,7 @@ function ProfilePageComponent() {
     });
   }, [router]);
 
+  // ✅ Cargar habilidades disponibles
   useEffect(() => {
     skillsAPI.getSkills()
       .then(setHabilidadesDisponibles)
@@ -119,6 +147,56 @@ function ProfilePageComponent() {
       });
   }, []);
 
+  // ✅ Cargar habilidades del perfil
+  useEffect(() => {
+    if (!perfil?.id) return;
+    skillsAPI.getPerfilSkills(perfil.id)
+      .then(setHabilidadesPerfil)
+      .catch(err => console.error(err));
+  }, [perfil?.id]);
+
+  // ✅ Cargar certificados del usuario
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchCertificaciones = async () => {
+      try {
+        const expedientes = await expedienteService.listarPorUsuario(user.id);
+        const certificados = expedientes.filter(
+          (exp) => exp.tipo === TipoExpedienteEnum.CERTIFICADO
+        );
+
+        const mapped = certificados.map((cert) => ({
+          id: cert.id,
+          name: cert.nombre,
+          issuer: cert.institucion,
+          date: cert.fecha_inicio || new Date().toISOString(),
+          status: cert.estado,
+          archivos: cert.archivos || [],
+        }));
+
+        setCertificaciones(mapped);
+      } catch (error) {
+        console.error("Error al cargar certificados en perfil:", error);
+        toast.error("No se pudieron cargar los certificados.");
+      } finally {
+        setLoadingCertificados(false);
+      }
+    };
+
+    fetchCertificaciones();
+  }, [user?.id]);
+
+  // ✅ Actualizar imagen de perfil
+  useEffect(() => {
+    if (perfil?.foto_perfil) {
+      setImageSrc(getProfileImageUrl(perfil.foto_perfil));
+    } else {
+      setImageSrc("/img/user.png");
+    }
+  }, [perfil?.foto_perfil]);
+
+  // ✅ Guardar asociación de habilidad
   const handleSaveAssociation = async (assoc: SkillAssociation) => {
     try {
       if (!perfil) return;
@@ -140,18 +218,13 @@ function ProfilePageComponent() {
       setShowAddForm(false);
     } catch (error) {
       console.error(error);
+      toast.error("Error al agregar la habilidad.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if (!perfil?.id) return;
-    skillsAPI.getPerfilSkills(perfil.id)
-      .then(setHabilidadesPerfil)
-      .catch(err => console.error(err));
-  }, [perfil?.id]);
-
+  // ✅ Eliminar habilidad
   const handleRemoveSkill = async (idAsociacion: number) => {
     if (!perfil) return;
     try {
@@ -160,12 +233,13 @@ function ProfilePageComponent() {
       setHabilidadesPerfil(prev => prev.filter(h => h.id !== idAsociacion));
     } catch (error) {
       console.error(error);
-      alert("Error al eliminar la habilidad.");
+      toast.error("Error al eliminar la habilidad.");
     } finally {
       setLoading(false);
     }
   };
 
+  // ✅ Cerrar sesión
   const handleLogout = () => {
     clearCurrentUser();
     setUser(null);
@@ -174,11 +248,13 @@ function ProfilePageComponent() {
     setTimeout(() => router.push("/auth/login"), 1000);
   };
 
+  // ✅ Búsqueda (placeholder)
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log("Buscando:", searchQuery);
   };
 
+  // ✅ Render loading
   if (loading) {
     return (
       <div className="min-h-screen bg-[#141414] flex items-center justify-center">
@@ -197,6 +273,9 @@ function ProfilePageComponent() {
 
   const toggleTheme = () => setIsDark(!isDark);
 
+  // ✅ Usa esta URL en la imagen
+  const profileImageUrl = getProfileImageUrl(perfil?.foto_perfil);
+
   return (
     <div className="min-h-screen bg-[#141414] flex">
       {/* Botón Hamburguesa */}
@@ -207,13 +286,13 @@ function ProfilePageComponent() {
       </div>
 
       {/* Sidebar Izquierdo */}
-       <MainSidebar
-                        isDark={isDark}
-                        toggleTheme={toggleTheme}
-                        isSidebarOpen={isSidebarOpen}
-                        setIsSidebarOpen={setIsSidebarOpen}
-                        user={user}
-                      />
+      <MainSidebar
+        isDark={isDark}
+        toggleTheme={toggleTheme}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        user={user}
+      />
 
       {/* Main Content */}
       <div className={`min-h-screen transition-all duration-300 w-full ${isSidebarOpen ? "pl-6" : "pl-14"} pr-6 py-6`}>
@@ -230,12 +309,16 @@ function ProfilePageComponent() {
               <div className="w-100 flex justify-between items-center p-8">
                 <div className="relative inline-block mb-4">
                   <div className="w-24 h-24 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full mx-auto flex items-center justify-center overflow-hidden">
-                    <Image
-                      src={perfil?.foto_perfil || "/img/user.png"}
-                      alt="Profile"
-                      width={96}
-                      height={96}
+                    {/* ✅ Usamos <img> en lugar de next/image */}
+                    <img
+                      src={imageSrc}
+                      alt="Foto de perfil"
                       className="w-full h-full object-cover"
+                      onError={() => {
+                        if (imageSrc !== "/img/user.png") {
+                          setImageSrc("/img/user.png");
+                        }
+                      }}
                     />
                   </div>
                   <button className="absolute -bottom-1 -right-1 bg-blue-600 p-2 rounded-full hover:bg-blue-700 transition-colors">
@@ -263,7 +346,10 @@ function ProfilePageComponent() {
                   ))}
                 </div>
 
-                <button className="bg-gradient-to-r from-gray-900 to-gray-600 text-white px-6 py-2.5 rounded-lg hover:from-gray-600 hover:to-gray-500 transition-all duration-200 flex items-center gap-2 mx-auto shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                <button 
+                  className="bg-gradient-to-r from-gray-900 to-gray-600 text-white px-6 py-2.5 rounded-lg hover:from-gray-600 hover:to-gray-500 transition-all duration-200 flex items-center gap-2 mx-auto shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => router.push("/settings/profile_edit")}
+                >
                   <Edit className="w-4 h-4" />
                   Editar perfil
                 </button>
@@ -306,28 +392,73 @@ function ProfilePageComponent() {
                 </div>
               </div>
 
-              <div className="border-t border-gray-700 pt-10">
-                <div className="flex items-center justify-between mb-8">
-                  <h4 className="text-white text-lx font-semibold">Certificados</h4>
-                  <div className="flex gap-2">
-                    <button className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-1 py-4 rounded-lg hover:from-blue-500 hover:to-blue-400 transition-all duration-200 flex items-center gap-1 text-sm font-medium shadow-lg hover:shadow-emerald-500/25">
-                      <Plus className="w-4 h-4" />
-                      Agregar
-                    </button>
-                    <button className="bg-gradient-to-r from-gray-700 to-gray-600 text-white px-1 py-4 rounded-lg hover:from-gray-600 hover:to-gray-500 transition-all duration-200 flex items-center gap-1 text-sm font-medium shadow-lg">
-                      <Eye className="w-4 h-4" />
-                      Ver más
-                    </button>
-                  </div>
-                </div>
+              {/* Certificados en Perfil */}
+<div className="border-t border-gray-700 pt-10">
+  <div className="flex items-center justify-between mb-6">
+    <h4 className="text-white text-lg font-semibold">Certificados</h4>
+    <Button
+      variant="outline"
+      size="sm"
+      className="text-blue-400 border-blue-500 hover:bg-blue-500/10"
+      onClick={() => router.push("/settings/certifications")}
+    >
+      <Eye className="w-4 h-4 mr-1" />
+      Ver todos
+    </Button>
+  </div>
 
-                <div className="bg-gray-900/50 rounded-lg p-6">
-                  <div className="text-center text-gray-400">
-                    <p className="text-sm">No tienes certificados aún</p>
-                    <p className="text-xs text-gray-500">Subelos a tu perfil para obtener el reconocimiento!</p>
-                  </div>
-                </div>
-              </div>
+  {loadingCertificados ? (
+    <div className="text-center py-4 text-gray-400">Cargando certificados...</div>
+  ) : certificaciones.length === 0 ? (
+    <div className="bg-gray-900/50 rounded-lg p-6 text-center">
+      <Award className="w-10 h-10 mx-auto text-gray-500 mb-3" />
+      <p className="text-gray-400 text-sm">Aún no has agregado certificados</p>
+      <p className="text-xs text-gray-500 mt-1">
+        Sube tus credenciales en <span className="text-blue-400">Configuración</span> para mostrarlas aquí.
+      </p>
+    </div>
+  ) : (
+    <div className="space-y-4">
+      {certificaciones.map((cert) => (
+        <div
+          key={cert.id}
+          className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-gray-700 transition-colors"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h5 className="text-white font-medium">{cert.name}</h5>
+              <p className="text-gray-400 text-sm">por {cert.issuer}</p>
+              <p className="text-gray-500 text-xs mt-1">
+                {new Date(cert.date).toLocaleDateString("es-ES")}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <Badge className={`${getStatusColor(cert.status)} text-white text-xs px-2 py-1`}>
+                {cert.status}
+              </Badge>
+
+              {cert.archivos && cert.archivos.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-300 hover:text-white hover:bg-gray-800"
+                  title="Ver certificado"
+                  onClick={() => {
+                    const url = `http://localhost:8000/uploads/${cert.archivos[0].ruta}`;
+                    window.open(url, "_blank");
+                  }}
+                >
+                  <Eye className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
             </div>
 
             {/* Skills Section */}
@@ -413,7 +544,6 @@ function ProfilePageComponent() {
   );
 }
 
-// ✅ Exportamos el componente protegido
 export default function ProfilePage() {
   return (
     <ProtectedRoute>

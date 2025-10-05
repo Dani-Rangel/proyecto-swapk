@@ -4,8 +4,8 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useTranslation } from "@/lib/useTranslations"
-import { useRouter } from "next/navigation"; // ✅ Corregido: next/router → next/navigation
-import toast, { Toaster } from 'react-hot-toast'
+import { useRouter } from "next/navigation"
+import toast from 'react-hot-toast'
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import {
@@ -50,8 +50,36 @@ import {
 import { actualizarIntercambio } from "@/services/intercambio"
 import { useNotificaciones } from "@/context/notificacionesContext"
 import { getCurrentUser } from "@/lib/auth"
-import ProtectedRoute from "@/components/protected_routes/protected_routes";
+import ProtectedRoute from "@/components/protected_routes/protected_routes"
 import { MainSidebar } from "@/components/MainSidebar"
+import axios from "axios"
+
+const api = axios.create({
+  baseURL: "http://localhost:8000",
+  headers: {
+    "Content-Type": "application/json",
+  },
+})
+
+// Añadir token a cada petición (leyendo desde el objeto 'user')
+api.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.token) {
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${user.token}`;
+        }
+      } catch (e) {
+        console.error("Error parsing user from localStorage", e);
+      }
+    }
+  }
+  return config;
+});
+
 
 function SwapkPlatformComponent() {
   const router = useRouter()
@@ -76,11 +104,18 @@ function SwapkPlatformComponent() {
   const [user, setUser] = useState<any>(null)
   const [perfil, setPerfil] = useState<any>(null)
 
+  // Modal de propuestas
+  const [propuestas, setPropuestas] = useState<any[]>([])
+  const [showPropuestasModal, setShowPropuestasModal] = useState(false)
+  const [selectedIntercambioId, setSelectedIntercambioId] = useState<number | null>(null)
+  const [propuestasEnviadas, setPropuestasEnviadas] = useState<Set<number>>(new Set());
+
+
   // Validar usuario logueado
   useEffect(() => {
     const user = getCurrentUser()
     if (user) setCurrentUser(user)
-    else router.push("/auth/login") // ✅ Corregido: /login → /auth/login
+    else router.push("/auth/login")
   }, [router])
 
   // Cargar intercambios y habilidades
@@ -100,15 +135,36 @@ function SwapkPlatformComponent() {
     fetchData()
   }, [])
 
+ useEffect(() => {
+  const cargarMisPropuestas = async () => {
+    if (!currentUser) return;
+
+    try {
+      const res = await api.get("/intercambios/mis-propuestas");
+      console.log("✅ Propuestas:", res.data);
+      const ids = new Set<number>();
+      for (const prop of res.data) {
+        ids.add(prop.id_intercambio);
+      }
+      setPropuestasEnviadas(ids);
+    } catch (error: any) {
+      console.error("❌ Error al cargar mis propuestas:", error.response?.data || error.message);
+    }
+  };
+  cargarMisPropuestas();
+}, [currentUser]);
+
+
+
+
   const handleLogout = () => {
     localStorage.removeItem("user")
     localStorage.removeItem("token")
-    router.push("/auth/login") // ✅ Corregido: /login → /auth/login
+    router.push("/auth/login")
   }
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => e.preventDefault()
 
-  // Transformar IntercambioResponse a TruequeFormData para el modal
   const mapIntercambioToFormData = (intercambio: IntercambioResponse): TruequeFormData => ({
     modalidad: intercambio.modo || "",
     nivel: intercambio.nivel || "",
@@ -119,7 +175,6 @@ function SwapkPlatformComponent() {
     habilidades_buscadas_ids: intercambio.habilidades_busca?.map(h => h.id) || [],
   })
 
-  // Crear o actualizar trueque
   const handleSaveTrueque = async (formData: TruequeFormData) => {
     if (!currentUser) {
       alert(t("login_required_exchange"))
@@ -174,20 +229,17 @@ function SwapkPlatformComponent() {
       try {
         const saved = await crearIntercambio(newTrueque)
         if (saved) {
-        setTrueques((prev) => [...prev, saved])
+          setTrueques((prev) => [...prev, saved])
 
-        // 🚀 Solo si es una NUEVA publicación (no edición), crear notificación
-        if (!truequeEditando) {
           const user = getCurrentUser()
           const nombreUsuario = user?.nombre || "Un usuario"
 
           agregarNotificacion({
-            tipo: "Intercambio", // ✅ Coincide con tu enum en el backend
+            tipo: "Intercambio",
             contenido: `El usuario ${nombreUsuario} ha creado un nuevo intercambio: ${formData.modalidad} - ${formData.nivel}.`,
             id_usuario: user?.id || 0,
           })
         }
-      }
       } catch (error) {
         console.error("❌ Error al crear intercambio:", error)
       }
@@ -211,6 +263,19 @@ function SwapkPlatformComponent() {
   const handleCloseModal = () => {
     setIsCrearModalOpen(false)
     setTruequeEditando(null)
+  }
+
+  // Cargar propuestas de un intercambio (solo para creador)
+  const cargarPropuestas = async (intercambioId: number) => {
+    try {
+      const res = await api.get(`/intercambios/${intercambioId}/propuestas`)
+      setPropuestas(res.data)
+      setSelectedIntercambioId(intercambioId)
+      setShowPropuestasModal(true)
+    } catch (error: any) {
+      console.error("Error al cargar propuestas:", error)
+      toast.error(error.response?.data?.detail || "No se pudieron cargar las propuestas")
+    }
   }
 
   const renderStars = (rating: number) =>
@@ -243,7 +308,6 @@ function SwapkPlatformComponent() {
     return matchesSearchQuery && matchesFilters
   })
 
-  // Clases de estilo consistentes con el Sidebar
   const sidebarBgClass = isDark ? "bg-[#1E1E1E]" : "bg-white";
   const sidebarBorderClass = isDark ? "border-[#2E2E2E]" : "border-gray-200";
   const sidebarTextClass = isDark ? "text-[#F5F5F5]" : "text-gray-900";
@@ -254,25 +318,22 @@ function SwapkPlatformComponent() {
 
   return (
     <div className={`flex h-screen ${isDark ? "bg-[#1A1A1A]" : "bg-gray-50"} ${sidebarTextClass}`}>
-      {/* Botón Hamburguesa */}
       <div className="absolute top-4 left-4 md:hidden z-50">
         <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`${isDark ? "text-gray-300" : "text-gray-600"}`}>
           {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </Button>
       </div>
 
-      {/* Sidebar Izquierdo */}
-       <MainSidebar
-                  isDark={isDark}
-                  toggleTheme={toggleTheme}
-                  isSidebarOpen={isSidebarOpen}
-                  setIsSidebarOpen={setIsSidebarOpen}
-                />
+      <MainSidebar
+        isDark={isDark}
+        toggleTheme={toggleTheme}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        user={user}
+      />
 
-      {/* Main */}
       <div className="flex-1 transition-all duration-300 ml-2">
         <div className="flex-1 p-6 overflow-y-auto">
-          {/* Encabezado */}
           <div className={`flex items-center justify-between mb-8 ${sidebarBgClass} ${sidebarBorderClass} p-4 rounded-lg border`}>
             <h2 className={`text-2xl font-bold ${sidebarTextClass}`}>{t("exchanges_title")}</h2>
             <Button
@@ -283,13 +344,8 @@ function SwapkPlatformComponent() {
             </Button>
           </div>
 
-          {/* Filtros */}
           <div className={`mb-6 ${sidebarBgClass} ${sidebarBorderClass} p-4 rounded-lg border`}>
-            <form
-              onSubmit={handleSearch}
-              className="flex flex-col md:flex-row md:items-center md:gap-4"
-            >
-              {/* Buscador */}
+            <form onSubmit={handleSearch} className="flex flex-col md:flex-row md:items-center md:gap-4">
               <div className={`flex items-center ${isDark ? "bg-[#1E1E1E]" : "bg-gray-100"} px-3 py-2 rounded-lg flex-1 border ${isDark ? "border-[#2E2E2E]" : "border-gray-300"}`}>
                 <Search className={`w-5 h-5 ${sidebarMutedTextClass} mr-2`} />
                 <input
@@ -301,7 +357,6 @@ function SwapkPlatformComponent() {
                 />
               </div>
 
-              {/* Filtros */}
               <select
                 value={modalidad}
                 onChange={(e) => setModalidad(e.target.value)}
@@ -341,16 +396,12 @@ function SwapkPlatformComponent() {
                 ))}
               </select>
 
-              <Button
-                type="submit"
-                className={`${sidebarButtonClass} mt-2 md:mt-0`}
-              >
+              <Button type="submit" className={`${sidebarButtonClass} mt-2 md:mt-0`}>
                 {t("search_button")}
               </Button>
             </form>
           </div>
 
-          {/* Listado de trueques */}
           {filteredTrueques.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {filteredTrueques.map((trueque) => (
@@ -369,7 +420,17 @@ function SwapkPlatformComponent() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 justify-between">
                         <h3 className={`text-xl font-semibold ${sidebarTextClass}`}>
-                          {trueque.usuario1?.nombre}
+                          <Link
+                            href={`/profile/${trueque.id_usuario1}`}
+                            className="text-gray-400 hover:underline hover:text-gray-300 transition-colors"
+                            onClick={(e) => {
+                              if (trueque.id_usuario1 === currentUser?.id) {
+                                e.preventDefault();
+                              }
+                            }}
+                          >
+                            {trueque.usuario1?.nombre}
+                          </Link>
                         </h3>
                         {renderEstadoCircle(trueque.estado)}
                       </div>
@@ -414,9 +475,16 @@ function SwapkPlatformComponent() {
                     </div>
                   )}
 
-                  {/* Botones editar / eliminar si el usuario es dueño */}
                   {currentUser?.id === trueque.id_usuario1 && (
                     <div className="mt-4 flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => cargarPropuestas(trueque.id)}
+                      >
+                        Ver propuestas
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
@@ -435,25 +503,66 @@ function SwapkPlatformComponent() {
                       </Button>
                     </div>
                   )}
-                  {currentUser?.id !== trueque.id_usuario1 && (
+
+                  {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Pendiente && (
                     <div className="mt-4">
-                      <Button
-                      className={sidebarButtonClass}
-                      onClick={() => {
-                        const user = getCurrentUser()
-                        const nombreUsuario = user?.nombre || "Un usuario"
+                      {propuestasEnviadas.has(trueque.id) ? (
+                        <Button
+                          variant="outline"
+                          className="bg-red-500 hover:bg-red-600 text-white w-full"
+                          onClick={async () => {
+                            try {
+                              // Obtener ID de la propuesta
+                              const res = await api.get("/intercambios/mis-propuestas");
+                              const miPropuesta = res.data.find((p: any) => p.id_intercambio === trueque.id);
+                              if (!miPropuesta) return;
 
-                        agregarNotificacion({
-                          tipo: "Intercambio",
-                          contenido: `El usuario ${nombreUsuario} está interesado en tu intercambio: ${trueque.modo} - ${trueque.nivel}.`,
-                          id_usuario: trueque.id_usuario1, // ✅ Notificar al autor del intercambio
-                        })
+                              // Cancelar propuesta
+                              await api.delete(`/intercambios/${trueque.id}/propuestas/${miPropuesta.id_propuesta}`);
+                              toast.success("Propuesta cancelada");
+                              setPropuestasEnviadas(prev => {
+                                const newSet = new Set(prev);
+                                newSet.delete(trueque.id);
+                                return newSet;
+                              });
+                            } catch (error: any) {
+                              toast.error(error.response?.data?.detail || "Error al cancelar propuesta");
+                            }
+                          }}
+                        >
+                          Cancelar propuesta
+                        </Button>
+                      ) : (
+                        <Button
+                          className={sidebarButtonClass}
+                          onClick={async () => {
+                            if (!currentUser) return;
+                            try {
+                              await api.post(`/intercambios/${trueque.id}/propuesta`);
+                              toast.success(`Propuesta enviada a ${trueque.usuario1?.nombre}`);
+                              // Recargar propuestas
+                              const res = await api.get("/intercambios/mis-propuestas");
+                              const ids = new Set<number>();
+                              for (const prop of res.data) {
+                                ids.add(prop.id_intercambio);
+                              }
+                              setPropuestasEnviadas(ids);
+                            } catch (error: any) {
+                              toast.error(error.response?.data?.detail || "Error al enviar propuesta");
+                            }
+                          }}
+                        >
+                          {t("propose_exchange")}
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
-                        alert(`Propuesta enviada a ${trueque.usuario1?.nombre}`)
-                      }}
-                    >
-                      {t("propose_exchange")}
-                    </Button>
+                  {currentUser?.id !== trueque.id_usuario1 && trueque.estado !== EstadoIntercambio.Pendiente && (
+                    <div className="mt-4">
+                      <Button disabled className="opacity-50 w-full">
+                        {trueque.estado === EstadoIntercambio.Confirmado ? "Confirmado" : "Finalizado"}
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -486,11 +595,86 @@ function SwapkPlatformComponent() {
           isEditing={!!truequeEditando}
         />
       )}
+
+      {/* Modal de Propuestas */}
+      {showPropuestasModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className={`${sidebarBgClass} rounded-xl p-6 w-full max-w-md mx-4`}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className={`text-xl font-bold ${sidebarTextClass}`}>Propuestas</h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowPropuestasModal(false)}>
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {propuestas.length === 0 ? (
+              <p className={sidebarMutedTextClass}>No hay propuestas aún.</p>
+            ) : (
+              <div className="space-y-4">
+                {propuestas.map((prop) => (
+                  <div key={prop.id} className={`${sidebarCardClass} p-4 rounded-lg`}>
+                    <div className="flex justify-between items-center">
+                      <span className={sidebarTextClass}>{prop.usuario_interesado.nombre}</span>
+                      {prop.aceptada ? (
+                        <span className="text-green-500">Confirmado</span>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={async () => {
+                              try {
+                                const res = await api.post(`/intercambios/${selectedIntercambioId}/propuestas/${prop.id}/aceptar`);
+                                toast.success("Propuesta aceptada");
+                                router.push(res.data.redirect);
+                              } catch (error: any) {
+                                toast.error(error.response?.data?.detail || "Error al aceptar");
+                              }
+                            }}
+                          >
+                            Confirmar
+                          </Button>
+                          {/* ✅ Botón para rechazar (solo creador lo ve) */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-red-500 hover:bg-red-600 text-white"
+                            onClick={async () => {
+                              if (!window.confirm("¿Rechazar esta propuesta?")) return;
+                              try {
+                                await api.delete(`/intercambios/${selectedIntercambioId}/propuestas/${prop.id}`);
+                                toast.success("Propuesta rechazada");
+                                // Recargar propuestas
+                                const res = await api.get(`/intercambios/${selectedIntercambioId}/propuestas`);
+                                setPropuestas(res.data);
+                              } catch (error: any) {
+                                toast.error(error.response?.data?.detail || "Error al rechazar");
+                              }
+                            }}
+                          >
+                            Rechazar
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <Button
+              className="mt-4 w-full"
+              onClick={() => setShowPropuestasModal(false)}
+            >
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-// ✅ Exportamos el componente protegido
 export default function SwapkPlatform() {
   return (
     <ProtectedRoute>

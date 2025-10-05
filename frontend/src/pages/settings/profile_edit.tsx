@@ -1,8 +1,7 @@
-// settings/profile_edit.tsx
 "use client";
 
 import { useTranslation } from "../../lib/useTranslations";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,11 +17,12 @@ function ProfileEditComponent() {
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
   const [username, setUsername] = useState("");
-  const [profileImage, setProfileImage] = useState("");
+  const [profileImage, setProfileImage] = useState("/img/user.png");
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cargar datos del usuario desde API
   useEffect(() => {
     const fetchUserData = async () => {
       setIsLoading(true);
@@ -54,6 +54,7 @@ function ProfileEditComponent() {
         setLocation(data.ubicacion || "");
         setPhone(data.Tel ? String(data.Tel) : "");
         setProfileImage(data.foto_perfil || "/img/user.png");
+        setPreviewImage(null);
       } catch (err: any) {
         setError(`No se pudo cargar el perfil: ${err.message}`);
       } finally {
@@ -64,8 +65,15 @@ function ProfileEditComponent() {
     fetchUserData();
   }, []);
 
-  const redirectToLogin = () => {
-    window.location.href = "/auth/login";
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSaveChanges = async () => {
@@ -84,36 +92,33 @@ function ProfileEditComponent() {
         throw new Error("Credenciales inválidas");
       }
 
-      // Validar y parsear teléfono
-      let TelValue: number | null = null;
-      if (phone.trim()) {
-        const parsed = parseInt(phone, 10);
-        if (isNaN(parsed)) {
-          throw new Error("El teléfono debe ser un número válido");
-        }
-        TelValue = parsed;
-      }
+      const formData = new FormData();
+      formData.append("nombre", username);
+      formData.append("descripcion", description);
+      formData.append("ubicacion", location);
+      formData.append("Tel", phone || "null");
 
-      const updatedProfile = {
-        nombre: username,
-        descripcion: description,
-        ubicacion: location,
-        Tel: TelValue,
-      };
+      // Añadir archivo si hay preview
+      if (fileInputRef.current?.files?.[0]) {
+        formData.append("foto_perfil", fileInputRef.current.files[0]);
+      }
 
       const response = await fetch(`http://localhost:8000/perfil/${userId}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          // ⚠️ NO pongas Content-Type; el navegador lo pone automáticamente con boundary
         },
-        body: JSON.stringify(updatedProfile),
+        body: formData,
       });
 
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(errorText || "Error al guardar");
       }
+
+      const result = await response.json();
+      const newImageUrl = result.foto_perfil || profileImage;
 
       // Actualizar localStorage
       const updatedUser = {
@@ -123,10 +128,15 @@ function ProfileEditComponent() {
           ...user.perfil,
           descripcion: description,
           ubicacion: location,
-          Tel: TelValue,
+          Tel: phone ? parseInt(phone, 10) : null,
+          foto_perfil: newImageUrl,
         },
       };
       localStorage.setItem("user", JSON.stringify(updatedUser));
+
+      setProfileImage(newImageUrl);
+      setPreviewImage(null);
+      if (fileInputRef.current) fileInputRef.current.value = "";
 
       alert("Perfil actualizado exitosamente");
     } catch (err: any) {
@@ -136,6 +146,12 @@ function ProfileEditComponent() {
       setIsLoading(false);
     }
   };
+
+  const redirectToLogin = () => {
+    window.location.href = "/auth/login";
+  };
+
+  const displayedImage = previewImage || profileImage;
 
   if (isLoading) {
     return (
@@ -193,7 +209,7 @@ function ProfileEditComponent() {
           <CardContent className="p-6">
             <div className="flex items-center gap-4 mb-6">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={profileImage} />
+                <AvatarImage src={displayedImage} />
                 <AvatarFallback className="bg-blue-600 text-white">
                   {username ? username.charAt(0).toUpperCase() : "U"}
                 </AvatarFallback>
@@ -205,10 +221,17 @@ function ProfileEditComponent() {
               <Button
                 variant="outline"
                 className="border-blue-500 text-blue-400 hover:bg-blue-600 hover:text-white"
-                disabled
+                onClick={() => fileInputRef.current?.click()}
               >
                 Cambiar foto
               </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                accept="image/*"
+                className="hidden"
+              />
             </div>
 
             <div className="space-y-4">

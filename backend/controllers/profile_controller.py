@@ -1,11 +1,20 @@
 # backend/controllers/perfil.py
-from fastapi import APIRouter, Depends, HTTPException, Body
+
+import os
+import uuid
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.models.perfil import Perfil
 from backend.models.usuarios import Usuario
 from backend.services.oauth2 import get_current_user
 from backend.services.auth_service import hash_password
+
+# 👇 Instala con: pip install Pillow
+from PIL import Image as PILImage
+
+UPLOAD_DIR = "uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 router = APIRouter(prefix="/perfil", tags=["Perfil"])
 
@@ -89,7 +98,12 @@ def get_perfil(id: int, db: Session = Depends(get_db), current_user: Usuario = D
 @router.put("/{id}")
 def update_perfil(
     id: int,
-    data: dict = Body(...),  # ✅ CORREGIDO: faltaba "data: "
+    nombre: str = Form(None),
+    descripcion: str = Form(None),
+    ubicacion: str = Form(None),
+    Tel: str = Form(None),
+    foto_perfil: UploadFile = File(None),
+    contrasena: str = Form(None),
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
@@ -102,36 +116,57 @@ def update_perfil(
     if not perfil or not usuario:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
-    # Actualizar nombre del USUARIO (si se envía)
-    if "nombre" in data and data["nombre"] is not None:
-        nuevo_nombre = str(data["nombre"]).strip()
-        if not nuevo_nombre:
+    # --- Actualizar nombre del usuario ---
+    if nombre is not None:
+        nombre = nombre.strip()
+        if not nombre:
             raise HTTPException(status_code=400, detail="El nombre no puede estar vacío")
-        usuario.nombre = nuevo_nombre
+        usuario.nombre = nombre
 
-    # Actualizar campos del PERFIL
-    if "descripcion" in data:
-        perfil.descripcion = data["descripcion"] if data["descripcion"] is not None else ""
+    # --- Actualizar campos del perfil ---
+    if descripcion is not None:
+        perfil.descripcion = descripcion if descripcion != "null" else ""
 
-    if "ubicacion" in data:
-        perfil.ubicacion = data["ubicacion"] if data["ubicacion"] is not None else ""
+    if ubicacion is not None:
+        perfil.ubicacion = ubicacion if ubicacion != "null" else ""
 
-    if "Tel" in data:
-        tel_value = data["Tel"]
-        if tel_value is None:
+    if Tel is not None:
+        if Tel == "null" or Tel == "":
             perfil.Tel = None
-        elif isinstance(tel_value, int) and tel_value >= 0:
-            perfil.Tel = tel_value
         else:
-            raise HTTPException(status_code=400, detail="Tel debe ser un entero no negativo o null")
+            try:
+                tel_int = int(Tel)
+                if tel_int < 0:
+                    raise ValueError
+                perfil.Tel = tel_int
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Tel debe ser un entero no negativo o null")
 
-    if "foto_perfil" in data:
-        perfil.foto_perfil = data["foto_perfil"] if data["foto_perfil"] is not None else "/img/user.png"
+    # --- Subir foto de perfil ---
+    if foto_perfil is not None:
+        # Validar tipo de archivo
+        if not foto_perfil.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="Solo se permiten imágenes")
 
-    # Opcional: actualizar contraseña
-    if "contrasena" in data:
-        contrasena = data["contrasena"]
-        if not isinstance(contrasena, str) or len(contrasena) < 6:
+        # Generar nombre único y forzar extensión .jpg
+        filename = f"{uuid.uuid4().hex}.jpg"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+
+        try:
+            # Leer la imagen con PIL y guardar como JPG
+            img = PILImage.open(foto_perfil.file)
+            img = img.convert("RGB")  # Eliminar transparencia si existe
+            img.save(filepath, "JPEG", quality=85)
+
+            # Actualizar ruta en DB (ruta relativa desde frontend)
+            perfil.foto_perfil = f"/{filepath.replace(os.sep, '/')}"  # Ej: "/uploads/abc123.jpg"
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
+
+    # --- Actualizar contraseña ---
+    if contrasena is not None:
+        if len(contrasena) < 6:
             raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
         usuario.contrasena_hash = hash_password(contrasena)
 
@@ -139,7 +174,10 @@ def update_perfil(
         db.commit()
         db.refresh(perfil)
         db.refresh(usuario)
-        return {"msg": "Perfil actualizado correctamente"}
+        return {
+            "msg": "Perfil actualizado correctamente",
+            "foto_perfil": perfil.foto_perfil  # ✅ Devolvemos la ruta relativa
+        }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Error al guardar en la base de datos")

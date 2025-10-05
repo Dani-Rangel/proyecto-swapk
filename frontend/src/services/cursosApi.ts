@@ -138,3 +138,14 @@ export const deleteCurso = async (cursoId: number): Promise<{ message: string }>
     throw error
   }
 }
+
+// Obtener el número de inscritos confirmados en un curso
+export const getInscritosCount = async (cursoId: number): Promise<number> => {
+  try {
+    const response = await api.get(`/inscritos-count/${cursoId}`)
+    return response.data.count || 0
+  } catch (error) {
+    console.error("Error al obtener contador de inscritos:", error)
+    return 0
+  }
+}

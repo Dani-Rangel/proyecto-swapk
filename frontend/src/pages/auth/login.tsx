@@ -157,11 +157,11 @@ const Login: React.FC = () => {
                 try {
                   const res = await axios.post("http://localhost:8000/auth/google/login", { token })
                   const data = res.data
-                  const userData = {
+                 const userData = {
                     token: data.token,
-                    id: data.id,
-                    nombre: data.nombre,
-                    correo: data.correo,
+                    id: data.user.id,
+                    nombre: data.user.nombre,
+                    correo: data.user.correo,
                     perfil: data.perfil,
                     rol: data.user.rol,
                   }

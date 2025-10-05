@@ -33,7 +33,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { type Curso, getCursos, createCurso, updateCurso, deleteCurso } from "@/services/cursosApi"
+import { type Curso, getCursos, createCurso, updateCurso, deleteCurso, getInscritosCount } from "@/services/cursosApi"
 import { getCurrentUser } from "@/lib/auth"
 import { Card, CardContent } from "@/components/ui/card"
 import { uploadAttachments } from "@/services/attachments"
@@ -49,6 +49,7 @@ import Link from "next/link";
 import ProtectedRoute from "@/components/protected_routes/protected_routes"; // ✅ Importamos el componente de protección
 import { MainSidebar } from "@/components/MainSidebar"
 import { inscripcionCursoAPI } from "@/services/inscripcionCursoApi"
+import ManageEnrollmentsModal from "@/components/ui/ManageEnrollmentsModal"
 
 
 interface NewCourseData {
@@ -67,9 +68,9 @@ type HabilidadOption = {
 }
 
 interface CourseDetailViewProps {
-  course: Curso
+  course: CursoConContador
   onBack: () => void
-  onEdit: (course: Curso) => void
+  onEdit: (course: CursoConContador) => void
   onDelete: (courseId: number) => void
 }
 
@@ -78,16 +79,20 @@ interface UserData {
   nombre: string
 }
 
+interface CursoConContador extends Curso {
+  inscritosCount?: number
+}
+
 function CursosComunidadComponent() {
   const { t } = useTranslation()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<UserData | null>(null)
   const [habilidadesDisponibles, setHabilidadesDisponibles] = useState<HabilidadOption[]>([])
-  const [cursos, setCursos] = useState<Curso[]>([])
+  const [cursos, setCursos] = useState<CursoConContador[]>([])
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [showCourseForm, setShowCourseForm] = useState<boolean>(false)
-  const [selectedCourse, setSelectedCourse] = useState<Curso | null>(null)
+  const [selectedCourse, setSelectedCourse] = useState<CursoConContador | null>(null)
   const [newCourse, setNewCourse] = useState<NewCourseData>({
     title: "",
     description: "",
@@ -110,19 +115,28 @@ function CursosComunidadComponent() {
   const [perfil, setPerfil] = useState<any>(null)
   const [inscrito, setInscrito] = useState<boolean>(false)
   const [estadoInscripcion, setEstadoInscripcion] = useState<string | null>(null)
+  const [inscripcionId, setInscripcionId] = useState<number | null>(null);
+  const [showManageModal, setShowManageModal] = useState(false)
+  
 
   const loadCursos = async () => {
-    try {
-      setLoading(true);
-      const cursosData = await getCursos();
-      console.log("[v0] Raw API response:", cursosData);
-      setCursos(cursosData);
-    } catch (error) {
-      console.error("Error loading cursos:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  try {
+    setLoading(true);
+    const cursosData = await getCursos();
+    // Cargar contador para cada curso
+    const cursosConContador = await Promise.all(
+      cursosData.map(async (curso) => {
+        const count = await getInscritosCount(curso.id);
+        return { ...curso, inscritosCount: count };
+      })
+    );
+    setCursos(cursosConContador);
+  } catch (error) {
+    console.error("Error loading cursos:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchHabilidades = async () => {
     try {
@@ -329,12 +343,11 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
   }
 
   // 🔹 Ver más
-  const handleViewMore = (course: Curso) => {
-    console.log("Curso seleccionado para ver más:", course)
-    setSelectedCourse(course)
-    setShowCourseForm(false)
-    setEditingCourse(null)
-  }
+  const handleViewMore = (course: CursoConContador) => {
+  setSelectedCourse(course)
+  setShowCourseForm(false)
+  setEditingCourse(null)
+}
 
   // 🔹 Crear curso (abrir form)
   const handleCreateCourse = () => {
@@ -344,26 +357,25 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
   }
 
   // 🔹 Editar curso
-  const handleEdit = (course: Curso) => {
-    console.log("Curso seleccionado para editar:", course)
-    setEditingCourse(course)
-    setSelectedCourse(null)
-    setNewCourse({
-      title: course.titulo,
-      description: course.descripcion || "",
-      objective: course.objetivo || "",
-      skills: course.habilidades
-        ? course.habilidades.map((h) => ({
+ const handleEdit = (course: CursoConContador) => {
+  setEditingCourse(course)
+  setSelectedCourse(null)
+  setNewCourse({
+    title: course.titulo,
+    description: course.descripcion || "",
+    objective: course.objetivo || "",
+    skills: course.habilidades
+      ? course.habilidades.map((h) => ({
           id: h.id,
           value: h.habilidad_nombre,
           label: h.habilidad_nombre,
         }))
-        : [],
-      attachments: [],
-      courseImage: null,
-    })
-    setShowCourseForm(true)
-  }
+      : [],
+    attachments: [],
+    courseImage: null,
+  })
+  setShowCourseForm(true)
+}
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -445,23 +457,28 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
   }
 
   // Verificar si el usuario está inscrito
-  const verificarInscripcion = async () => {
-    const user = getCurrentUser()
-    if (!user) return
-    try {
-      const inscrito = await inscripcionCursoAPI.checkInscripcion(course.id, user.id)
-      setInscrito(inscrito)
-      if (inscrito) {
+ const verificarInscripcion = async () => {
+      const user = getCurrentUser()
+      if (!user) return
+      try {
         const inscripciones = await inscripcionCursoAPI.getByUser(user.id)
         const inscripcion = inscripciones.find(i => i.curso_id === course.id)
-        setEstadoInscripcion(inscripcion?.estado || null)
+        if (inscripcion) {
+          setInscrito(true)
+          setEstadoInscripcion(inscripcion.estado)
+          setInscripcionId(inscripcion.id)
+        } else {
+          setInscrito(false)
+          setEstadoInscripcion(null)
+          setInscripcionId(null)
+        }
+      } catch (error) {
+        console.error("Error al verificar inscripción:", error)
       }
-    } catch (error) {
-      console.error("Error al verificar inscripción:", error)
     }
-  }
-  verificarInscripcion()
-}, [course])
+
+    verificarInscripcion()
+  }, [course])
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -471,16 +488,16 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
       </Button>
       <div className={`rounded-lg shadow-lg overflow-hidden ${isDark ? "bg-[#2E2E2E] border-[#3E3E3E]" : "bg-white border-gray-200"} border`}>
         {/* Mostrar la imagen del curso si existe */}
-        {course.img_Cursos && (
+         {course.img_Cursos && (
           <div className="w-full h-64 bg-muted flex items-center justify-center">
             <img
               className="w-full h-full object-cover"
-              src={`http://localhost:8000${course.img_Cursos}` || "/img/image.png"}
+              src={`http://localhost:8000${course.img_Cursos}`}
               alt={course.titulo}
               onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                 target.src = "/img/image.png";
-                              }}
+                const target = e.target as HTMLImageElement;
+                target.src = "/img/image.png";
+              }}
             />
           </div>
         )}
@@ -488,7 +505,29 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
           <div className="flex justify-between items-start mb-4">
             <div>
               <h1 className={`text-3xl font-bold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{course.titulo}</h1>
-              <p className={`${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>{t("by_author").replace("{author}", course.usuario?.nombre || "Usuario desconocido")}</p>
+              <p className={`${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
+                {t("by_author")}{" "}
+                {course.usuario?.nombre ? (
+                  <Link
+                    href={`/profile/${course.user_id}`}
+                    className="text-gray-400 hover:underline hover:text-gray-300 transition-colors"
+                    onClick={(e) => {
+                      const user = getCurrentUser();
+                      if (user?.id === course.user_id) {
+                        e.preventDefault(); // Evita redirigir a tu propio perfil
+                      }
+                    }}
+                  >
+                    {course.usuario.nombre}
+                  </Link>
+                ) : (
+                  "Usuario desconocido"
+                )}
+              </p>
+              {/* Dentro del div principal de CourseDetailView */}
+              <p className={`${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
+                👥 {course.inscritosCount || 0} inscritos
+              </p>
             </div>
           </div>
           {course.descripcion && (
@@ -553,10 +592,21 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
             </div>
           </section>
           <section>
-            <h2 className={`text-xl font-semibold mb-2 mt-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>Contenido del Curso</h2>
-            <div className={`p-5 rounded h-50 w-full mt-2 mb-2 ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E] hover:bg-[#4E4E4E]" : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"}`}>
-              <div className="h-40 w-full p-6 bg-[#8e1600] m-full flex items-center justify-center border rounded">Acceso Restrigido</div>
-            </div>
+            {isCreator || (inscrito && estadoInscripcion === "Confirmado") ? (
+              <div className="p-6 bg-green-100 border rounded">
+                <h3 className="font-bold text-green-800">Contenido del curso disponible</h3>
+                {/* Aquí iría el contenido real del curso */}
+                <p>Lecciones, videos, materiales, etc.</p>
+              </div>
+            ) : (
+              <div className="h-40 w-full p-6 border border-red-400 bg-red-400/20 flex items-center justify-center rounded text-white">
+                {inscrito && estadoInscripcion === "Pendiente"
+                  ? "Esperando aprobación del creador"
+                  : inscrito && estadoInscripcion === "Finalizado"
+                    ? "Acceso finalizado por el creador"
+                    : "Acceso restringido"}
+              </div>
+            )}
           </section>
           <section>
             <h2 className={`text-xl font-semibold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("actions")}</h2>
@@ -615,31 +665,65 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                 </div>
               )}
               {isCreator && (
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => onEdit(course)}
-                    variant="outline"
-                    size="sm"
-                    className={`flex items-center gap-2 ${isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
-                  >
-                    <Edit className="w-4 h-4" />
-                    {t("edit_course")}
-                  </Button>
-                  <Button
-                    onClick={() => onDelete(course.id)}
-                    variant="destructive"
-                    size="sm"
-                    className="flex items-center gap-2"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    {t("delete")}
-                  </Button>
-                </div>
-              )}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => onEdit(course)}
+                      variant="outline"
+                      size="sm"
+                      className={`flex items-center gap-2 ${isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+                    >
+                      <Edit className="w-4 h-4" />
+                      {t("edit_course")}
+                    </Button>
+                    <Button
+                      onClick={() => onDelete(course.id)}
+                      variant="destructive"
+                      size="sm"
+                      className={`flex items-center gap-2 ${isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {t("delete")}
+                    </Button>
+                    {/* Botón para gestionar inscripciones */}
+                    <Button
+                      onClick={() => setShowManageModal(true)}
+                      variant="outline"
+                      size="sm"
+                      className={`flex items-center gap-2 ${isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      Gestionar Inscripciones
+                    </Button>
+                  </div>
+                )}
+
             </div>
           </section>
         </div>
       </div>
+      <ManageEnrollmentsModal
+        isOpen={showManageModal}
+        onClose={() => setShowManageModal(false)}
+        cursoId={course.id}
+        onEstadoActualizado={() => {
+          // Refresca la información de inscripción actual
+          const user = getCurrentUser()
+          if (user) {
+            inscripcionCursoAPI.getByUser(user.id).then(inscripciones => {
+              const inscripcion = inscripciones.find(i => i.curso_id === course.id)
+              if (inscripcion) {
+                setInscrito(true)
+                setEstadoInscripcion(inscripcion.estado)
+                setInscripcionId(inscripcion.id)
+              } else {
+                setInscrito(false)
+                setEstadoInscripcion(null)
+                setInscripcionId(null)
+              }
+            })
+          }
+        }}
+      />
     </div>
   )
 }
@@ -957,7 +1041,7 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                               alt={curso.titulo}
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement
-                                 target.src = "/img/image.png";
+                                target.src = "/img/image.png";
                               }}
                             />
                             <div className="absolute bottom-4 left-4">
@@ -977,10 +1061,20 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                           <CardContent className="p-4">
                             <div className="flex items-center mb-2">
                               <span className={`text-sm ${isDark ? "text-[#D1D1D1]" : "text-gray-600"}`}>
-                                {curso.usuario?.nombre || "Desconocido"}
+                                <Link
+                                  href={`/profile/${curso.user_id}`}
+                                  className={`text-sm text-gray-400 hover:underline hover:text-gray-300 transition-colors ${isDark ? "" : ""}`}
+                                  onClick={(e) => {
+                                    if (curso.user_id === currentUser?.id) {
+                                      e.preventDefault();
+                                    }
+                                  }}
+                                >
+                                  {curso.usuario?.nombre || "Desconocido"}
+                                </Link>
                               </span>
                               {isCreator && (
-                                <div className="ml-auto flex space-x-1">
+                                <div className="ml-auto flex space-x-1 " >
                                   <Button
                                     onClick={(e) => {
                                       e.stopPropagation()
@@ -988,8 +1082,15 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                                     }}
                                     variant="ghost"
                                     size="sm"
+                                    className={`w-full inline-flex justify-center items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md ${
+                                isDark
+                                  ? "border-[#4E4E4E] text-[#F5F5F5] bg-[#3E3E3E] hover:bg-[#4E4E4E]"
+                                  : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+                              } focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                isDark ? "focus:ring-blue-500" : "focus:ring-blue-500"
+                              }`}
                                   >
-                                    <Edit className="w-4 h-4" />
+                                    <Edit className="w-4 h-4 "  />
                                   </Button>
                                   <Button
                                     onClick={(e) => {
@@ -1000,13 +1101,24 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                                     }}
                                     variant="ghost"
                                     size="sm"
-                                    className="text-destructive hover:text-destructive"
+                                  className={`w-full inline-flex justify-center items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md ${
+                                isDark
+                                  ? "border-[#4E4E4E] text-[#F5F5F5] bg-[#3E3E3E] hover:bg-[#4E4E4E]"
+                                  : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+                              } focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                                isDark ? "focus:ring-blue-500" : "focus:ring-blue-500"
+                              }`}
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-4 h-4 " />
                                   </Button>
                                 </div>
                               )}
                             </div>
+                            <div >
+                                <span className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`}>
+                                  👥 {curso.inscritosCount || 0} inscritos
+                                </span>
+                              </div>
                             <h3 className={`text-lg font-medium mb-1 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
                               {curso.titulo}
                             </h3>

@@ -137,3 +137,13 @@ class IntercambioConHabilidadesSeparadas(BaseModel):
 
     class Config:
         orm_mode = True
+
+class PropuestaResumen(BaseModel):
+    id_intercambio: int
+    id_propuesta: int
+    id_usuario_interesado: int
+    aceptada: bool
+    
+
+    class Config:
+        orm_mode = True        

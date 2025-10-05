@@ -27,6 +27,7 @@ class Usuario(Base):
     likes = relationship("Like", back_populates="usuario")
     perfil = relationship("Perfil", back_populates="usuario", uselist=False)
     cursos = relationship('Curso', back_populates='usuario')
+    inscripciones = relationship("InscripcionCurso", back_populates="usuario")
 
 
     def __repr__(self):

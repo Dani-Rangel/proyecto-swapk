@@ -260,3 +260,4 @@ export const eliminarIntercambioHabilidad = async (id: number): Promise<boolean>
   }
 };
 
+

@@ -2,7 +2,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
-from backend.models.Inscripciones_Cursos import InscripcionCurso as InscripcionCursoModel
+from sqlalchemy.orm import joinedload
+from backend.models.Inscripciones_Cursos import InscripcionCurso as InscripcionCursoModel, EstadoInscripcion
 from backend.models.cursos import Curso
 from backend.models.usuarios import Usuario
 from pydantic import BaseModel
@@ -15,12 +16,20 @@ class InscripcionCursoCreate(BaseModel):
     curso_id: int
     usuario_id: int
 
+class UsuarioResponse(BaseModel):
+    id: int
+    nombre: str
+
+    class Config:
+        orm_mode = True
+
 class InscripcionCursoResponse(BaseModel):
     id: int
     curso_id: int
     usuario_id: int
     fecha_inscripcion: datetime
     estado: str
+    usuario: UsuarioResponse  # ← Añadido
 
     class Config:
         orm_mode = True
@@ -69,3 +78,46 @@ def delete_inscripcion(inscripcion_id: int, db: Session = Depends(get_db)):
     db.delete(inscripcion)
     db.commit()
     return
+
+@router.put("/inscripciones_cursos/{inscripcion_id}/aceptar")
+def aceptar_inscripcion(inscripcion_id: int, db: Session = Depends(get_db)):
+    inscripcion = db.query(InscripcionCursoModel).filter(InscripcionCursoModel.id == inscripcion_id).first()
+    if not inscripcion:
+        raise HTTPException(status_code=404, detail="Inscripción no encontrada")
+
+    # Verificar que el usuario autenticado es el creador del curso
+    curso = db.query(Curso).filter(Curso.id == inscripcion.curso_id).first()
+    # Aquí deberías usar el usuario autenticado desde el token (ej. Depends(get_current_user))
+    # Por simplicidad, asumimos que ya lo tienes. Si no, implementa autenticación JWT.
+
+    # TODO: Reemplazar con lógica real de usuario autenticado
+    # if current_user.id != curso.User_Id:
+    #     raise HTTPException(status_code=403, detail="No autorizado")
+
+    inscripcion.estado = EstadoInscripcion.Confirmado
+    db.commit()
+    return {"message": "Inscripción aceptada", "estado": inscripcion.estado}
+
+@router.put("/inscripciones_cursos/{inscripcion_id}/finalizar")
+def finalizar_inscripcion(inscripcion_id: int, db: Session = Depends(get_db)):
+    inscripcion = db.query(InscripcionCursoModel).filter(InscripcionCursoModel.id == inscripcion_id).first()
+    if not inscripcion:
+        raise HTTPException(status_code=404, detail="Inscripción no encontrada")
+
+    # TODO: Verificar que el creador del curso es quien finaliza
+
+    inscripcion.estado = EstadoInscripcion.Finalizado
+    db.commit()
+    return {"message": "Inscripción finalizada", "estado": inscripcion.estado}    
+
+@router.get("/inscripciones_cursos/curso/{curso_id}", response_model=List[InscripcionCursoResponse])
+def get_inscripciones_by_curso(curso_id: int, db: Session = Depends(get_db)):
+    inscripciones = (
+        db.query(InscripcionCursoModel)
+        .filter(InscripcionCursoModel.curso_id == curso_id)
+        .options(joinedload(InscripcionCursoModel.usuario))  # ← Carga la relación
+        .all()
+    )
+    return inscripciones   
+
+    

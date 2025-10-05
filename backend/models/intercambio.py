@@ -46,3 +46,4 @@ class Intercambio(Base):
     usuario1 = relationship("Usuario", foreign_keys=[id_usuario1])
     perfil = relationship("Perfil", foreign_keys=[id_perfil])
     habilidades = relationship("IntercambioHabilidad", back_populates="intercambio")
+    propuestas = relationship("PropuestaIntercambio", back_populates="intercambio")

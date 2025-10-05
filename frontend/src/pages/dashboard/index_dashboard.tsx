@@ -652,15 +652,8 @@ const handleVerLikes = async (postId: number) => {
           <CardContent className="p-6">
             <div className="flex gap-4">
               {/* Likes */}
-                  {user && user.id === post.id_usuario ? (
-                    // Si el usuario es el autor, solo muestra el contador
-                    <div className="flex flex-col items-center gap-1">
-                      <span className={`text-sm ${isDark ? "text-[#A0A0A0]" : "text-gray-600"} font-medium`}>
-                        {likes[post.id] ?? 0}
-                      </span>
-                    </div>
-                  ) : (
-                    // Si no es el autor, muestra el botón de like y el contador
+                  
+                    {/* Si no es el autor, muestra el botón de like y el contador*/}
                     <div className="flex flex-col items-center gap-1">
                       <Button 
                         variant="ghost" 
@@ -678,13 +671,28 @@ const handleVerLikes = async (postId: number) => {
                         {likes[post.id] ?? 0}
                       </span>
                     </div>
-                  )}
+            
               {/* Contenido */}
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <div className={`w-6 h-6 rounded-full ${config.color}`}></div>
                   <span className={`text-sm ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>r/{config.slug}</span>
-                  <span className={`text-sm ${isDark ? "text-[#707070]" : "text-gray-500"}`}>• {post.usuario.nombre} • {formatFecha(post.fecha_creacion)}</span>
+                  <span className={`text-sm ${isDark ? "text-[#707070]" : "text-gray-500"}`}>
+                    •{" "}
+                    <Link
+                      href={`/profile/${post.id_usuario}`}
+                      className="text-gray-400 hover:underline hover:text-blue-300 transition-colors"
+                      onClick={(e) => {
+                        if (post.id_usuario === user?.id) {
+                          e.preventDefault(); // No redirigir si es tu propio perfil (opcional)
+                        }
+                      }}
+                    >
+                      {post.usuario.nombre}
+                    </Link>
+                    {" • "}
+                    {formatFecha(post.fecha_creacion)}
+                  </span>
                 </div>
 
                 <h2 className={`text-xl font-semibold mb-3 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{post.titulo}</h2>

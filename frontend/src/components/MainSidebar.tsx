@@ -6,7 +6,7 @@ import {
   Search,
   Sun,
   Moon,
-  MessageSquare,
+  MessageSquare,   
   User,
   Settings,
   Home,

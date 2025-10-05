@@ -1,7 +1,9 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Enum
+from sqlalchemy.orm import relationship
 import enum
 from datetime import datetime
+
 
 
 class EstadoInscripcion(str, enum.Enum):
@@ -16,3 +18,6 @@ class InscripcionCurso(Base):
     usuario_id = Column(Integer, ForeignKey("usuarios.id"))
     fecha_inscripcion = Column(DateTime, default= datetime.now)
     estado = Column(Enum(EstadoInscripcion))
+
+    curso = relationship("Curso", back_populates="inscripciones")
+    usuario = relationship("Usuario", back_populates="inscripciones")

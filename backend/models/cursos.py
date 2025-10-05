@@ -16,3 +16,5 @@ class Curso(Base):
     usuario = relationship('Usuario', back_populates='cursos')
     attachments = relationship("Attachment", back_populates="curso")
     curso_habilidades = relationship("CursoHabilidad", back_populates="curso")
+    inscripciones = relationship("InscripcionCurso", back_populates="curso")
+    
