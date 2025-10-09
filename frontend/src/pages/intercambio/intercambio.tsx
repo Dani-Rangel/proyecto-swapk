@@ -80,7 +80,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-
 function SwapkPlatformComponent() {
   const router = useRouter()
   const { t } = useTranslation()
@@ -108,8 +107,11 @@ function SwapkPlatformComponent() {
   const [propuestas, setPropuestas] = useState<any[]>([])
   const [showPropuestasModal, setShowPropuestasModal] = useState(false)
   const [selectedIntercambioId, setSelectedIntercambioId] = useState<number | null>(null)
-  const [propuestasEnviadas, setPropuestasEnviadas] = useState<Set<number>>(new Set());
+  const [propuestasEnviadas, setPropuestasEnviadas] = useState<Set<number>>(new Set())
 
+  // Modal de reseña
+  const [showResenaModal, setShowResenaModal] = useState(false)
+  const [truequeParaFinalizar, setTruequeParaFinalizar] = useState<IntercambioResponse | null>(null)
 
   // Validar usuario logueado
   useEffect(() => {
@@ -135,27 +137,23 @@ function SwapkPlatformComponent() {
     fetchData()
   }, [])
 
- useEffect(() => {
-  const cargarMisPropuestas = async () => {
-    if (!currentUser) return;
+  useEffect(() => {
+    const cargarMisPropuestas = async () => {
+      if (!currentUser) return;
 
-    try {
-      const res = await api.get("/intercambios/mis-propuestas");
-      console.log("✅ Propuestas:", res.data);
-      const ids = new Set<number>();
-      for (const prop of res.data) {
-        ids.add(prop.id_intercambio);
+      try {
+        const res = await api.get("/intercambios/mis-propuestas");
+        const ids = new Set<number>();
+        for (const prop of res.data) {
+          ids.add(prop.id_intercambio);
+        }
+        setPropuestasEnviadas(ids);
+      } catch (error: any) {
+        console.error("❌ Error al cargar mis propuestas:", error.response?.data || error.message);
       }
-      setPropuestasEnviadas(ids);
-    } catch (error: any) {
-      console.error("❌ Error al cargar mis propuestas:", error.response?.data || error.message);
-    }
-  };
-  cargarMisPropuestas();
-}, [currentUser]);
-
-
-
+    };
+    cargarMisPropuestas();
+  }, [currentUser]);
 
   const handleLogout = () => {
     localStorage.removeItem("user")
@@ -275,6 +273,30 @@ function SwapkPlatformComponent() {
     } catch (error: any) {
       console.error("Error al cargar propuestas:", error)
       toast.error(error.response?.data?.detail || "No se pudieron cargar las propuestas")
+    }
+  }
+
+  // Enviar reseña y finalizar intercambio
+  const enviarResena = async (calificacion: number, comentario: string) => {
+    if (!truequeParaFinalizar || !currentUser) return
+
+    try {
+      await api.post(`/intercambios/${truequeParaFinalizar.id}/finalizar`, {
+        intercambio_id: truequeParaFinalizar.id,
+        usuario_id: currentUser.id,
+        calificacion,
+        comentario
+      })
+
+      toast.success("Intercambio finalizado con éxito")
+      setShowResenaModal(false)
+      setTruequeParaFinalizar(null)
+
+      // Recargar intercambios
+      const [truequesData] = await Promise.all([obtenerIntercambios()])
+      setTrueques(truequesData)
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Error al finalizar intercambio")
     }
   }
 
@@ -476,7 +498,8 @@ function SwapkPlatformComponent() {
                   )}
 
                   {currentUser?.id === trueque.id_usuario1 && (
-                    <div className="mt-4 flex gap-2">
+                  <div className="mt-4 flex gap-2">
+                    {trueque.estado === EstadoIntercambio.Pendiente && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -485,24 +508,59 @@ function SwapkPlatformComponent() {
                       >
                         Ver propuestas
                       </Button>
+                    )}
+                    {trueque.estado === EstadoIntercambio.Confirmado && (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 flex items-center justify-center gap-2"
-                        onClick={() => handleEditTrueque(trueque)}
+                        className="flex-1"
+                        onClick={() => {
+                          setTruequeParaFinalizar(trueque)
+                          setShowResenaModal(true)
+                        }}
                       >
-                        <Edit size={16} /> {t("edit_exchange")}
+                        Finalizar intercambio
                       </Button>
+                    )}
+                    {trueque.estado === EstadoIntercambio.Finalizado && (
                       <Button
                         size="sm"
                         variant="outline"
-                        className="flex-1 flex items-center justify-center gap-2 text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
-                        onClick={() => handleDeleteTrueque(trueque.id)}
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
+                        onClick={async () => {
+                          if (!window.confirm("¿Restablecer este intercambio a estado pendiente?")) return;
+                          try {
+                            await api.post(`/intercambios/${trueque.id}/restablecer`);
+                            toast.success("Intercambio restablecido");
+                            // Recargar intercambios
+                            const [truequesData] = await Promise.all([obtenerIntercambios()]);
+                            setTrueques(truequesData);
+                          } catch (error: any) {
+                            toast.error(error.response?.data?.detail || "Error al restablecer intercambio");
+                          }
+                        }}
                       >
-                        <Trash2 size={16} /> {t("delete_exchange")}
+                        Restablecer intercambio
                       </Button>
-                    </div>
-                  )}
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 flex items-center justify-center gap-2"
+                      onClick={() => handleEditTrueque(trueque)}
+                    >
+                      <Edit size={16} /> {t("edit_exchange")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 flex items-center justify-center gap-2 text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
+                      onClick={() => handleDeleteTrueque(trueque.id)}
+                    >
+                      <Trash2 size={16} /> {t("delete_exchange")}
+                    </Button>
+                  </div>
+                )}
 
                   {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Pendiente && (
                     <div className="mt-4">
@@ -558,10 +616,24 @@ function SwapkPlatformComponent() {
                     </div>
                   )}
 
-                  {currentUser?.id !== trueque.id_usuario1 && trueque.estado !== EstadoIntercambio.Pendiente && (
+                  {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Confirmado && (
+                    <div className="mt-4">
+                      <Button
+                        className={sidebarButtonClass}
+                        onClick={() => {
+                          setTruequeParaFinalizar(trueque)
+                          setShowResenaModal(true)
+                        }}
+                      >
+                        Finalizar intercambio
+                      </Button>
+                    </div>
+                  )}
+
+                  {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Finalizado && (
                     <div className="mt-4">
                       <Button disabled className="opacity-50 w-full">
-                        {trueque.estado === EstadoIntercambio.Confirmado ? "Confirmado" : "Finalizado"}
+                        Finalizado
                       </Button>
                     </div>
                   )}
@@ -671,6 +743,108 @@ function SwapkPlatformComponent() {
           </div>
         </div>
       )}
+
+      {/* Modal de Reseña */}
+        {showResenaModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#1E1E1E] rounded-xl p-6 w-full max-w-md mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white">Dejanos tu opinión sobre este trueque</h3>
+                <Button variant="ghost" size="icon" onClick={() => {
+                  setShowResenaModal(false)
+                  setTruequeParaFinalizar(null)
+                }}>
+                  <X className="w-5 h-5 text-white" />
+                </Button>
+              </div>
+
+              <form onSubmit={(e) => {
+                e.preventDefault()
+                const form = e.target as HTMLFormElement
+                const calificacion = parseInt((form.elements.namedItem('calificacion') as HTMLInputElement)?.value || '0')
+                const comentario = (form.elements.namedItem('comentario') as HTMLTextAreaElement)?.value || ''
+                enviarResena(calificacion, comentario)
+              }} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Calificación</label>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        name="calificacion"
+                        value={star}
+                        onClick={(e) => {
+                          const buttons = document.querySelectorAll('button[name="calificacion"]')
+                          buttons.forEach((btn, i) => {
+                            if (i < star) btn.classList.add('text-yellow-400')
+                            else btn.classList.remove('text-yellow-400')
+                          })
+                        }}
+                        className="text-2xl text-gray-400"
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Comentario</label>
+                  <textarea
+                    name="comentario"
+                    placeholder="Cuéntanos brevemente tu experiencia..."
+                    className="w-full px-3 py-2 bg-[#2E2E2E] text-white rounded-lg border border-[#404040] resize-none"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 text-blue-400 hover:bg-blue-900"
+                    onClick={() => {
+                      toast.custom("Función de reporte en desarrollo");
+                    }}
+                  >
+                    Reportar Trueque
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  >
+                    Enviar feedback
+                  </Button>
+                </div>
+              </form>
+
+              {/* ✅ Nuevo botón: Finalizar sin reseña */}
+              <div className="mt-4 pt-4 border-t border-[#404040]">
+                <Button
+                  type="button"
+                  className="w-full bg-gray-600 hover:bg-gray-700"
+                  onClick={async () => {
+                    if (!truequeParaFinalizar) return;
+                    try {
+                      await api.post(`/intercambios/${truequeParaFinalizar.id}/finalizar`);
+                      toast.success("Intercambio finalizado sin reseña");
+                      setShowResenaModal(false);
+                      setTruequeParaFinalizar(null);
+                      // Recargar intercambios
+                      const [truequesData] = await Promise.all([obtenerIntercambios()]);
+                      setTrueques(truequesData);
+                    } catch (error: any) {
+                      toast.error(error.response?.data?.detail || "Error al finalizar intercambio");
+                    }
+                  }}
+                >
+                  Finalizar sin reseña
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   )
 }

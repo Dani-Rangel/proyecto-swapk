@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from backend.models import Intercambio, IntercambioHabilidad, Habilidad, PropuestaIntercambio
+from backend.models import Intercambio, IntercambioHabilidad, Habilidad, PropuestaIntercambio, Resena
 from backend.schemas.intercambio_schema import (
     IntercambioCreate,
     IntercambioConHabilidadesSeparadas,
@@ -162,6 +162,10 @@ def eliminar_intercambio(db: Session, id: int) -> bool:
     # ✅ Eliminar propuestas asociadas
     db.query(PropuestaIntercambio).filter(
         PropuestaIntercambio.id_intercambio == id
+    ).delete()
+
+    db.query(Resena).filter(
+        Resena.intercambio_id == id
     ).delete()
 
     # ✅ Eliminar habilidades asociadas

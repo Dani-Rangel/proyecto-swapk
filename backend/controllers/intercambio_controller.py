@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from backend.models.Propuesta_Intercambio import PropuestaIntercambio
-from backend.models import Intercambio, Usuario
+from backend.models import Intercambio, Usuario, Resena
 from backend.db.database import get_db
 from backend.services.oauth2 import get_current_user
 from backend.services import intercambio_service
@@ -10,8 +10,11 @@ from backend.schemas.intercambio_schema import (
     IntercambioCreate,
     IntercambioConHabilidadesSeparadas,
     EstadoIntercambioEnum,
-    PropuestaResumen
+    PropuestaResumen,
+    ResenaCreate, 
+    ResenaResponse
 )
+from typing import List, Optional
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 
 # -------------------------------
@@ -226,12 +229,38 @@ def cancelar_propuesta(
     db.commit()
     return {"message": "Propuesta cancelada correctamente"}
 
+@router.post("/{id}/restablecer")
+def restablecer_intercambio(
+    id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    intercambio = db.query(Intercambio).filter(Intercambio.id == id).first()
+    if not intercambio:
+        raise HTTPException(status_code=404, detail="Intercambio no encontrado")
+    
+    # Solo el creador puede restablecer
+    if intercambio.id_usuario1 != current_user.id:
+        raise HTTPException(status_code=403, detail="Solo el creador puede restablecer el intercambio")
+    
+    # Cambiar estado a Pendiente
+    intercambio.estado = EstadoIntercambioEnum.Pendiente
+    
+    db.commit()
+    return {"message": "Intercambio restablecido a estado pendiente"}
+
 @router.post("/{id}/finalizar")
-def finalizar_intercambio(id: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
+def finalizar_intercambio(
+    id: int,
+    resena: Optional[ResenaCreate] = None,  # Hacer opcional
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
     intercambio = db.query(Intercambio).filter(Intercambio.id == id).first()
     if not intercambio:
         raise HTTPException(status_code=404, detail="Intercambio no encontrado")
 
+    # Verificar permisos (creador o proponente aceptado)
     if intercambio.id_usuario1 != current_user.id:
         propuesta = db.query(PropuestaIntercambio).filter(
             PropuestaIntercambio.id_intercambio == id,
@@ -241,6 +270,18 @@ def finalizar_intercambio(id: int, db: Session = Depends(get_db), current_user: 
         if not propuesta:
             raise HTTPException(status_code=403, detail="No autorizado")
 
+    # Si se proporciona reseña, crearla
+    if resena:
+        nueva_resena = Resena(
+            intercambio_id=id,
+            usuario_id=current_user.id,
+            calificacion=resena.calificacion,
+            comentario=resena.comentario
+        )
+        db.add(nueva_resena)
+
+    # Cambiar estado a Finalizado
     intercambio.estado = EstadoIntercambioEnum.Finalizado
     db.commit()
-    return {"message": "Intercambio finalizado"}
+
+    return {"message": "Intercambio finalizado con éxito"}

@@ -146,4 +146,22 @@ class PropuestaResumen(BaseModel):
     
 
     class Config:
-        orm_mode = True        
+        orm_mode = True   
+
+# backend/schemas/intercambio_schema.py
+
+class ResenaCreate(BaseModel):
+    intercambio_id: int
+    usuario_id: int
+    calificacion: float
+    comentario: str
+
+    class Config:
+        orm_mode = True
+
+class ResenaResponse(ResenaCreate):
+    id: int
+    fecha: datetime
+
+    class Config:
+        orm_mode = True             
