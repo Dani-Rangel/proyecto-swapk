@@ -114,6 +114,15 @@ class IntercambioResponse(IntercambioBase):
     class Config:
         orm_mode = True
 
+class PropuestaAceptada(BaseModel):
+    id: int
+    id_usuario_interesado: int
+    aceptada: bool
+    usuario_interesado: UsuarioBase
+
+    class Config:
+        orm_mode = True        
+
 # -------------------------------
 # Intercambio: Response extendido con habilidades separadas
 # -------------------------------
@@ -134,6 +143,7 @@ class IntercambioConHabilidadesSeparadas(BaseModel):
     perfil: PerfilBase
     habilidades_ofrece: List[HabilidadBase] = []
     habilidades_busca: List[HabilidadBase] = []
+    propuestas: List[PropuestaAceptada] = []
 
     class Config:
         orm_mode = True

@@ -30,8 +30,9 @@ import {
   RefreshCw,
   BookOpen,
   Edit,
-  Trash2,
+  Trash2, 
 } from "lucide-react"
+import { Shuffle } from "lucide-react"; 
 import { Button } from "@/components/ui/button"
 import CrearTruequeModal, { TruequeFormData } from "@/components/ui/CreateTruequeForm"
 import { TipoHabilidad } from "@/services/intercambio"
@@ -112,6 +113,22 @@ function SwapkPlatformComponent() {
   // Modal de reseña
   const [showResenaModal, setShowResenaModal] = useState(false)
   const [truequeParaFinalizar, setTruequeParaFinalizar] = useState<IntercambioResponse | null>(null)
+
+  // Verifica si el usuario actual es participante (creador o proponente aceptado)
+const esParticipante = (trueque: IntercambioResponse): boolean => {
+  if (!currentUser) return false;
+  
+  // Es el creador
+  if (trueque.id_usuario1 === currentUser.id) return true;
+  
+  // Es el proponente aceptado (solo en estado Confirmado)
+  if (trueque.estado === EstadoIntercambio.Confirmado) {
+    const propuestaAceptada = trueque.propuestas?.find((p: any) => p.aceptada);
+    return propuestaAceptada?.id_usuario_interesado === currentUser.id;
+  }
+  
+  return false;
+};
 
   // Validar usuario logueado
   useEffect(() => {
@@ -277,28 +294,28 @@ function SwapkPlatformComponent() {
   }
 
   // Enviar reseña y finalizar intercambio
-  const enviarResena = async (calificacion: number, comentario: string) => {
-    if (!truequeParaFinalizar || !currentUser) return
+ const enviarResena = async (calificacion: number, comentario: string) => {
+  if (!truequeParaFinalizar || !currentUser) return
 
-    try {
-      await api.post(`/intercambios/${truequeParaFinalizar.id}/finalizar`, {
-        intercambio_id: truequeParaFinalizar.id,
-        usuario_id: currentUser.id,
-        calificacion,
-        comentario
-      })
+  try {
+    await api.post(`/intercambios/${truequeParaFinalizar.id}/finalizar`, {
+      intercambio_id: truequeParaFinalizar.id,
+      usuario_id: currentUser.id,
+      calificacion,
+      comentario
+    })
 
-      toast.success("Intercambio finalizado con éxito")
-      setShowResenaModal(false)
-      setTruequeParaFinalizar(null)
+    toast.success("Intercambio finalizado con éxito")
+    setShowResenaModal(false)
+    setTruequeParaFinalizar(null)
 
-      // Recargar intercambios
-      const [truequesData] = await Promise.all([obtenerIntercambios()])
-      setTrueques(truequesData)
-    } catch (error: any) {
-      toast.error(error.response?.data?.detail || "Error al finalizar intercambio")
-    }
+    // ✅ Recargar intercambios para actualizar el estado y eliminar propuestas
+    const [truequesData] = await Promise.all([obtenerIntercambios()])
+    setTrueques(truequesData)
+  } catch (error: any) {
+    toast.error(error.response?.data?.detail || "Error al finalizar intercambio")
   }
+}
 
   const renderStars = (rating: number) =>
     Array.from({ length: 4 }, (_, i) => (
@@ -441,19 +458,34 @@ function SwapkPlatformComponent() {
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 justify-between">
-                        <h3 className={`text-xl font-semibold ${sidebarTextClass}`}>
-                          <Link
-                            href={`/profile/${trueque.id_usuario1}`}
-                            className="text-gray-400 hover:underline hover:text-gray-300 transition-colors"
-                            onClick={(e) => {
-                              if (trueque.id_usuario1 === currentUser?.id) {
-                                e.preventDefault();
-                              }
-                            }}
-                          >
-                            {trueque.usuario1?.nombre}
-                          </Link>
-                        </h3>
+                        {trueque.estado === EstadoIntercambio.Confirmado ? (
+                          // ✅ Mostrar ambos usuarios con icono de intercambio
+                          <div className="flex items-center gap-2">
+                            <span className={`font-semibold ${sidebarTextClass}`}>
+                              {trueque.usuario1?.nombre}
+                            </span>
+                            <div className="flex items-center text-gray-400">
+                              <Shuffle className="mx-1 text-gray-500" />
+                            </div>
+                            {/* Obtener el nombre del proponente aceptado */}
+                            {trueque.propuestas?.find((p: any) => p.aceptada)?.usuario_interesado?.nombre || "Usuario"}
+                          </div>
+                        ) : (
+                          // Estado normal (solo creador)
+                          <h3 className={`text-xl font-semibold ${sidebarTextClass}`}>
+                            <Link
+                              href={`/profile/${trueque.id_usuario1}`}
+                              className="text-gray-400 hover:underline hover:text-gray-300 transition-colors"
+                              onClick={(e) => {
+                                if (trueque.id_usuario1 === currentUser?.id) {
+                                  e.preventDefault();
+                                }
+                              }}
+                            >
+                              {trueque.usuario1?.nombre}
+                            </Link>
+                          </h3>
+                        )}
                         {renderEstadoCircle(trueque.estado)}
                       </div>
                       <div className="flex">{renderStars(trueque.valoracion || 0)}</div>
@@ -509,7 +541,8 @@ function SwapkPlatformComponent() {
                         Ver propuestas
                       </Button>
                     )}
-                    {trueque.estado === EstadoIntercambio.Confirmado && (
+                    {/* ✅ Botón de finalizar SOLO para participantes */}
+                    {esParticipante(trueque) && trueque.estado === EstadoIntercambio.Confirmado && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -522,6 +555,7 @@ function SwapkPlatformComponent() {
                         Finalizar intercambio
                       </Button>
                     )}
+                    
                     {trueque.estado === EstadoIntercambio.Finalizado && (
                       <Button
                         size="sm"
@@ -562,6 +596,13 @@ function SwapkPlatformComponent() {
                   </div>
                 )}
 
+                  {!esParticipante(trueque) && trueque.estado === EstadoIntercambio.Confirmado && (
+                      <div className="mt-4">
+                        <Button disabled className="opacity-70 w-full bg-blue-900/30 text-blue-200 cursor-not-allowed">
+                          🤝 Intercambio en proceso entre {trueque.usuario1?.nombre} y otro usuario
+                        </Button>
+                      </div>
+                    )}
                   {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Pendiente && (
                     <div className="mt-4">
                       {propuestasEnviadas.has(trueque.id) ? (
@@ -616,27 +657,6 @@ function SwapkPlatformComponent() {
                     </div>
                   )}
 
-                  {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Confirmado && (
-                    <div className="mt-4">
-                      <Button
-                        className={sidebarButtonClass}
-                        onClick={() => {
-                          setTruequeParaFinalizar(trueque)
-                          setShowResenaModal(true)
-                        }}
-                      >
-                        Finalizar intercambio
-                      </Button>
-                    </div>
-                  )}
-
-                  {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Finalizado && (
-                    <div className="mt-4">
-                      <Button disabled className="opacity-50 w-full">
-                        Finalizado
-                      </Button>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>

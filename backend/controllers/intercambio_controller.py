@@ -252,7 +252,7 @@ def restablecer_intercambio(
 @router.post("/{id}/finalizar")
 def finalizar_intercambio(
     id: int,
-    resena: Optional[ResenaCreate] = None,  # Hacer opcional
+    resena: Optional[ResenaCreate] = None,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
@@ -260,17 +260,19 @@ def finalizar_intercambio(
     if not intercambio:
         raise HTTPException(status_code=404, detail="Intercambio no encontrado")
 
-    # Verificar permisos (creador o proponente aceptado)
-    if intercambio.id_usuario1 != current_user.id:
-        propuesta = db.query(PropuestaIntercambio).filter(
-            PropuestaIntercambio.id_intercambio == id,
-            PropuestaIntercambio.id_usuario_interesado == current_user.id,
-            PropuestaIntercambio.aceptada == True
-        ).first()
-        if not propuesta:
-            raise HTTPException(status_code=403, detail="No autorizado")
+    # ✅ Verificar que el usuario actual es el creador O el proponente aceptado
+    es_creador = intercambio.id_usuario1 == current_user.id
+    propuesta_aceptada = db.query(PropuestaIntercambio).filter(
+        PropuestaIntercambio.id_intercambio == id,
+        PropuestaIntercambio.id_usuario_interesado == current_user.id,
+        PropuestaIntercambio.aceptada == True
+    ).first()
+    es_proponente_aceptado = propuesta_aceptada is not None
 
-    # Si se proporciona reseña, crearla
+    if not (es_creador or es_proponente_aceptado):
+        raise HTTPException(status_code=403, detail="Solo los participantes pueden finalizar este intercambio")
+
+    # Crear reseña si se proporciona
     if resena:
         nueva_resena = Resena(
             intercambio_id=id,
@@ -279,6 +281,10 @@ def finalizar_intercambio(
             comentario=resena.comentario
         )
         db.add(nueva_resena)
+
+    # Eliminar la propuesta aceptada
+    if propuesta_aceptada:
+        db.delete(propuesta_aceptada)
 
     # Cambiar estado a Finalizado
     intercambio.estado = EstadoIntercambioEnum.Finalizado
