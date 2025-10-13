@@ -44,7 +44,7 @@ export function MainSidebar({
   // Rutas visibles para todos los usuarios
   const navItems = [
     { icon: Home, label: t("home"), href: "/dashboard/index_dashboard" },
-    { icon: TrendingUp, label: t("popular"), href: "/message/messages" },
+    { icon: TrendingUp, label: t("popular"), href: "/popular/popular" },
     { icon: RefreshCw, label: t("exchanges"), href: "/intercambio/intercambio" },
     { icon: BookOpen, label: t("myCourses"), href: "/Cursos/community_courses" },
   ]

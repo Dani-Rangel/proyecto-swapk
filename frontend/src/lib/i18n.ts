@@ -345,7 +345,19 @@ export const translations = {
     cancel_enrollment_success: "Inscripción cancelada",
     view_enrollment_status: "Ver estado de inscripción",
 
-    volver: "Volver"
+    volver: "Volver",
+
+    // ===== Reportes =====
+report_exchange: "Reportar trueque",
+report_reason: "Motivo del reporte",
+describe_issue: "Describe brevemente el problema...",
+report_reason_required: "Por favor, indica el motivo del reporte.",
+report_sent_success: "¡Reporte enviado con éxito!",
+error_sending_report: "Error al enviar el reporte.",
+send_report: "Enviar reporte",
+sending: "Enviando...",
+report_context_info_prefix: "Se incluirá automáticamente el ID del trueque",
+report_context_info_suffix: "en tu reporte.",
 
   },
 
@@ -699,7 +711,19 @@ export const translations = {
     cancel_enrollment_success: "Enrollment canceled",
     view_enrollment_status: "View enrollment status",
 
-    volver: "return"
+    volver: "return",
+
+    // ===== Reports =====
+report_exchange: "Report exchange",
+report_reason: "Report reason",
+describe_issue: "Briefly describe the issue...",
+report_reason_required: "Please provide a reason for the report.",
+report_sent_success: "Report sent successfully!",
+error_sending_report: "Failed to send report.",
+send_report: "Send report",
+sending: "Sending...",
+report_context_info_prefix: "The exchange ID",
+report_context_info_suffix: "will be automatically included in your report.",
 
   },
 } as const;

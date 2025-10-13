@@ -8,12 +8,15 @@ class Resena(Base):
     __tablename__ = "resena"
     id = Column(Integer, primary_key=True)
     intercambio_id = Column(Integer, ForeignKey("intercambios.id"))
-    usuario_id = Column(Integer, ForeignKey("usuarios.id"))
+    destinatario_id = Column(Integer, ForeignKey("usuarios.id"))  # antes era usuario_id
+    autor_id = Column(Integer, ForeignKey("usuarios.id"))         # nuevo campo
     calificacion = Column(Float)
     comentario = Column(Text)
-    fecha = Column(DateTime, default= datetime.now)
+    fecha = Column(DateTime, default=datetime.now)
+    ciclo = Column(Integer, default=1) 
 
+    destinatario = relationship("Usuario", foreign_keys=[destinatario_id])
+    autor = relationship("Usuario", foreign_keys=[autor_id])
     intercambio = relationship("Intercambio", back_populates="reseñas")
-    usuario = relationship("Usuario", foreign_keys=[usuario_id])
 
     

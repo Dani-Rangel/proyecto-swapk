@@ -53,6 +53,7 @@ import { useNotificaciones } from "@/context/notificacionesContext"
 import { getCurrentUser } from "@/lib/auth"
 import ProtectedRoute from "@/components/protected_routes/protected_routes"
 import { MainSidebar } from "@/components/MainSidebar"
+import ReporteDialog from "@/components/ui/ReporteDialog";
 import axios from "axios"
 
 const api = axios.create({
@@ -103,6 +104,8 @@ function SwapkPlatformComponent() {
   const [currentUser, setCurrentUser] = useState(getCurrentUser())
   const [user, setUser] = useState<any>(null)
   const [perfil, setPerfil] = useState<any>(null)
+  const [showReporteModal, setShowReporteModal] = useState(false);
+ const [intercambioAReportar, setIntercambioAReportar] = useState<number | null>(null);
 
   // Modal de propuestas
   const [propuestas, setPropuestas] = useState<any[]>([])
@@ -541,20 +544,6 @@ const esParticipante = (trueque: IntercambioResponse): boolean => {
                         Ver propuestas
                       </Button>
                     )}
-                    {/* ✅ Botón de finalizar SOLO para participantes */}
-                    {esParticipante(trueque) && trueque.estado === EstadoIntercambio.Confirmado && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => {
-                          setTruequeParaFinalizar(trueque)
-                          setShowResenaModal(true)
-                        }}
-                      >
-                        Finalizar intercambio
-                      </Button>
-                    )}
                     
                     {trueque.estado === EstadoIntercambio.Finalizado && (
                       <Button
@@ -592,6 +581,21 @@ const esParticipante = (trueque: IntercambioResponse): boolean => {
                       onClick={() => handleDeleteTrueque(trueque.id)}
                     >
                       <Trash2 size={16} /> {t("delete_exchange")}
+                    </Button>
+                  </div>
+                )}
+
+                {/* ✅ NUEVO BLOQUE: Finalizar para cualquier participante */}
+                {esParticipante(trueque) && trueque.estado === EstadoIntercambio.Confirmado && (
+                  <div className="mt-4">
+                    <Button
+                      className={sidebarButtonClass}
+                      onClick={() => {
+                        setTruequeParaFinalizar(trueque);
+                        setShowResenaModal(true);
+                      }}
+                    >
+                      Finalizar intercambio
                     </Button>
                   </div>
                 )}
@@ -765,109 +769,156 @@ const esParticipante = (trueque: IntercambioResponse): boolean => {
       )}
 
       {/* Modal de Reseña */}
-        {showResenaModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#1E1E1E] rounded-xl p-6 w-full max-w-md mx-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white">Dejanos tu opinión sobre este trueque</h3>
-                <Button variant="ghost" size="icon" onClick={() => {
-                  setShowResenaModal(false)
-                  setTruequeParaFinalizar(null)
-                }}>
-                  <X className="w-5 h-5 text-white" />
-                </Button>
-              </div>
+{showResenaModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div 
+      className={`rounded-xl p-6 w-full max-w-md mx-4 ${
+        isDark ? "bg-[#1E1E1E] text-[#F5F5F5]" : "bg-white text-gray-900"
+      }`}
+    >
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold">Dejanos tu opinión sobre este trueque</h3>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => {
+            setShowResenaModal(false);
+            setTruequeParaFinalizar(null);
+          }}
+          className={isDark ? "text-[#A0A0A0] hover:bg-[#2E2E2E]" : "text-gray-600 hover:bg-gray-100"}
+        >
+          <X className="w-5 h-5" />
+        </Button>
+      </div>
 
-              <form onSubmit={(e) => {
-                e.preventDefault()
-                const form = e.target as HTMLFormElement
-                const calificacion = parseInt((form.elements.namedItem('calificacion') as HTMLInputElement)?.value || '0')
-                const comentario = (form.elements.namedItem('comentario') as HTMLTextAreaElement)?.value || ''
-                enviarResena(calificacion, comentario)
-              }} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Calificación</label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <button
-                        key={star}
-                        type="button"
-                        name="calificacion"
-                        value={star}
-                        onClick={(e) => {
-                          const buttons = document.querySelectorAll('button[name="calificacion"]')
-                          buttons.forEach((btn, i) => {
-                            if (i < star) btn.classList.add('text-yellow-400')
-                            else btn.classList.remove('text-yellow-400')
-                          })
-                        }}
-                        className="text-2xl text-gray-400"
-                      >
-                        ★
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Comentario</label>
-                  <textarea
-                    name="comentario"
-                    placeholder="Cuéntanos brevemente tu experiencia..."
-                    className="w-full px-3 py-2 bg-[#2E2E2E] text-white rounded-lg border border-[#404040] resize-none"
-                    rows={4}
-                  />
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex-1 text-blue-400 hover:bg-blue-900"
-                    onClick={() => {
-                      toast.custom("Función de reporte en desarrollo");
-                    }}
-                  >
-                    Reportar Trueque
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  >
-                    Enviar feedback
-                  </Button>
-                </div>
-              </form>
-
-              {/* ✅ Nuevo botón: Finalizar sin reseña */}
-              <div className="mt-4 pt-4 border-t border-[#404040]">
-                <Button
-                  type="button"
-                  className="w-full bg-gray-600 hover:bg-gray-700"
-                  onClick={async () => {
-                    if (!truequeParaFinalizar) return;
-                    try {
-                      await api.post(`/intercambios/${truequeParaFinalizar.id}/finalizar`);
-                      toast.success("Intercambio finalizado sin reseña");
-                      setShowResenaModal(false);
-                      setTruequeParaFinalizar(null);
-                      // Recargar intercambios
-                      const [truequesData] = await Promise.all([obtenerIntercambios()]);
-                      setTrueques(truequesData);
-                    } catch (error: any) {
-                      toast.error(error.response?.data?.detail || "Error al finalizar intercambio");
-                    }
-                  }}
-                >
-                  Finalizar sin reseña
-                </Button>
-              </div>
-            </div>
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement;
+        const calificacion = parseInt((form.elements.namedItem('calificacion') as HTMLInputElement)?.value || '0');
+        const comentario = (form.elements.namedItem('comentario') as HTMLTextAreaElement)?.value || '';
+        enviarResena(calificacion, comentario);
+      }} className="space-y-4">
+        <div>
+          <label className={`block text-sm font-medium mb-2 ${isDark ? "text-[#A0A0A0]" : "text-gray-700"}`}>
+            Calificación
+          </label>
+          <input
+            type="hidden"
+            name="calificacion"
+            id="calificacion-input"
+          />
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => {
+                  const input = document.getElementById('calificacion-input') as HTMLInputElement;
+                  input.value = star.toString();
+                  // Actualizar estrellas visuales
+                  const buttons = document.querySelectorAll('.star-btn');
+                  buttons.forEach((btn, i) => {
+                    if (i < star) btn.classList.add('text-yellow-400');
+                    else btn.classList.remove('text-yellow-400');
+                  });
+                }}
+                className={`star-btn text-2xl ${isDark ? "text-[#A0A0A0]" : "text-gray-400"}`}
+              >
+                ★
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+
+        <div>
+          <label className={`block text-sm font-medium mb-2 ${isDark ? "text-[#A0A0A0]" : "text-gray-700"}`}>
+            Comentario
+          </label>
+          <textarea
+            name="comentario"
+            placeholder="Cuéntanos brevemente tu experiencia..."
+            className={`w-full px-3 py-2 rounded-lg resize-none ${
+              isDark 
+                ? "bg-[#2E2E2E] text-[#F5F5F5] border-[#404040]" 
+                : "bg-gray-100 text-gray-900 border-gray-300"
+            }`}
+            rows={4}
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className={`flex-1 ${
+              isDark 
+                ? "text-blue-400 border-blue-400 hover:bg-blue-900" 
+                : "text-blue-600 border-blue-600 hover:bg-blue-100"
+            }`}
+            onClick={() => {
+              if (truequeParaFinalizar) {
+                setIntercambioAReportar(truequeParaFinalizar.id);
+                setShowResenaModal(false);
+                setShowReporteModal(true);
+              }
+            }}
+          >
+            Reportar Trueque
+          </Button>
+          <Button
+            type="submit"
+            className={`flex-1 ${
+              isDark ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-500 hover:bg-blue-600"
+            }`}
+          >
+            Enviar feedback
+          </Button>
+        </div>
+      </form>
+
+      {/* Finalizar sin reseña */}
+      <div className={`mt-4 pt-4 border-t ${
+        isDark ? "border-[#404040]" : "border-gray-200"
+      }`}>
+        <Button
+          type="button"
+          className={`w-full ${
+            isDark ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-200 hover:bg-gray-300 text-gray-800"
+          }`}
+          onClick={async () => {
+            if (!truequeParaFinalizar) return;
+            try {
+              await api.post(`/intercambios/${truequeParaFinalizar.id}/finalizar`);
+              toast.success("Intercambio finalizado sin reseña");
+              setShowResenaModal(false);
+              setTruequeParaFinalizar(null);
+              const [truequesData] = await Promise.all([obtenerIntercambios()]);
+              setTrueques(truequesData);
+            } catch (error: any) {
+              toast.error(error.response?.data?.detail || "Error al finalizar intercambio");
+            }
+          }}
+        >
+          Finalizar sin reseña
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
+        {showReporteModal && intercambioAReportar && (
+        <ReporteDialog
+          isOpen={showReporteModal}
+          onClose={() => {
+            setShowReporteModal(false);
+            setIntercambioAReportar(null);
+          }}
+          intercambioId={intercambioAReportar}
+        />
+      )}
     </div>
   )
 }
+
 
 export default function SwapkPlatform() {
   return (

@@ -28,6 +28,8 @@ from backend.controllers import publicaciones_admin_controller
 from backend.controllers import notificacion_controller
 from backend.controllers import help_controller
 from backend.controllers import inscripcion_curso_controller
+from backend.controllers import reporte_controller as reportes_api
+
 
 
 
@@ -80,6 +82,7 @@ app.include_router(perfil_admin_controller.router)
 app.include_router(publicaciones_admin_controller.router)
 app.include_router(help_controller.router)
 app.include_router(inscripcion_curso_controller.router)
+app.include_router(reportes_api.router)
 
 
 

@@ -5,3 +5,12 @@
  --spacing-xxs: 0.25rem;
 }
 */
+
+/* En tu archivo globals.css o styles.css */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

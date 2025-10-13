@@ -1,8 +1,8 @@
-"""SwapkBd
+"""Swapkbdm
 
-Revision ID: e1b324427c65
+Revision ID: f774129085f7
 Revises: 
-Create Date: 2025-10-03 14:26:59.017783
+Create Date: 2025-10-13 00:27:17.766447
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'e1b324427c65'
+revision: str = 'f774129085f7'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -206,6 +206,7 @@ def upgrade() -> None:
     sa.Column('estado_trueque', sa.Boolean(), nullable=True),
     sa.Column('estado', sa.Enum('Pendiente', 'Confirmado', 'Finalizado', name='estadointercambio'), nullable=True),
     sa.Column('fecha_creacion', sa.DateTime(), nullable=True),
+    sa.Column('ciclo', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['id_perfil'], ['perfiles.id'], ),
     sa.ForeignKeyConstraint(['id_usuario1'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -282,12 +283,15 @@ def upgrade() -> None:
     op.create_table('resena',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('intercambio_id', sa.Integer(), nullable=True),
-    sa.Column('usuario_id', sa.Integer(), nullable=True),
+    sa.Column('destinatario_id', sa.Integer(), nullable=True),
+    sa.Column('autor_id', sa.Integer(), nullable=True),
     sa.Column('calificacion', sa.Float(), nullable=True),
     sa.Column('comentario', sa.Text(), nullable=True),
     sa.Column('fecha', sa.DateTime(), nullable=True),
+    sa.Column('ciclo', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['autor_id'], ['usuarios.id'], ),
+    sa.ForeignKeyConstraint(['destinatario_id'], ['usuarios.id'], ),
     sa.ForeignKeyConstraint(['intercambio_id'], ['intercambios.id'], ),
-    sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###

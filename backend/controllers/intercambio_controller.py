@@ -239,14 +239,20 @@ def restablecer_intercambio(
     if not intercambio:
         raise HTTPException(status_code=404, detail="Intercambio no encontrado")
     
-    # Solo el creador puede restablecer
     if intercambio.id_usuario1 != current_user.id:
         raise HTTPException(status_code=403, detail="Solo el creador puede restablecer el intercambio")
     
-    # Cambiar estado a Pendiente
-    intercambio.estado = EstadoIntercambioEnum.Pendiente
+    # ✅ Incrementar el ciclo
+    intercambio.ciclo = (intercambio.ciclo or 0) + 1
     
+    # ✅ Eliminar SOLO propuestas (no reseñas)
+    db.query(PropuestaIntercambio).filter(
+        PropuestaIntercambio.id_intercambio == id
+    ).delete()
+    
+    intercambio.estado = EstadoIntercambioEnum.Pendiente
     db.commit()
+    
     return {"message": "Intercambio restablecido a estado pendiente"}
 
 @router.post("/{id}/finalizar")
@@ -260,34 +266,89 @@ def finalizar_intercambio(
     if not intercambio:
         raise HTTPException(status_code=404, detail="Intercambio no encontrado")
 
-    # ✅ Verificar que el usuario actual es el creador O el proponente aceptado
-    es_creador = intercambio.id_usuario1 == current_user.id
+    # Obtener la propuesta aceptada
     propuesta_aceptada = db.query(PropuestaIntercambio).filter(
         PropuestaIntercambio.id_intercambio == id,
-        PropuestaIntercambio.id_usuario_interesado == current_user.id,
         PropuestaIntercambio.aceptada == True
     ).first()
-    es_proponente_aceptado = propuesta_aceptada is not None
 
-    if not (es_creador or es_proponente_aceptado):
+    if not propuesta_aceptada:
+        raise HTTPException(status_code=400, detail="No hay propuesta aceptada para este intercambio")
+
+    creador_id = intercambio.id_usuario1
+    proponente_id = propuesta_aceptada.id_usuario_interesado
+
+    if current_user.id not in (creador_id, proponente_id):
         raise HTTPException(status_code=403, detail="Solo los participantes pueden finalizar este intercambio")
+
+    # Determinar quién es el autor y quién es el destinatario
+    autor_id = current_user.id
+    destinatario_id = proponente_id if current_user.id == creador_id else creador_id
 
     # Crear reseña si se proporciona
     if resena:
+        if not (1 <= resena.calificacion <= 5):
+            raise HTTPException(status_code=400, detail="La calificación debe estar entre 1 y 5")
+
+        reseña_existente = db.query(Resena).filter(
+            Resena.intercambio_id == id,
+            Resena.autor_id == autor_id,
+            Resena.ciclo == intercambio.ciclo  # 👈 Validar por ciclo
+        ).first()
+
+        if reseña_existente:
+            raise HTTPException(status_code=400, detail="Ya has dejado una reseña para este ciclo del intercambio")
+
         nueva_resena = Resena(
             intercambio_id=id,
-            usuario_id=current_user.id,
+            autor_id=autor_id,
+            destinatario_id=destinatario_id,
             calificacion=resena.calificacion,
-            comentario=resena.comentario
+            comentario=resena.comentario,
+            ciclo=intercambio.ciclo  # 👈 Asignar el ciclo
         )
         db.add(nueva_resena)
 
-    # Eliminar la propuesta aceptada
-    if propuesta_aceptada:
-        db.delete(propuesta_aceptada)
+    # Limpiar propuestas y finalizar
+    db.query(PropuestaIntercambio).filter(
+        PropuestaIntercambio.id_intercambio == id
+    ).delete()
 
-    # Cambiar estado a Finalizado
     intercambio.estado = EstadoIntercambioEnum.Finalizado
     db.commit()
+    db.refresh(intercambio)
 
     return {"message": "Intercambio finalizado con éxito"}
+
+@router.get("/resenas/mias", response_model=List[ResenaResponse])
+def obtener_mis_resenas(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """
+    Obtiene las reseñas que otros usuarios me han dejado a MÍ (soy el destinatario).
+    """
+    reseñas = db.query(Resena).filter(Resena.destinatario_id == current_user.id).all()
+    return reseñas
+
+@router.get("/resenas/escritas", response_model=List[ResenaResponse])
+def obtener_resenas_escritas(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user)
+):
+    """
+    Obtiene las reseñas que YO he escrito (soy el autor).
+    """
+    reseñas = db.query(Resena).filter(Resena.autor_id == current_user.id).all()
+    return reseñas        
+
+# En tu archivo de rutas de intercambios
+@router.get("/resenas/todas", response_model=List[ResenaResponse])
+def obtener_todas_las_resenas(
+    db: Session = Depends(get_db)
+):
+    """
+    Obtiene todas las reseñas públicas (sin necesidad de autenticación).
+    """
+    reseñas = db.query(Resena).order_by(Resena.fecha.desc()).all()
+    return reseñas    

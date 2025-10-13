@@ -162,16 +162,21 @@ class PropuestaResumen(BaseModel):
 
 class ResenaCreate(BaseModel):
     intercambio_id: int
-    usuario_id: int
-    calificacion: float
+    calificacion: float  # ❌ NO necesitas pasar autor_id ni destinatario_id desde el frontend
     comentario: str
 
     class Config:
         orm_mode = True
 
-class ResenaResponse(ResenaCreate):
+
+class ResenaResponse(BaseModel):
     id: int
+    intercambio_id: int
+    autor: UsuarioBase          # 👈 Mostrar datos del autor
+    destinatario: UsuarioBase   # 👈 Mostrar datos del destinatario
+    calificacion: float
+    comentario: str
     fecha: datetime
 
     class Config:
-        orm_mode = True             
+        orm_mode = True            
