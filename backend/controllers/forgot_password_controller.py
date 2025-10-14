@@ -9,7 +9,7 @@ import random
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.models.usuarios import Usuario
-from passlib.hash import argon2  # ✅ usar solo Argon2
+from passlib.hash import argon2  # usar solo Argon2
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 

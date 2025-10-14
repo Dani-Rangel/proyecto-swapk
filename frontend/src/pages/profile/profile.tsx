@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import toast, { Toaster } from 'react-hot-toast';
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation"; // <-- Añadido useParams
 import axios from "axios";
 import {
   X, 
@@ -71,6 +71,7 @@ function ProfilePageComponent() {
   const skillContainerRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<any>(null); 
   const router = useRouter();
+  const params = useParams(); // <-- Obtiene los parámetros de la URL
   const [habilidadesDisponibles, setHabilidadesDisponibles] = useState<Skill[]>([]);
   const [habilidadesPerfil, setHabilidadesPerfil] = useState<SkillAssociationResponse[]>([]);
   const [imageSrc, setImageSrc] = useState<string>("/img/user.png");
@@ -103,40 +104,46 @@ function ProfilePageComponent() {
     }
   };
 
-  // ✅ Cargar perfil del usuario
+  // ✅ Cargar perfil del usuario (propio o de otro)
   useEffect(() => {
-    const currentUser = getCurrentUser();
-    
-    if (!currentUser || !currentUser.token) {
-      console.warn("❌ No hay usuario autenticado");
-      router.push("/auth/login");
-      return;
-    }
-
-    console.log("✅ Usuario cargado:", currentUser);
-    setUser(currentUser);
-
-    axios.get(`http://localhost:8000/perfil/usuario/${currentUser.id}`, {
-      headers: {
-        Authorization: `Bearer ${currentUser.token}`
-      }
-    })
-    .then(response => {
-      setPerfil(response.data);
-    })
-    .catch(error => {
-      console.error("Error al obtener el perfil:", error);
-      if (error.response?.status === 401) {
-        clearCurrentUser();
+    const loadProfile = async () => {
+      const currentUser = getCurrentUser();
+      if (!currentUser || !currentUser.token) {
+        console.warn("❌ No hay usuario autenticado");
         router.push("/auth/login");
-      } else {
-        setError("No se pudo cargar el perfil.");
+        return;
       }
-    })
-    .finally(() => {
-      setLoading(false);
-    });
-  }, [router]);
+
+      setUser(currentUser);
+      
+      // Determina qué ID de usuario cargar
+      const targetUserId = params?.id ? Number(params.id) : currentUser.id;
+      const isOwnProfile = targetUserId === currentUser.id;
+
+      try {
+        setLoading(true);
+        // Asumiendo que tu backend tiene un endpoint para obtener cualquier perfil por ID de usuario
+        const response = await axios.get(`http://localhost:8000/perfil/usuario/${targetUserId}`, {
+          headers: {
+            Authorization: `Bearer ${currentUser.token}`
+          }
+        });
+        setPerfil(response.data);
+      } catch (error) {
+        console.error("Error al obtener el perfil:", error);
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          clearCurrentUser();
+          router.push("/auth/login");
+        } else {
+          setError("No se pudo cargar el perfil.");
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [router, params]); // <-- Ahora depende de `params`
 
   // ✅ Cargar habilidades disponibles
   useEffect(() => {
@@ -155,9 +162,11 @@ function ProfilePageComponent() {
       .catch(err => console.error(err));
   }, [perfil?.id]);
 
-  // ✅ Cargar certificados del usuario
+  // ✅ Cargar certificados del usuario (solo si es tu propio perfil)
   useEffect(() => {
-    if (!user?.id) return;
+    // Solo carga certificados si es tu propio perfil
+    const isOwnProfile = perfil?.id_usuario === user?.id;
+    if (!isOwnProfile || !user?.id) return;
 
     const fetchCertificaciones = async () => {
       try {
@@ -185,7 +194,7 @@ function ProfilePageComponent() {
     };
 
     fetchCertificaciones();
-  }, [user?.id]);
+  }, [user?.id, perfil?.id_usuario]); // <-- Añadida dependencia
 
   // ✅ Actualizar imagen de perfil
   useEffect(() => {
@@ -196,12 +205,15 @@ function ProfilePageComponent() {
     }
   }, [perfil?.foto_perfil]);
 
-  // ✅ Guardar asociación de habilidad
+  // ✅ Guardar asociación de habilidad (solo si es tu propio perfil)
   const handleSaveAssociation = async (assoc: SkillAssociation) => {
+    const isOwnProfile = perfil?.id_usuario === user?.id;
+    if (!isOwnProfile || !perfil) {
+      toast.error("No puedes editar el perfil de otro usuario.");
+      return;
+    }
     try {
-      if (!perfil) return;
       setLoading(true);
-
       const nuevaAsociacion = await skillsAPI.associateSkill({
         Perfil_id: perfil.id,
         habilidad_id: assoc.habilidad_id,
@@ -210,7 +222,6 @@ function ProfilePageComponent() {
       });
 
       const habilidadCompleta = habilidadesDisponibles.find(h => h.id === assoc.habilidad_id);
-
       setHabilidadesPerfil(prev => [
         ...prev,
         { ...nuevaAsociacion, habilidad_nombre: habilidadCompleta?.nombre || "" }
@@ -224,9 +235,13 @@ function ProfilePageComponent() {
     }
   };
 
-  // ✅ Eliminar habilidad
+  // ✅ Eliminar habilidad (solo si es tu propio perfil)
   const handleRemoveSkill = async (idAsociacion: number) => {
-    if (!perfil) return;
+    const isOwnProfile = perfil?.id_usuario === user?.id;
+    if (!isOwnProfile || !perfil) {
+      toast.error("No puedes editar el perfil de otro usuario.");
+      return;
+    }
     try {
       setLoading(true);
       await skillsAPI.deleteSkillAssociation(idAsociacion);
@@ -272,9 +287,8 @@ function ProfilePageComponent() {
   }
 
   const toggleTheme = () => setIsDark(!isDark);
-
-  // ✅ Usa esta URL en la imagen
   const profileImageUrl = getProfileImageUrl(perfil?.foto_perfil);
+  const isOwnProfile = perfil?.id_usuario === user?.id; // <-- Determina si es tu perfil
 
   return (
     <div className="min-h-screen bg-[#141414] flex">
@@ -309,7 +323,6 @@ function ProfilePageComponent() {
               <div className="w-100 flex justify-between items-center p-8">
                 <div className="relative inline-block mb-4">
                   <div className="w-24 h-24 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full mx-auto flex items-center justify-center overflow-hidden">
-                    {/* ✅ Usamos <img> en lugar de next/image */}
                     <img
                       src={imageSrc}
                       alt="Foto de perfil"
@@ -321,15 +334,20 @@ function ProfilePageComponent() {
                       }}
                     />
                   </div>
-                  <button className="absolute -bottom-1 -right-1 bg-blue-600 p-2 rounded-full hover:bg-blue-700 transition-colors">
-                    <Camera className="w-4 h-4 text-white" />
-                  </button>
+                  {/* Solo muestra el botón de editar si es tu propio perfil */}
+                  {isOwnProfile && (
+                    <button className="absolute -bottom-1 -right-1 bg-blue-600 p-2 rounded-full hover:bg-blue-700 transition-colors">
+                      <Camera className="w-4 h-4 text-white" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="relative inline-block">
                   <h2 className="text-white text-2xl font-bold mb-1 flex items-center justify-center gap-2 w-100">
                     {perfil?.nombre || "Cargando..."}
-                    <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center"></div>
+                    {isOwnProfile && ( // <-- El círculo verde solo para tu perfil
+                      <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center"></div>
+                    )}
                   </h2>
 
                   <div className="flex items-center justify-center gap-1 text-gray-400 mb-3">
@@ -346,13 +364,16 @@ function ProfilePageComponent() {
                   ))}
                 </div>
 
-                <button 
-                  className="bg-gradient-to-r from-gray-900 to-gray-600 text-white px-6 py-2.5 rounded-lg hover:from-gray-600 hover:to-gray-500 transition-all duration-200 flex items-center gap-2 mx-auto shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={() => router.push("/settings/profile_edit")}
-                >
-                  <Edit className="w-4 h-4" />
-                  Editar perfil
-                </button>
+                {/* Solo muestra el botón de editar si es tu propio perfil */}
+                {isOwnProfile && (
+                  <button 
+                    className="bg-gradient-to-r from-gray-900 to-gray-600 text-white px-6 py-2.5 rounded-lg hover:from-gray-600 hover:to-gray-500 transition-all duration-200 flex items-center gap-2 mx-auto shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => router.push("/settings/profile_edit")}
+                  >
+                    <Edit className="w-4 h-4" />
+                    Editar perfil
+                  </button>
+                )}
               </div>
             </div>
             <div className="mt-6 p-4 bg-gray-900/50 rounded-lg">
@@ -392,82 +413,87 @@ function ProfilePageComponent() {
                 </div>
               </div>
 
-              {/* Certificados en Perfil */}
-<div className="border-t border-gray-700 pt-10">
-  <div className="flex items-center justify-between mb-6">
-    <h4 className="text-white text-lg font-semibold">Certificados</h4>
-    <Button
-      variant="outline"
-      size="sm"
-      className="text-blue-400 border-blue-500 hover:bg-blue-500/10"
-      onClick={() => router.push("/settings/certifications")}
-    >
-      <Eye className="w-4 h-4 mr-1" />
-      Ver todos
-    </Button>
-  </div>
+              {/* Certificados en Perfil (solo para tu propio perfil) */}
+              {isOwnProfile && (
+                <div className="border-t border-gray-700 pt-10">
+                  <div className="flex items-center justify-between mb-6">
+                    <h4 className="text-white text-lg font-semibold">Certificados</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-blue-400 border-blue-500 hover:bg-blue-500/10"
+                      onClick={() => router.push("/settings/certifications")}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Ver todos
+                    </Button>
+                  </div>
 
-  {loadingCertificados ? (
-    <div className="text-center py-4 text-gray-400">Cargando certificados...</div>
-  ) : certificaciones.length === 0 ? (
-    <div className="bg-gray-900/50 rounded-lg p-6 text-center">
-      <Award className="w-10 h-10 mx-auto text-gray-500 mb-3" />
-      <p className="text-gray-400 text-sm">Aún no has agregado certificados</p>
-      <p className="text-xs text-gray-500 mt-1">
-        Sube tus credenciales en <span className="text-blue-400">Configuración</span> para mostrarlas aquí.
-      </p>
-    </div>
-  ) : (
-    <div className="space-y-4">
-      {certificaciones.map((cert) => (
-        <div
-          key={cert.id}
-          className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-gray-700 transition-colors"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h5 className="text-white font-medium">{cert.name}</h5>
-              <p className="text-gray-400 text-sm">por {cert.issuer}</p>
-              <p className="text-gray-500 text-xs mt-1">
-                {new Date(cert.date).toLocaleDateString("es-ES")}
-              </p>
-            </div>
+                  {loadingCertificados ? (
+                    <div className="text-center py-4 text-gray-400">Cargando certificados...</div>
+                  ) : certificaciones.length === 0 ? (
+                    <div className="bg-gray-900/50 rounded-lg p-6 text-center">
+                      <Award className="w-10 h-10 mx-auto text-gray-500 mb-3" />
+                      <p className="text-gray-400 text-sm">Aún no has agregado certificados</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Sube tus credenciales en <span className="text-blue-400">Configuración</span> para mostrarlas aquí.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {certificaciones.map((cert) => (
+                        <div
+                          key={cert.id}
+                          className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-gray-700 transition-colors"
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div>
+                              <h5 className="text-white font-medium">{cert.name}</h5>
+                              <p className="text-gray-400 text-sm">por {cert.issuer}</p>
+                              <p className="text-gray-500 text-xs mt-1">
+                                {new Date(cert.date).toLocaleDateString("es-ES")}
+                              </p>
+                            </div>
 
-            <div className="flex items-center gap-2 flex-wrap justify-end">
-              <Badge className={`${getStatusColor(cert.status)} text-white text-xs px-2 py-1`}>
-                {cert.status}
-              </Badge>
+                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                              <Badge className={`${getStatusColor(cert.status)} text-white text-xs px-2 py-1`}>
+                                {cert.status}
+                              </Badge>
 
-              {cert.archivos && cert.archivos.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-gray-300 hover:text-white hover:bg-gray-800"
-                  title="Ver certificado"
-                  onClick={() => {
-                    const url = `http://localhost:8000/uploads/${cert.archivos[0].ruta}`;
-                    window.open(url, "_blank");
-                  }}
-                >
-                  <Eye className="w-4 h-4" />
-                </Button>
+                              {cert.archivos && cert.archivos.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-gray-300 hover:text-white hover:bg-gray-800"
+                                  title="Ver certificado"
+                                  onClick={() => {
+                                    const url = `http://localhost:8000/uploads/${cert.archivos[0].ruta}`;
+                                    window.open(url, "_blank");
+                                  }}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )}
-</div>
             </div>
 
             {/* Skills Section */}
             <div className="bg-[#1E1E1E] border-[#2E2E2E] rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-white text-lg font-bold">Habilidades</h3>
-                <button onClick={() => setShowAddForm(true)} className="bg-blue-600 px-3 py-2 rounded mt-3 text-white">
-                  Añadir habilidad
-                </button>
+                {/* Solo muestra el botón de añadir si es tu propio perfil */}
+                {isOwnProfile && (
+                  <button onClick={() => setShowAddForm(true)} className="bg-blue-600 px-3 py-2 rounded mt-3 text-white">
+                    Añadir habilidad
+                  </button>
+                )}
               </div>
 
               <div ref={skillContainerRef} className="flex flex-wrap gap-3 mb-6 relative">
@@ -479,12 +505,15 @@ function ProfilePageComponent() {
                     >
                       #{skill.habilidad_nombre || `Habilidad ${index + 1}`}
                     </span>
-                    <button
-                      onClick={() => handleRemoveSkill(skill.id)}
-                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      ×
-                    </button>
+                    {/* Solo muestra el botón de eliminar si es tu propio perfil */}
+                    {isOwnProfile && (
+                      <button
+                        onClick={() => handleRemoveSkill(skill.id)}
+                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        ×
+                      </button>
+                    )}
                     {activeSkillIndex === index && (
                       <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs p-3 rounded-lg shadow-lg z-10 w-max max-w-xs">
                         <p className="mb-1">
@@ -501,7 +530,7 @@ function ProfilePageComponent() {
                 )}
               </div>
 
-              {showAddForm && (
+              {showAddForm && isOwnProfile && (
                 <AddSkillForm
                   onClose={() => setShowAddForm(false)}
                   onSave={handleSaveAssociation}

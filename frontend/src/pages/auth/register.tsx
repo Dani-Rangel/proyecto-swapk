@@ -13,7 +13,7 @@ export default function RegisterPage() {
     correo: "",
     password: "",
     acceptTerms: false,
-    showPassword: false, // 👁️ para la contraseña
+    showPassword: false, //  para la contraseña
   })
   const [darkMode, setDarkMode] = useState(true)
   const [error, setError] = useState<string[]>([])
@@ -87,7 +87,7 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
       const data = await res.json()
 
       if (res.ok) {
-        // ✅ CORREGIDO: usamos data.user (no data.usuario)
+        //  CORREGIDO: usamos data.user (no data.usuario)
         const userData = {
           token: data.token,
           id: data.user.id,
@@ -287,7 +287,7 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
                     const res = await axios.post("http://localhost:8000/auth/google/login", { token })
                     const data = res.data
 
-                    // ✅ CORREGIDO: usar data.user.id, etc.
+                    //  CORREGIDO: usar data.user.id, etc.
                     const userData = {
                       token: data.token,
                       id: data.user.id,

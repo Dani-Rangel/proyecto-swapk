@@ -3,10 +3,11 @@
 import React, { useState } from "react"
 import { Bell, X } from "lucide-react"
 import { useNotificaciones } from "@/context/notificacionesContext"
+import { motion, AnimatePresence } from "framer-motion"
 
 export function Notificaciones() {
   const { notificaciones, marcarComoLeida, eliminarNotificacion, notificacionesNoLeidas } = useNotificaciones()
-  const [showNotifications, setShowNotifications] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadingId, setLoadingId] = useState<number | null>(null)
 
@@ -15,7 +16,7 @@ export function Notificaciones() {
     setError(null)
     try {
       await marcarComoLeida(id)
-    } catch (err) {
+    } catch {
       setError("Error al marcar como leída")
     } finally {
       setLoadingId(null)
@@ -27,31 +28,23 @@ export function Notificaciones() {
     setError(null)
     try {
       await eliminarNotificacion(id)
-    } catch (err) {
+    } catch {
       setError("Error al eliminar la notificación")
     } finally {
       setLoadingId(null)
     }
   }
 
-  // ✅ Cuando se abre el dropdown, marcamos todas como leídas
-  const toggleDropdown = () => {
-    setShowNotifications(!showNotifications)
-    if (!showNotifications) {
-      // Aquí podrías marcar todas como leídas si lo deseas
-      // notificaciones.filter(n => !n.leido).forEach(n => marcarComoLeida(n.id))
-    }
-  }
-
   return (
     <div className="relative">
+      {/* Botón de campana */}
       <button
         title="Notificaciones"
         aria-label="Mostrar notificaciones"
-        onClick={toggleDropdown}
+        onClick={() => setShowModal(true)}
         className="inline-flex cursor-pointer h-8 items-center justify-center text-gray-600 hover:text-gray-900 dark:text-[#A0A0A0] dark:hover:text-[#F5F5F5] transition-colors duration-300"
       >
-        <Bell className="h-4 w-4" />
+        <Bell className="h-5 w-5" />
         {notificacionesNoLeidas > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5 min-w-[16px] h-4 flex items-center justify-center animate-pulse">
             {notificacionesNoLeidas}
@@ -59,66 +52,87 @@ export function Notificaciones() {
         )}
       </button>
 
-      {showNotifications && (
-        <div
-          className="absolute left-8 top-0 w-80 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-50 max-h-96 overflow-y-auto"
-          style={{ animationFillMode: "forwards" }}
-        >
-          <div className="p-3 font-bold border-b border-gray-600 flex justify-between items-center text-gray-400">
-            Notificaciones
-            <button
-              aria-label="Cerrar notificaciones"
-              onClick={() => setShowNotifications(false)}
-              className="text-gray-400 hover:text-white"
+      {/* Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {/* Contenedor del modal */}
+            <motion.div
+              className="relative w-[90%] max-w-lg bg-[#121212] text-white rounded-2xl shadow-2xl overflow-hidden border border-gray-800"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ type: "spring", damping: 18, stiffness: 200 }}
             >
-              <X size={18} />
-            </button>
-          </div>
-
-          {error && (
-            <div className="p-3 text-red-500 text-sm border-b border-gray-700">{error}</div>
-          )}
-
-          {notificaciones.length === 0 ? (
-            <div className="p-3 text-sm text-gray-400">No tienes notificaciones</div>
-          ) : (
-            notificaciones.map((n) => (
-              <div
-                key={n.id}
-                className={`p-3 text-sm border-b border-gray-700 flex justify-between items-start ${
-                  n.leido ? "text-gray-400" : "text-white font-semibold"
-                }`}
-              >
-                <div
-                  className="cursor-pointer flex-1 break-words line-clamp-2"
-                  onClick={() => handleMarcarComoLeida(n.id)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      handleMarcarComoLeida(n.id)
-                    }
-                  }}
-                >
-                  <div className="font-medium">{n.contenido}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    {new Date(n.fecha).toLocaleString()}
-                  </div>
-                </div>
-
+              {/* Encabezado */}
+              <div className="flex justify-between items-center px-5 py-3 border-b border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-200">Notificaciones</h2>
                 <button
-                  onClick={() => handleEliminar(n.id)}
-                  aria-label="Eliminar notificación"
-                  disabled={loadingId === n.id}
-                  className="ml-2 text-gray-400 hover:text-red-500 focus:outline-none"
+                  onClick={() => setShowModal(false)}
+                  aria-label="Cerrar"
+                  className="text-gray-400 hover:text-white transition-colors"
                 >
-                  <X size={16} />
+                  <X size={20} />
                 </button>
               </div>
-            ))
-          )}
-        </div>
-      )}
+
+              {/* Cuerpo */}
+              <div className="max-h-[400px] overflow-y-auto p-4">
+                {error && (
+                  <div className="p-3 text-red-500 text-sm border border-red-700 rounded-md mb-3">
+                    {error}
+                  </div>
+                )}
+
+                {notificaciones.length === 0 ? (
+                  <div className="text-center text-gray-500 py-6">
+                    No tienes notificaciones nuevas
+                  </div>
+                ) : (
+                  notificaciones.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`p-3 mb-2 rounded-lg border border-gray-700 transition-all duration-200 hover:bg-gray-800 flex justify-between items-start ${
+                        n.leido ? "text-gray-400" : "text-white font-medium bg-gray-900/40"
+                      }`}
+                    >
+                      <div
+                        className="flex-1 cursor-pointer"
+                        onClick={() => handleMarcarComoLeida(n.id)}
+                      >
+                        <div className="font-semibold">{n.contenido}</div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {new Date(n.fecha).toLocaleString()}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleEliminar(n.id)}
+                        disabled={loadingId === n.id}
+                        className="ml-2 text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Pie (opcional) */}
+              <div className="px-5 py-3 border-t border-gray-700 text-center text-sm text-gray-500">
+                {notificacionesNoLeidas > 0
+                  ? `${notificacionesNoLeidas} sin leer`
+                  : "Todas las notificaciones leídas"}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

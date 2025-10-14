@@ -4,6 +4,7 @@ node_modules/
 out/
 *.log
 .env
+env
 .env.local
 venv/
 backend/services/firebase/firebase_credentials.json

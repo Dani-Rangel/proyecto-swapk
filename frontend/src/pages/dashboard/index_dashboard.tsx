@@ -39,7 +39,7 @@ import { MainSidebar } from "@/components/MainSidebar"
 import { useNotificaciones } from "../../context/notificacionesContext"
 import { getCurrentUser } from "@/lib/auth"
 
-// ✅ Tipos basados en tus modelos SQLAlchemy
+//Tipos basados en tus modelos SQLAlchemy
 interface Usuario {
   id: number;
   nombre: string;
@@ -62,7 +62,7 @@ function ForumLayoutComponent() {
   const { t } = useTranslation()
   const { agregarNotificacion } = useNotificaciones()
 
-  // 🟢 activeTab usa valores fijos (no traducciones)
+  // activeTab usa valores fijos (no traducciones)
   const [activeTab, setActiveTab] = useState("Intercambio")
   const tabLabels: Record<string, string> = {
     Intercambio: t("postTypeExchanges"),
@@ -113,7 +113,7 @@ function ForumLayoutComponent() {
     return tab === "Todo" ? "all" : tabToApiSlug[tab] || "all"
   }
 
-  // 🧠 Cargar usuario desde localStorage (memoizado para evitar renders innecesarios)
+  //  Cargar usuario desde localStorage (memoizado para evitar renders innecesarios)
   useEffect(() => {
     isMountedRef.current = true;
 
@@ -173,7 +173,7 @@ function ForumLayoutComponent() {
     };
   }, [showShareMenu]);
 
-  // 🎨 Obtener configuración de tipo (color, slug, display)
+  // Obtener configuración de tipo (color, slug, display)
   const getTipoConfig = useCallback((tipo: string) => {
     switch (tipo) {
       case "Intercambio":
@@ -189,7 +189,7 @@ function ForumLayoutComponent() {
     }
   }, [t])
 
-  // 📅 Formatear fecha
+  // Formatear fecha
   const formatFecha = useCallback((fechaStr: string) => {
     const fecha = new Date(fechaStr)
     if (isNaN(fecha.getTime())) {
@@ -251,7 +251,7 @@ function ForumLayoutComponent() {
 
   const toggleTheme = () => setIsDark(!isDark)
 
-  // 👍 Manejar like
+  // Manejar like
 const handleLike = async (postId: number) => {
   if (!user) {
     toast.error(t("mustLogin"))
@@ -279,18 +279,18 @@ const handleLike = async (postId: number) => {
     setLikes((prev) => ({ ...prev, [postId]: data.total_likes }))
     setUserLikes((prev) => ({ ...prev, [postId]: data.liked }))
 
-    // 🚀 Solo si el usuario dio like (no si lo quitó), enviar notificación
+    // Solo si el usuario dio like (no si lo quitó), enviar notificación
     if (data.liked) {
       const currentUser = getCurrentUser()
       const nombreUsuario = currentUser?.nombre || "Un usuario"
 
-      // 🚨 Buscar la publicación para obtener el autor
+      // buscar la publicación para obtener el autor
       const post = publicaciones.find(p => p.id === postId)
       if (post && post.id_usuario !== currentUser?.id) { // No notificar si es el mismo usuario
         agregarNotificacion({
-          tipo: "Publicacion", // ✅ Coincide con tu enum en el backend
+          tipo: "Publicacion", // Aca tenemos que asegurarnos que coincida con el enum en el backend
           contenido: `El usuario ${nombreUsuario} ha dado like a tu publicación: "${post.titulo}".`,
-          id_usuario: post.id_usuario, // ✅ Notificar al autor de la publicación
+          id_usuario: post.id_usuario, // Notificar al autor de la publicación
         })
       }
     }
@@ -299,7 +299,7 @@ const handleLike = async (postId: number) => {
   }
 }
 
-  // 💬 Manejar comentarios
+  // manejar comentarios
   const toggleComentarios = async (postId: number) => {
     if (comentariosAbiertos === postId) {
       setComentariosAbiertos(null)
@@ -319,7 +319,7 @@ const handleLike = async (postId: number) => {
     }
   }
 
-  // ✍️ Comentar
+  // comentar
  const handleComentar = async (postId: number, post: any) => {
   if (!nuevoComentario.trim()) return
   const savedUser = localStorage.getItem("user");
@@ -424,13 +424,13 @@ const handleLike = async (postId: number) => {
       if (res.ok) {
         toast.success(editingPost ? t("postUpdated") : t("postCreated"))
 
-        // 🚀 Solo si es una NUEVA publicación (no edición), crear notificación
+        // Solo si es una NUEVA publicación (no edición), crear notificación
         if (!editingPost) {
           const user = getCurrentUser()
           const nombreUsuario = user?.nombre || "Un usuario"
 
           agregarNotificacion({
-            tipo: "Publicacion", // ✅ Coincide con tu enum en el backend
+            tipo: "Publicacion", 
             contenido: `El usuario ${nombreUsuario} ha creado una nueva publicación: "${newPost.titulo}".`,
             id_usuario: user?.id || 0,
           })
@@ -449,7 +449,7 @@ const handleLike = async (postId: number) => {
     }
   }
 
-  // 🖊️ Editar publicación — abre el mismo modal con los datos cargados
+  // Editar publicación — abre el mismo modal con los datos cargados
   const handleEditPost = (post: any) => {
     setEditingPost(post)
     setNewPost({
@@ -461,7 +461,7 @@ const handleLike = async (postId: number) => {
     setIsModalOpen(true)
   }
 
-  // 🗑️ Eliminar publicación
+  // eliminar publicación
   const handleDeletePost = async (postId: number) => {
     if (!confirm(t("confirmDeletePost"))) return
 
@@ -497,7 +497,7 @@ const handleLike = async (postId: number) => {
     }
   }
 
-  // 🖊️ Editar comentario 
+  // Editar comentario 
  const handleSaveEditedComment = async () => {
   if (!editedCommentText.trim() || !editingComment) return;
 
@@ -548,7 +548,7 @@ const handleLike = async (postId: number) => {
   }
 };
 
-  // 🗑️ Eliminar comentario
+  // eliminar comentario
   const handleDeleteComment = async (commentId: number, postId: number) => {
     if (!confirm(t("confirmDeleteComment"))) return
 
@@ -592,7 +592,7 @@ const handleEditComment = (comment: any) => {
   setIsEditCommentModalOpen(true);
 };
 
-// 🆕 Función para cargar y mostrar quién dio like a una publicación
+// Función para cargar y mostrar quién dio like a una publicación
 const handleVerLikes = async (postId: number) => {
   if (!user) {
     toast.error(t("mustLogin"));
@@ -725,7 +725,7 @@ const handleVerLikes = async (postId: number) => {
                     <Flag className="w-4 h-4 mr-1" /> {t("report")}
                   </Button>
 
-                  {/* 🟢 BOTONES DE EDITAR Y ELIMINAR (solo si es el autor) */}
+                  {/* BOTONES DE EDITAR Y ELIMINAR (solo si es el autor) */}
                   {user && user.id === post.id_usuario && (
                   <div className="flex gap-1 ml-auto">
                     {/* Botón Ver Likes (nuevo) */}
@@ -887,7 +887,7 @@ const handleVerLikes = async (postId: number) => {
                           <span className="font-medium text-sm">{com.nombre_usuario}</span>
                           <span className="text-xs text-gray-500">{new Date(com.fecha).toLocaleDateString()}</span>
 
-                          {/* 🟢 BOTONES DE EDITAR Y ELIMINAR (solo si es el autor del comentario) */}
+                          {/* BOTONES DE EDITAR Y ELIMINAR (solo si es el autor del comentario) */}
                           {user?.id === com.id_usuario && (
                             <div className="absolute right-0 top-0 flex gap-1">
                               <Button
@@ -918,7 +918,7 @@ const handleVerLikes = async (postId: number) => {
                     ))}
                   </div>
                 )}
-                {/* 🆕 Sección para mostrar quién dio like (solo visible si se han cargado) */}
+                {/* Sección para mostrar quién dio like (solo visible si se han cargado) */}
                 {publicacionLikes[post.id] && publicacionLikes[post.id].length > 0 && (
                   <div className="mt-4 pt-4 border-t relative">
                     {/* Botón de Cerrar */}
@@ -967,7 +967,7 @@ const handleVerLikes = async (postId: number) => {
     });
   }, [publicaciones, isDark, userLikes, likes, comentariosAbiertos, comentarios, nuevoComentario, showShareMenu, t, getTipoConfig, formatFecha, handleLike, toggleComentarios, handleComentar, handleShare, user?.id, handleEditPost, handleDeletePost, handleEditComment, handleDeleteComment]);
 
-  // 🔄 Resetear modal al cerrar
+  // Resetear modal al cerrar
   const handleCloseModal = () => {
     setIsModalOpen(false)
     setEditingPost(null)

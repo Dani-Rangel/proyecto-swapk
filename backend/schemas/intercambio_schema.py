@@ -114,6 +114,15 @@ class IntercambioResponse(IntercambioBase):
     class Config:
         orm_mode = True
 
+class PropuestaAceptada(BaseModel):
+    id: int
+    id_usuario_interesado: int
+    aceptada: bool
+    usuario_interesado: UsuarioBase
+
+    class Config:
+        orm_mode = True        
+
 # -------------------------------
 # Intercambio: Response extendido con habilidades separadas
 # -------------------------------
@@ -134,6 +143,7 @@ class IntercambioConHabilidadesSeparadas(BaseModel):
     perfil: PerfilBase
     habilidades_ofrece: List[HabilidadBase] = []
     habilidades_busca: List[HabilidadBase] = []
+    propuestas: List[PropuestaAceptada] = []
 
     class Config:
         orm_mode = True
@@ -146,4 +156,22 @@ class PropuestaResumen(BaseModel):
     
 
     class Config:
-        orm_mode = True        
+        orm_mode = True   
+
+# backend/schemas/intercambio_schema.py
+
+class ResenaCreate(BaseModel):
+    intercambio_id: int
+    usuario_id: int
+    calificacion: float
+    comentario: str
+
+    class Config:
+        orm_mode = True
+
+class ResenaResponse(ResenaCreate):
+    id: int
+    fecha: datetime
+
+    class Config:
+        orm_mode = True             

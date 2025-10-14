@@ -80,23 +80,7 @@ export default function SwapkLanding() {
   }
 
   const handleJoinClick = (): void => {
-    router.push("auth/register")
-  }
-
-  const handleHowItWorksClick = (): void => {
-    console.log("How it works clicked")
-  }
-
-  const handleFindExchangeClick = (): void => {
-    console.log("Find exchange clicked")
-  }
-
-  const handleLearnMoreClick = (): void => {
-    console.log("Learn more about mission clicked")
-  }
-
-  const handleDiscoverGoalsClick = (): void => {
-    console.log("Discover goals clicked")
+    router.push("/auth/register")
   }
 
   return (
@@ -109,7 +93,7 @@ export default function SwapkLanding() {
       </button>
 
       <nav
-        className={`fixed top-0 left-0 h-full w-65 bg-[#141414] backdrop-blur-md border-r border-gray-700 z-40 transform transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-64 bg-[#141414] backdrop-blur-md border-r border-gray-700 z-40 transform transition-transform duration-300 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:translate-x-0`}
       >
@@ -128,18 +112,18 @@ export default function SwapkLanding() {
 
           {/* Navigation Links */}
           <div className="flex flex-col gap-2 mb-10">
-            <button className="cursor-pointer text-white font-medium text-left py-3 px-4 rounded-lg hover:bg-blue-800/20 hover:text-blue-600 transition-all">
+            <a href="#inicio" className="text-white font-medium text-left py-3 px-4 rounded-lg hover:bg-blue-800/20 hover:text-blue-600 transition-all block">
               INICIO
-            </button>
-            <button className="cursor-pointer text-white font-medium text-left py-3 px-4 rounded-lg hover:bg-blue-800/20 hover:text-blue-600 transition-all">
-              TRUEQUES
-            </button>
-            <button className="cursor-pointer text-white font-medium text-left py-3 px-4 rounded-lg hover:bg-blue-800/20 hover:text-blue-600 transition-all">
-              COMUNIDAD
-            </button>
-            <button className="cursor-pointer text-white font-medium text-left py-3 px-4 rounded-lg hover:bg-blue-800/20 hover:text-blue-600 transition-all">
-              FAQ's
-            </button>
+            </a>
+            <a href="#como-funciona" className="text-white font-medium text-left py-3 px-4 rounded-lg hover:bg-blue-800/20 hover:text-blue-600 transition-all block">
+              ¿CÓMO FUNCIONA?
+            </a>
+            <a href="#mision-vision" className="text-white font-medium text-left py-3 px-4 rounded-lg hover:bg-blue-800/20 hover:text-blue-600 transition-all block">
+              MISION Y VISION
+            </a>
+            <a href="#resenas" className="text-white font-medium text-left py-3 px-4 rounded-lg hover:bg-blue-800/20 hover:text-blue-600 transition-all block">
+              RESEÑAS
+            </a>
           </div>
 
           {/* Search */}
@@ -184,9 +168,9 @@ export default function SwapkLanding() {
         <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
 
-      <div className="lg:ml-80">
-        {/* SECCIÓN 1*/}
-        <section className="min-h-screen bg-gradient-to-br bg-[#141414] flex items-center">
+      <div className="lg:ml-64">
+        {/* SECCIÓN 1: INICIO */}
+        <section id="inicio" className="min-h-screen bg-gradient-to-br bg-[#141414] flex items-center">
           <div className="max-w-4xl mx-auto text-center px-5 w-full">
             <h2 className="text-5xl md:text-6xl font-extrabold text-white mb-5 leading-tight">
               ¿Qué pasa cuando 2 <span className="text-blue-600 font-bold cursor-pointer">mentes</span> se encuentran?
@@ -202,15 +186,15 @@ export default function SwapkLanding() {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-5 justify-center items-center">
-              <button
-                className="cursor-pointer bg-transparent text-gray-400 border border-gray-600 px-6 py-3 rounded-lg font-semibold hover:border-blue-600 hover:text-blue-600 transition-all text-sm"
-                onClick={handleHowItWorksClick}
+              <a
+                href="#como-funciona"
+                className="cursor-pointer bg-transparent text-gray-400 border border-gray-600 px-6 py-3 rounded-lg font-semibold hover:border-blue-600 hover:text-blue-600 transition-all text-sm block"
               >
                 ¿CÓMO FUNCIONA?
-              </button>
+              </a>
               <button
                 className="cursor-pointer bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-500 hover:to-blue-600 hover:shadow-lg hover:shadow-blue-600/30 transition-all"
-                onClick={handleFindExchangeClick}
+                onClick={() => router.push("/auth/register")}
               >
                 ENCUENTRA TU INTERCAMBIO
               </button>
@@ -218,8 +202,8 @@ export default function SwapkLanding() {
           </div>
         </section>
 
-        {/* SECCIÓN 2*/}
-        <section className="min-h-screen bg-gradient-to-br bg-[#141414] pt-10 pb-20 px-5" id="inicio">
+        {/* SECCIÓN 2: ¿CÓMO FUNCIONA? */}
+        <section id="como-funciona" className="min-h-screen bg-gradient-to-br bg-[#141414] pt-10 pb-20 px-5">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="text-center lg:text-left">
               <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-5 leading-tight">
@@ -279,8 +263,8 @@ export default function SwapkLanding() {
           </div>
         </section>
 
-        {/* SECCIÓN 3: Mission & Vision Section */}
-        <section className="min-h-screen flex items-center px-5 bg-[#141414]">
+        {/* SECCIÓN 3: MISIÓN Y VISIÓN */}
+        <section id="mision-vision" className="min-h-screen flex items-center px-5 bg-[#141414]">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center w-full">
             <div>
               <h2 className="text-3xl md:text-5xl text-white font-bold mb-12 leading-tight">
@@ -296,7 +280,6 @@ export default function SwapkLanding() {
                   </p>
                   <button
                     className="bg-transparent text-gray-400 border border-gray-600 px-6 py-3 rounded-lg font-semibold hover:border-blue-600 hover:text-blue-600 transition-all text-sm"
-                    onClick={handleLearnMoreClick}
                   >
                     DESCUBRE NUESTROS OBJETIVOS
                   </button>
@@ -310,7 +293,6 @@ export default function SwapkLanding() {
                   </p>
                   <button
                     className="bg-transparent text-gray-400 border border-gray-600 px-6 py-3 rounded-lg font-semibold hover:border-blue-600 hover:text-blue-600 transition-all text-sm"
-                    onClick={handleDiscoverGoalsClick}
                   >
                     DESCUBRE NUESTRAS METAS
                   </button>
@@ -320,8 +302,8 @@ export default function SwapkLanding() {
           </div>
         </section>
 
-        {/* SECCIÓN 4: Testimonials Section */}
-        <section className="min-h-screen bg-[#141414] flex items-center px-5">
+        {/* SECCIÓN 4: RESEÑAS */}
+        <section id="resenas" className="min-h-screen bg-[#141414] flex items-center px-5">
           <div className="max-w-4xl mx-auto w-full">
             <div className="bg-gray-700/30 border border-gray-600 rounded-2xl p-10 relative flex items-center gap-10 mb-8">
               <div className="flex-shrink-0">
@@ -373,7 +355,7 @@ export default function SwapkLanding() {
         </section>
 
         {/* Footer */}
-        <footer className="bg-white text-gray-900 py-2 text-center ">
+        <footer className="bg-white text-gray-900 py-2 text-center">
           <div>
             <p className="text-sm font-medium">© 2025 Swapk. Todos los derechos reservados.</p>
           </div>

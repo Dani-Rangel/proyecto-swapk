@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // 🔧 Usa la variable del entorno o una URL por defecto
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export type TipoNotificacion = 'Curso' | 'Intercambio' | 'Mensaje' | 'Publicacion' | 'comentario';
 

@@ -44,9 +44,9 @@ import { cursoHabilidadAPI } from '@/services/api_cursoHabilidad'
 import { Notificaciones } from "@/components/ui/notificaciones/notifications"
 import { useNotificaciones } from "../../context/notificacionesContext"
 import { useTranslation } from "@/lib/useTranslations"
-import { useRouter } from "next/navigation"; // ✅ Corregido: next/router → next/navigation
+import { useRouter } from "next/navigation"; //  Corregido: next/router → next/navigation
 import Link from "next/link";
-import ProtectedRoute from "@/components/protected_routes/protected_routes"; // ✅ Importamos el componente de protección
+import ProtectedRoute from "@/components/protected_routes/protected_routes"; 
 import { MainSidebar } from "@/components/MainSidebar"
 import { inscripcionCursoAPI } from "@/services/inscripcionCursoApi"
 import ManageEnrollmentsModal from "@/components/ui/ManageEnrollmentsModal"
@@ -194,7 +194,6 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
         ? await convertImageToBase64(newCourse.courseImage)
         : editingCourse?.img_Cursos || "",
       user_id: currentUserId,
-      habilidades_ids: newCourse.skills.map((h) => h.id),
     };
     let cursoId: number;
     // 2. Crear o editar
@@ -223,7 +222,7 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
       console.log("🚀 Usuario desde storage:", userFromStorage);
       console.log("🚀 Nombre del usuario:", nombreUsuario);
 
-      // ✅ Notificación con el nombre correcto
+      //  Notificación con el nombre correcto
       agregarNotificacion({
         tipo: "Curso",
         contenido: `El usuario ${nombreUsuario} ha creado el curso "${newCourse.title}".`,
@@ -1249,7 +1248,7 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
   )
 }
 
-// ✅ Exportamos el componente protegido
+//  Exportamos el componente protegido
 export default function CursosComunidad() {
   return (
     <ProtectedRoute>

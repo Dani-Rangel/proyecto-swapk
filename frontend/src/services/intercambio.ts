@@ -54,6 +54,13 @@ export interface Habilidad {
   nombre: string;
 }
 
+export interface PropuestaAceptada {
+  id: number;
+  id_usuario_interesado: number;
+  aceptada: boolean;
+  usuario_interesado: Usuario;
+}
+
 // ✅ Base de Intercambio (para enviar al backend)
 export interface IntercambioBase {
   id_usuario1: number;
@@ -84,8 +91,9 @@ export interface IntercambioResponse {
   fecha_creacion: string;
   usuario1: Usuario;
   perfil: Perfil;
-   habilidades_ofrece: Habilidad[];
+  habilidades_ofrece: Habilidad[];
   habilidades_busca: Habilidad[];
+  propuestas?: PropuestaAceptada[];
 }
 
 // -------------------------------
@@ -259,5 +267,3 @@ export const eliminarIntercambioHabilidad = async (id: number): Promise<boolean>
     return false;
   }
 };
-
-

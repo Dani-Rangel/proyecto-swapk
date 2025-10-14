@@ -5,7 +5,7 @@ export type Locale = keyof typeof translations
 
 // Hook para traducciones
 export function useTranslation() {
-  // ✅ El hook useLanguage se usa correctamente dentro de otro hook
+  //  El hook useLanguage se usa correctamente dentro de otro hook
   const { lang } = useLanguage()
 
   // Función para traducir textos

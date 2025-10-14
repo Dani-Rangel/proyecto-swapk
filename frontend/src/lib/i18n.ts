@@ -229,8 +229,8 @@ export const translations = {
     delete_account_button: "Eliminar cuenta permanentemente",
     deleting_account: "Eliminando...",
     deleting: "Eliminando...",
-    account_deleted_success: "Cuenta eliminada correctamente ✅",
-    delete_success: "Cuenta eliminada correctamente ✅",
+    account_deleted_success: "Cuenta eliminada correctamente ",
+    delete_success: "Cuenta eliminada correctamente ",
     delete_error: "Error al eliminar la cuenta",
 
     default_user: "Usuario por defecto",
@@ -491,8 +491,8 @@ export const translations = {
     delete_account_button: "Delete account permanently",
     deleting_account: "Deleting...",
     deleting: "Deleting...",
-    account_deleted_success: "Account deleted successfully ✅",
-    delete_success: "Account deleted successfully ✅",
+    account_deleted_success: "Account deleted successfully ",
+    delete_success: "Account deleted successfully ",
     delete_error: "Could not delete the account",
 
     default_user: "Default user",

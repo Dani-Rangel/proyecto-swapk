@@ -1,13 +1,15 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from backend.models import Intercambio, IntercambioHabilidad, Habilidad, PropuestaIntercambio
+from backend.models import Intercambio, IntercambioHabilidad, Habilidad, PropuestaIntercambio, Resena
 from backend.schemas.intercambio_schema import (
     IntercambioCreate,
     IntercambioConHabilidadesSeparadas,
     UsuarioBase,
     PerfilBase,
     HabilidadBase,
+    EstadoIntercambioEnum,
+    PropuestaAceptada
 )
 
 
@@ -56,7 +58,31 @@ def crear_intercambio(db: Session, intercambio: IntercambioCreate) -> Intercambi
 # -------------------------------
 def obtener_intercambios(db: Session) -> List[IntercambioConHabilidadesSeparadas]:
     intercambios = db.query(Intercambio).all()
-    return [obtener_intercambio(db, i.id) for i in intercambios if i]
+    resultado = []
+    for i in intercambios:
+        intercambio_con_datos = obtener_intercambio(db, i.id)
+        if intercambio_con_datos:
+            # ✅ Solo incluir propuestas aceptadas si el estado es Confirmado
+            if intercambio_con_datos.estado == EstadoIntercambioEnum.Confirmado:
+                propuestas_aceptadas = db.query(PropuestaIntercambio).filter(
+                    PropuestaIntercambio.id_intercambio == i.id,
+                    PropuestaIntercambio.aceptada == True
+                ).all()
+                
+                intercambio_con_datos.propuestas = [
+                    PropuestaAceptada(
+                        id=p.id,
+                        id_usuario_interesado=p.id_usuario_interesado,
+                        aceptada=p.aceptada,
+                        usuario_interesado=UsuarioBase(
+                            id=p.usuario_interesado.id,
+                            nombre=p.usuario_interesado.nombre
+                        )
+                    )
+                    for p in propuestas_aceptadas
+                ]
+            resultado.append(intercambio_con_datos)
+    return resultado
 
 
 # -------------------------------
@@ -159,9 +185,13 @@ def eliminar_intercambio(db: Session, id: int) -> bool:
     if not intercambio:
         return False
 
-    # ✅ Eliminar propuestas asociadas
+    # Eliminar propuestas asociadas
     db.query(PropuestaIntercambio).filter(
         PropuestaIntercambio.id_intercambio == id
+    ).delete()
+
+    db.query(Resena).filter(
+        Resena.intercambio_id == id
     ).delete()
 
     # ✅ Eliminar habilidades asociadas

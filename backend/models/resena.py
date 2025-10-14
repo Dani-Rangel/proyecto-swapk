@@ -1,6 +1,7 @@
 from backend.db import Base
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Text, Boolean, Float
 from datetime import datetime
+from sqlalchemy.orm import relationship
 
 
 class Resena(Base):
@@ -12,4 +13,5 @@ class Resena(Base):
     comentario = Column(Text)
     fecha = Column(DateTime, default= datetime.now)
 
-    
+    intercambio = relationship("Intercambio", back_populates="reseñas")
+    usuario = relationship("Usuario", foreign_keys=[usuario_id])

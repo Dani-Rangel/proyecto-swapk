@@ -17,48 +17,54 @@ function ChangeEmailComponent() {
   const [message, setMessage] = useState("")
 
   // 🔁 Cargar correo del usuario desde localStorage o API
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const savedUserStr = localStorage.getItem("user")
-        if (!savedUserStr) {
-          setMessage("No has iniciado sesión")
-          return
-        }
-
-        const savedUser = JSON.parse(savedUserStr)
-        const token = savedUser.token
-        if (!token) throw new Error("No hay token de autenticación")
-
-        // 🔹 Intentar fetch desde API
-        const res = await fetch("http://localhost:8000/users/me", {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        })
-
-        if (!res.ok) {
-          const errText = await res.text()
-          throw new Error(errText || "Error al obtener usuario")
-        }
-
-        const data = await res.json()
-        setCurrentEmail(data.correo || "")
-        
-        // 🔹 Actualizar localStorage si hubo cambio
-        if (data.correo !== savedUser.correo) {
-          const updatedUser = { ...savedUser, correo: data.correo }
-          localStorage.setItem("user", JSON.stringify(updatedUser))
-        }
-
-      } catch (err: any) {
-        console.error("Error al obtener usuario:", err)
-        setMessage("No se pudo cargar tu información")
+useEffect(() => {
+  const fetchUser = async () => {
+    try {
+      const savedUserStr = localStorage.getItem("user")
+      if (!savedUserStr) {
+        setMessage("No has iniciado sesión")
+        return
       }
-    }
 
-    fetchUser()
-  }, [])
+      const savedUser = JSON.parse(savedUserStr)
+      const token = savedUser.token
+      console.log("Token (fetchUser):", token)
+      if (!token) throw new Error("No hay token de autenticación")
+
+      // USAR /perfil/me (el endpoint que dijiste que funciona)
+      const res = await fetch("http://localhost:8000/perfil/me", {
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      })
+
+      console.log("GET /perfil/me status:", res.status)
+
+      if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(errText || "Error al obtener usuario")
+      }
+
+      const data = await res.json()
+      // intenta leer correo en distintas propiedades
+      const correo = data.correo ?? data.email ?? data.user?.correo ?? data.user?.email ?? ""
+      setCurrentEmail(correo)
+
+      // Actualizar localStorage si hubo cambio
+      if (correo && correo !== savedUser.correo) {
+        const updatedUser = { ...savedUser, correo }
+        localStorage.setItem("user", JSON.stringify(updatedUser))
+      }
+
+    } catch (err: any) {
+      console.error("Error al obtener usuario:", err)
+      setMessage("No se pudo cargar tu información")
+    }
+  }
+
+  fetchUser()
+}, [])
+
 
   // 🔹 Actualizar correo
   const handleUpdate = async () => {

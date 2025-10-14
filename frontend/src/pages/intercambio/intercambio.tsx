@@ -4,7 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import { useTranslation } from "@/lib/useTranslations"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next/router"
 import toast from 'react-hot-toast'
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
@@ -30,8 +30,9 @@ import {
   RefreshCw,
   BookOpen,
   Edit,
-  Trash2,
+  Trash2, 
 } from "lucide-react"
+import { Shuffle } from "lucide-react"; 
 import { Button } from "@/components/ui/button"
 import CrearTruequeModal, { TruequeFormData } from "@/components/ui/CreateTruequeForm"
 import { TipoHabilidad } from "@/services/intercambio"
@@ -80,7 +81,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-
 function SwapkPlatformComponent() {
   const router = useRouter()
   const { t } = useTranslation()
@@ -108,8 +108,29 @@ function SwapkPlatformComponent() {
   const [propuestas, setPropuestas] = useState<any[]>([])
   const [showPropuestasModal, setShowPropuestasModal] = useState(false)
   const [selectedIntercambioId, setSelectedIntercambioId] = useState<number | null>(null)
-  const [propuestasEnviadas, setPropuestasEnviadas] = useState<Set<number>>(new Set());
+  const [propuestasEnviadas, setPropuestasEnviadas] = useState<Set<number>>(new Set())
 
+  // Modal de reseña
+  const [showResenaModal, setShowResenaModal] = useState(false)
+  const [truequeParaFinalizar, setTruequeParaFinalizar] = useState<IntercambioResponse | null>(null)
+  const [calificacion, setCalificacion] = useState(0)
+  const [comentario, setComentario] = useState("")
+
+  // Verifica si el usuario actual es participante (creador o proponente aceptado)
+const esParticipante = (trueque: IntercambioResponse): boolean => {
+  if (!currentUser) return false;
+  
+  // Es el creador
+  if (trueque.id_usuario1 === currentUser.id) return true;
+  
+  // Es el proponente aceptado (solo en estado Confirmado)
+  if (trueque.estado === EstadoIntercambio.Confirmado) {
+    const propuestaAceptada = trueque.propuestas?.find((p: any) => p.aceptada);
+    return propuestaAceptada?.id_usuario_interesado === currentUser.id;
+  }
+  
+  return false;
+};
 
   // Validar usuario logueado
   useEffect(() => {
@@ -135,27 +156,23 @@ function SwapkPlatformComponent() {
     fetchData()
   }, [])
 
- useEffect(() => {
-  const cargarMisPropuestas = async () => {
-    if (!currentUser) return;
+  useEffect(() => {
+    const cargarMisPropuestas = async () => {
+      if (!currentUser) return;
 
-    try {
-      const res = await api.get("/intercambios/mis-propuestas");
-      console.log("✅ Propuestas:", res.data);
-      const ids = new Set<number>();
-      for (const prop of res.data) {
-        ids.add(prop.id_intercambio);
+      try {
+        const res = await api.get("/intercambios/mis-propuestas");
+        const ids = new Set<number>();
+        for (const prop of res.data) {
+          ids.add(prop.id_intercambio);
+        }
+        setPropuestasEnviadas(ids);
+      } catch (error: any) {
+        console.error("❌ Error al cargar mis propuestas:", error.response?.data || error.message);
       }
-      setPropuestasEnviadas(ids);
-    } catch (error: any) {
-      console.error("❌ Error al cargar mis propuestas:", error.response?.data || error.message);
-    }
-  };
-  cargarMisPropuestas();
-}, [currentUser]);
-
-
-
+    };
+    cargarMisPropuestas();
+  }, [currentUser]);
 
   const handleLogout = () => {
     localStorage.removeItem("user")
@@ -241,7 +258,7 @@ function SwapkPlatformComponent() {
           })
         }
       } catch (error) {
-        console.error("❌ Error al crear intercambio:", error)
+        console.error("Error al crear intercambio:", error)
       }
     }
 
@@ -277,6 +294,32 @@ function SwapkPlatformComponent() {
       toast.error(error.response?.data?.detail || "No se pudieron cargar las propuestas")
     }
   }
+
+  // Enviar reseña y finalizar intercambio
+ const enviarResena = async (calificacion: number, comentario: string) => {
+  if (!truequeParaFinalizar || !currentUser) return
+
+  try {
+    await api.post(`/intercambios/${truequeParaFinalizar.id}/finalizar`, {
+      intercambio_id: truequeParaFinalizar.id,
+      usuario_id: currentUser.id,
+      calificacion,
+      comentario
+    })
+
+    toast.success("Intercambio finalizado con éxito")
+    setShowResenaModal(false)
+    setTruequeParaFinalizar(null)
+    setCalificacion(0)
+    setComentario("")
+
+    //  Recargar intercambios para actualizar el estado y eliminar propuestas
+    const [truequesData] = await Promise.all([obtenerIntercambios()])
+    setTrueques(truequesData)
+  } catch (error: any) {
+    toast.error(error.response?.data?.detail || "Error al finalizar intercambio")
+  }
+}
 
   const renderStars = (rating: number) =>
     Array.from({ length: 4 }, (_, i) => (
@@ -407,117 +450,194 @@ function SwapkPlatformComponent() {
               {filteredTrueques.map((trueque) => (
                 <div
                   key={trueque.id}
-                  className={`${sidebarCardClass} rounded-xl p-6 flex flex-col hover:shadow-lg transition-shadow`}
+                  className={`bg-[#121212] rounded-xl p-6 flex flex-col hover:shadow-lg hover:shadow-blue-500/10 transition-shadow border border-[#2D2D2D]`}
                 >
+                  {/* Encabezado de la tarjeta */}
                   <div className="flex items-start gap-4 mb-4">
                     <Image
                       src={trueque.perfil?.foto_perfil || "/img/user.png"}
                       alt={trueque.usuario1?.nombre || "Usuario"}
-                      width={80}
-                      height={80}
-                      className="rounded-full object-cover"
+                      width={48}
+                      height={48}
+                      className="rounded-full object-cover border border-[#333]"
                     />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 justify-between">
-                        <h3 className={`text-xl font-semibold ${sidebarTextClass}`}>
-                          <Link
-                            href={`/profile/${trueque.id_usuario1}`}
-                            className="text-gray-400 hover:underline hover:text-gray-300 transition-colors"
-                            onClick={(e) => {
-                              if (trueque.id_usuario1 === currentUser?.id) {
-                                e.preventDefault();
-                              }
-                            }}
-                          >
-                            {trueque.usuario1?.nombre}
-                          </Link>
-                        </h3>
+                        {trueque.estado === EstadoIntercambio.Confirmado ? (
+                          //  Mostrar ambos usuarios con icono de intercambio
+                          <div className="flex items-center gap-1">
+                            <span className="font-semibold text-white">
+                              {trueque.usuario1?.nombre}
+                            </span>
+                            <div className="flex items-center text-gray-400">
+                              <Shuffle className="mx-0.5 text-gray-500 w-4 h-4" />
+                            </div>
+                            {/* Obtener el nombre del proponente aceptado */}
+                            {trueque.propuestas?.find((p: any) => p.aceptada)?.usuario_interesado?.nombre || "Usuario"}
+                          </div>
+                        ) : (
+                          // Estado normal (solo creador)
+                          <h3 className="text-lg font-semibold text-white">
+                            <Link
+                              href={`/profile/${trueque.id_usuario1}`}
+                              className="text-gray-400 hover:underline hover:text-gray-300 transition-colors"
+                              onClick={(e) => {
+                                if (trueque.id_usuario1 === currentUser?.id) {
+                                  e.preventDefault();
+                                }
+                              }}
+                            >
+                              {trueque.usuario1?.nombre}
+                            </Link>
+                          </h3>
+                        )}
+                        {/* Estado (círculo pequeño) */}
                         {renderEstadoCircle(trueque.estado)}
                       </div>
-                      <div className="flex">{renderStars(trueque.valoracion || 0)}</div>
-                      <p className={sidebarMutedTextClass}>{trueque.nivel}</p>
+                      <div className="flex mb-1">
+                        {renderStars(trueque.valoracion || 0)}
+                      </div>
+                      <p className="text-xs text-gray-400">{trueque.nivel}</p>
+                    </div>
+                  </div>
 
-                      <div className="mt-2">
-                        <p className="text-xs text-blue-400">{t("offer_label")}</p>
-                        <div className="flex flex-wrap gap-1">
-                          {trueque.habilidades_ofrece?.map((h, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
-                            >
-                              {String(h.nombre)}
-                            </span>
-                          ))}
-                        </div>
-                        <p className="text-xs text-red-400 mt-2">{t("seek_label")}</p>
-                        <div className="flex flex-wrap gap-1">
-                          {trueque.habilidades_busca?.map((h, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"
-                            >
-                              {h.nombre}
-                            </span>
-                          ))}
-                        </div>
+                  {/* Habilidades ofrecidas y buscadas */}
+                  <div className="space-y-2 mb-4">
+                    <div>
+                      <p className="text-xs text-blue-400 mb-1">Offer:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {trueque.habilidades_ofrece?.map((h, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 rounded-md text-xs font-medium bg-blue-600 text-white border border-blue-500"
+                          >
+                            {String(h.nombre)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-red-400 mb-1">Seek:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {trueque.habilidades_busca?.map((h, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-0.5 rounded-md text-xs font-medium bg-red-600 text-white border border-red-500"
+                          >
+                            {h.nombre}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  <p className={sidebarTextClass} style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {/* Descripción */}
+                  <p className="text-sm text-gray-300 mb-3" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {trueque.descripcion}
                   </p>
 
+                  {/* Disponibilidad */}
                   {trueque.disponibilidad && (
-                    <div className="mt-3 flex items-center gap-2 text-gray-400 text-sm">
-                      <Calendar size={16} />
+                    <div className="flex items-center gap-2 text-gray-500 text-xs mb-4">
+                      <Calendar size={14} />
                       <span>{trueque.disponibilidad}</span>
                     </div>
                   )}
 
-                  {currentUser?.id === trueque.id_usuario1 && (
-                    <div className="mt-4 flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => cargarPropuestas(trueque.id)}
-                      >
-                        Ver propuestas
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 flex items-center justify-center gap-2"
-                        onClick={() => handleEditTrueque(trueque)}
-                      >
-                        <Edit size={16} /> {t("edit_exchange")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 flex items-center justify-center gap-2 text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
-                        onClick={() => handleDeleteTrueque(trueque.id)}
-                      >
-                        <Trash2 size={16} /> {t("delete_exchange")}
-                      </Button>
-                    </div>
-                  )}
-
-                  {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Pendiente && (
-                    <div className="mt-4">
-                      {propuestasEnviadas.has(trueque.id) ? (
+                  {/* Botones de acción */}
+                  <div className="flex gap-2 pt-2">
+                    {currentUser?.id === trueque.id_usuario1 && (
+                      <>
+                        {trueque.estado === EstadoIntercambio.Pendiente && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-white border-gray-600 hover:bg-gray-700"
+                            onClick={() => cargarPropuestas(trueque.id)}
+                          >
+                            Ver propuestas
+                          </Button>
+                        )}
+                        {/*  Botón de finalizar SOLO para participantes */}
+                        {esParticipante(trueque) && trueque.estado === EstadoIntercambio.Confirmado && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-white border-gray-600 hover:bg-gray-700"
+                            onClick={() => {
+                              setTruequeParaFinalizar(trueque)
+                              setShowResenaModal(true)
+                            }}
+                          >
+                            Finalizar intercambio
+                          </Button>
+                        )}
+                        
+                        {trueque.estado === EstadoIntercambio.Finalizado && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 text-white bg-orange-600 hover:bg-orange-700 border-orange-500"
+                            onClick={async () => {
+                              if (!window.confirm("¿Restablecer este intercambio a estado pendiente?")) return;
+                              try {
+                                await api.post(`/intercambios/${trueque.id}/restablecer`);
+                                toast.success("Intercambio restablecido");
+                                // Recargar intercambios
+                                const [truequesData] = await Promise.all([obtenerIntercambios()]);
+                                setTrueques(truequesData);
+                              } catch (error: any) {
+                                toast.error(error.response?.data?.detail || "Error al restablecer intercambio");
+                              }
+                            }}
+                          >
+                            Restablecer intercambio
+                          </Button>
+                        )}
                         <Button
+                          size="sm"
                           variant="outline"
-                          className="bg-red-500 hover:bg-red-600 text-white w-full"
-                          onClick={async () => {
-                            try {
-                              // Obtener ID de la propuesta
+                          className="flex-1 text-white border-gray-600 hover:bg-gray-700"
+                          onClick={() => handleEditTrueque(trueque)}
+                        >
+                          <Edit size={14} className="mr-1" /> Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 text-red-400 border-red-500 hover:bg-red-500 hover:text-white"
+                          onClick={() => handleDeleteTrueque(trueque.id)}
+                        >
+                          <Trash2 size={14} className="mr-1" /> Delete
+                        </Button>
+                      </>
+                    )}
+
+                    {!esParticipante(trueque) && trueque.estado === EstadoIntercambio.Confirmado && (
+                      <Button
+                        disabled
+                        className="flex-1 opacity-70 bg-blue-900/30 text-blue-200 cursor-not-allowed"
+                      >
+                        🤝 Intercambio en proceso
+                      </Button>
+                    )}
+
+                    {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Pendiente && (
+                      <Button
+                        size="sm"
+                        className={`flex-1 ${
+                          propuestasEnviadas.has(trueque.id)
+                            ? "bg-red-600 hover:bg-red-700 text-white"
+                            : "bg-blue-600 hover:bg-blue-700 text-white"
+                        }`}
+                        onClick={async () => {
+                          if (!currentUser) return;
+                          try {
+                            if (propuestasEnviadas.has(trueque.id)) {
+                              // Cancelar propuesta
                               const res = await api.get("/intercambios/mis-propuestas");
                               const miPropuesta = res.data.find((p: any) => p.id_intercambio === trueque.id);
                               if (!miPropuesta) return;
-
-                              // Cancelar propuesta
                               await api.delete(`/intercambios/${trueque.id}/propuestas/${miPropuesta.id_propuesta}`);
                               toast.success("Propuesta cancelada");
                               setPropuestasEnviadas(prev => {
@@ -525,46 +645,26 @@ function SwapkPlatformComponent() {
                                 newSet.delete(trueque.id);
                                 return newSet;
                               });
-                            } catch (error: any) {
-                              toast.error(error.response?.data?.detail || "Error al cancelar propuesta");
-                            }
-                          }}
-                        >
-                          Cancelar propuesta
-                        </Button>
-                      ) : (
-                        <Button
-                          className={sidebarButtonClass}
-                          onClick={async () => {
-                            if (!currentUser) return;
-                            try {
+                            } else {
+                              // Enviar propuesta
                               await api.post(`/intercambios/${trueque.id}/propuesta`);
                               toast.success(`Propuesta enviada a ${trueque.usuario1?.nombre}`);
-                              // Recargar propuestas
                               const res = await api.get("/intercambios/mis-propuestas");
                               const ids = new Set<number>();
                               for (const prop of res.data) {
                                 ids.add(prop.id_intercambio);
                               }
                               setPropuestasEnviadas(ids);
-                            } catch (error: any) {
-                              toast.error(error.response?.data?.detail || "Error al enviar propuesta");
                             }
-                          }}
-                        >
-                          {t("propose_exchange")}
-                        </Button>
-                      )}
-                    </div>
-                  )}
-
-                  {currentUser?.id !== trueque.id_usuario1 && trueque.estado !== EstadoIntercambio.Pendiente && (
-                    <div className="mt-4">
-                      <Button disabled className="opacity-50 w-full">
-                        {trueque.estado === EstadoIntercambio.Confirmado ? "Confirmado" : "Finalizado"}
+                          } catch (error: any) {
+                            toast.error(error.response?.data?.detail || "Error al enviar/cancelar propuesta");
+                          }
+                        }}
+                      >
+                        {propuestasEnviadas.has(trueque.id) ? "Cancelar propuesta" : "Proponer intercambio"}
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -634,7 +734,7 @@ function SwapkPlatformComponent() {
                           >
                             Confirmar
                           </Button>
-                          {/* ✅ Botón para rechazar (solo creador lo ve) */}
+                          {/*  Botón para rechazar (solo creador lo ve) */}
                           <Button
                             size="sm"
                             variant="outline"
@@ -668,6 +768,112 @@ function SwapkPlatformComponent() {
             >
               Cerrar
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Reseña Modernizada */}
+      {showResenaModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
+          <div className="bg-[#2E2E2E] rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl transform transition-transform duration-300 ease-out">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Dejanos tu opinión sobre este trueque</h3>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  setShowResenaModal(false)
+                  setTruequeParaFinalizar(null)
+                  setCalificacion(0)
+                  setComentario("")
+                }}
+                className="hover:bg-gray-700"
+              >
+                <X className="w-5 h-5 text-white" />
+              </Button>
+            </div>
+
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault()
+                enviarResena(calificacion, comentario)
+              }} 
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Calificación</label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setCalificacion(star)}
+                      className={`text-2xl transition-colors ${
+                        star <= calificacion ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-300'
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Comentario</label>
+                <textarea
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  placeholder="Cuéntanos brevemente tu experiencia..."
+                  className="w-full px-3 py-2 bg-[#1E1E1E] text-white rounded-lg border border-[#404040] resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={4}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 text-blue-400 hover:bg-blue-900 hover:text-blue-200 border-blue-500"
+                  onClick={() => {
+                    toast.custom("Función de reporte en desarrollo");
+                  }}
+                >
+                  Reportar Trueque
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                >
+                  Enviar feedback
+                </Button>
+              </div>
+            </form>
+
+            {/* Botón Finalizar sin reseña */}
+            <div className="mt-4 pt-4 border-t border-[#404040]">
+              <Button
+                type="button"
+                className="w-full bg-gray-600 hover:bg-gray-700 text-white"
+                onClick={async () => {
+                  if (!truequeParaFinalizar) return;
+                  try {
+                    await api.post(`/intercambios/${truequeParaFinalizar.id}/finalizar`);
+                    toast.success("Intercambio finalizado sin reseña");
+                    setShowResenaModal(false);
+                    setTruequeParaFinalizar(null);
+                    setCalificacion(0);
+                    setComentario("");
+                    // Recargar intercambios
+                    const [truequesData] = await Promise.all([obtenerIntercambios()]);
+                    setTrueques(truequesData);
+                  } catch (error: any) {
+                    toast.error(error.response?.data?.detail || "Error al finalizar intercambio");
+                  }
+                }}
+              >
+                Finalizar sin reseña
+              </Button>
+            </div>
           </div>
         </div>
       )}
