@@ -19,17 +19,18 @@ const Login: React.FC = () => {
   const [countdown, setCountdown] = useState(0)
   const router = useRouter()
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout
-    if (isLocked && countdown > 0) {
-      timer = setInterval(() => setCountdown((prev) => prev - 1), 1000)
-    }
-    if (countdown === 0 && isLocked) {
-      setIsLocked(false)
-      setAttempts(0)
-    }
-    return () => clearInterval(timer)
-  }, [isLocked, countdown])
+useEffect(() => {
+  let timer: NodeJS.Timeout
+  if (isLocked && countdown > 0) {
+    timer = setInterval(() => setCountdown((prev) => prev - 1), 1000)
+  }
+  if (countdown === 0 && isLocked) {
+    setIsLocked(false)
+    setAttempts(0)
+    setError("")
+  }
+  return () => clearInterval(timer)
+}, [isLocked, countdown])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -76,10 +77,10 @@ const Login: React.FC = () => {
       setAttempts((prev) => prev + 1)
     }
 
-    if (attempts + 1 >= 5) {
-      setIsLocked(true)
-      setCountdown(5)
-    }
+  if (attempts + 1 >= 3) {
+    setIsLocked(true)
+    setCountdown(25)
+  }
   }
 
   return (
@@ -138,10 +139,39 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={isLocked}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700"
+              className={`w-full py-3 px-4 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors duration-200
+                ${isLocked
+                  ? "bg-gray-400 text-gray-700 cursor-not-allowed"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
             >
-              Iniciar sesión
+              {isLocked ? (
+                <>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-5 h-5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75M4.5 10.5h15a1.5 1.5 0 011.5 1.5v7.5a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 19.5v-7.5a1.5 1.5 0 011.5-1.5z"
+                    />
+                  </svg>
+                  Iniciar sesión
+                </>
+              ) : (
+                "Iniciar sesión"
+              )}
             </button>
+            {isLocked && (
+            <p className="text-center text-sm text-red-500">
+              Demasiados intentos fallidos. Espera {countdown} segundos antes de volver a intentar.
+            </p>
+          )}
           </form>
 
           <p className="text-center text-sm">Otra opcion de inicio de sesión</p>
