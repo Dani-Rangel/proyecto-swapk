@@ -38,6 +38,7 @@ import { Heart } from "lucide-react"
 import { MainSidebar } from "@/components/MainSidebar"
 import { useNotificaciones } from "../../context/notificacionesContext"
 import { getCurrentUser } from "@/lib/auth"
+import { getCursos } from "@/services/cursosApi"
 
 //Tipos basados en tus modelos SQLAlchemy
 interface Usuario {
@@ -83,6 +84,7 @@ function ForumLayoutComponent() {
   const [userLikes, setUserLikes] = useState<Record<number, boolean>>({})
   const [comentarios, setComentarios] = useState<Record<number, any[]>>({})
   const [comentariosAbiertos, setComentariosAbiertos] = useState<number | null>(null)
+  const [cursos, setCursos] = useState<any[]>([]) 
   const [nuevoComentario, setNuevoComentario] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingPost, setEditingPost] = useState<any | null>(null) // <-- Nuevo estado para edición
@@ -207,6 +209,18 @@ function ForumLayoutComponent() {
     if (diffHrs < 24) return `${diffHrs} ${t("hoursAgo")}`
     return fecha.toLocaleDateString()
   }, [t])
+
+  useEffect(() => {
+  const fetchCursos = async () => {
+    try {
+      const data = await getCursos();
+      setCursos(data);
+    } catch (error) {
+      console.error("Error al cargar cursos:", error);
+    }
+  };
+    fetchCursos();
+  }, []);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -1056,34 +1070,112 @@ const handleVerLikes = async (postId: number) => {
 
         {/* Right Sidebar */}
         <aside className={`w-82 p-4 border-l ${isDark ? "border-[#2E2E2E]" : "border-gray-200"}`}>
-          <Card className={`mb-4 ${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"}`}>
-            <CardContent className="p-3">
-              <h3 className={`text-base font-semibold mb-3 flex items-center gap-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
+          <Card
+            className={`mb-4 ${
+              isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"
+            }`}
+          >
+            <CardContent className="p-4">
+              <h3
+                className={`text-base font-semibold mb-3 flex items-center gap-2 ${
+                  isDark ? "text-[#F5F5F5]" : "text-gray-900"
+                }`}
+              >
                 <TrendingUp className="w-4 h-4" /> {t("popularCourses")}
               </h3>
-              <div className="space-y-7">
-                {[
-                  { name: "r/IntercambioIdiomas", members: "45.2k miembros", color: "bg-green-600" },
-                  { name: "r/ProgramaciónPython", members: "38.1k miembros", color: "bg-blue-600" },
-                  { name: "r/DiseñoGráfico", members: "29.5k miembros", color: "bg-yellow-600" },
-                  { name: "r/CursosGratuitos", members: "52.3k miembros", color: "bg-purple-600" },
-                  { name: "r/MarketingDigital", members: "31.7k miembros", color: "bg-red-600" },
-                  { name: "r/FotografíaBásica", members: "24.9k miembros", color: "bg-indigo-600" },
-                ].map((c, i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-6 h-6 ${c.color} rounded-full`}></div>
-                      <div>
-                        <div className={`text-sm font-medium ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{c.name}</div>
-                        <div className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>{c.members}</div>
-                      </div>
-                    </div>
-                    <Button size="sm" className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white text-xs px-2 py-1">
-                      {t("join")}
+
+              {cursos.length === 0 ? (
+                <p className={`${isDark ? "text-gray-400" : "text-gray-600"}`}>
+                  No hay cursos disponibles por el momento.
+                </p>
+              ) : (
+                <>
+                  <div className="space-y-3 max-h-[360px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
+                    {cursos
+                      .sort((a, b) => (b.inscritosCount || 0) - (a.inscritosCount || 0))
+                      .slice(0, 8) // muestra solo los primeros 8
+                      .map((curso, index) => {
+                        const colores = [
+                          "bg-blue-600",
+                          "bg-red-600",
+                          "bg-green-600",
+                          "bg-purple-600",
+                          "bg-yellow-600",
+                          "bg-pink-600",
+                          "bg-indigo-600",
+                        ];
+                        const color = colores[index % colores.length];
+
+                        return (
+                          <div
+                            key={curso.id}
+                            className={`flex items-center justify-between px-2 py-2 rounded-md border transition-all ${
+                              isDark
+                                ? "border-[#2E2E2E] hover:bg-[#2C2C2C]"
+                                : "border-gray-200 hover:bg-gray-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 w-full">
+                              {/* 🔵 Círculo uniforme */}
+                              <div
+                                className={`flex-shrink-0 w-9 h-9 ${color} rounded-full flex items-center justify-center text-white font-bold`}
+                              >
+                                {curso.titulo.charAt(0).toUpperCase()}
+                              </div>
+
+                              {/* 🧾 Título e inscritos */}
+                              <div className="flex flex-col justify-center overflow-hidden w-[65%]">
+                                <span
+                                  className={`text-sm font-medium truncate ${
+                                    isDark ? "text-[#F5F5F5]" : "text-gray-900"
+                                  }`}
+                                >
+                                  {curso.titulo}
+                                </span>
+                                <span
+                                  className={`text-xs ${
+                                    isDark ? "text-gray-400" : "text-gray-600"
+                                  }`}
+                                >
+                                  {curso.inscritosCount
+                                    ? `${curso.inscritosCount} inscritos`
+                                    : "0 inscritos"}
+                                </span>
+                              </div>
+
+                              {/* 🔘 Botón Join */}
+                              <Button
+                                onClick={() =>
+                                  router.push(`/Cursos/community_courses?cursoId=${curso.id}`)
+                                }
+                                size="sm"
+                                className="cursor-pointer ml-auto bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1"
+                              >
+                                {t("join")}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* Botón que nos va a redirigir al apartado de cursos*/}
+                  <div className="mt-4 flex justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push("/Cursos/community_courses")}
+                      className={`${
+                        isDark
+                          ? "cursor-pointer border-gray-700 text-gray-200 hover:bg-[#2E2E2E]"
+                          : "border-gray-300 text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      Ver más cursos
                     </Button>
                   </div>
-                ))}
-              </div>
+                </>
+              )}
             </CardContent>
           </Card>
 

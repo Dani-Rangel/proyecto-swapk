@@ -1,6 +1,8 @@
 frontend/node_modules/
 node_modules/
-.next/
+.next/dist/}
+build/
+.next
 out/
 *.log
 .env
