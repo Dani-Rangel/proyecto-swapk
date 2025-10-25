@@ -18,11 +18,11 @@ def get_perfil_habilidades(perfil_id: int, db: Session = Depends(get_db)):
 def create_perfil_habilidad(data: PerfilHabilidadCreate, db: Session = Depends(get_db)):
     new_assoc = perfil_habilidad_service.create_perfil_habilidad(db, data)
 
-    # 🔥 Extraer el nombre de la habilidad (JOIN manual)
+    # Extraer el nombre de la habilidad (JOIN manual)
     habilidad = db.query(Habilidad).filter(Habilidad.id == new_assoc.habilidad_id).first()
     habilidad_nombre = habilidad.nombre if habilidad else None
 
-    # 🔁 Devolver respuesta enriquecida
+    # Devolver respuesta enriquecida
     return {
         "id": new_assoc.id,
         "Perfil_id": new_assoc.Perfil_id,

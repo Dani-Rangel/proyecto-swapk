@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles  # <-- Importa StaticFiles
-from backend.db.database import Base, engine
+from backend.db.database import Base, engine, get_db 
+from sqlalchemy.orm import Session
 from backend.controllers.auth_controller import router as auth_router
 from backend.controllers.habilidad_controller import router as habilidad_router
 from backend.controllers.forgot_password_controller import router as forgot_password_router
@@ -29,7 +30,8 @@ from backend.controllers import notificacion_controller
 from backend.controllers import help_controller
 from backend.controllers import inscripcion_curso_controller
 
-
+from backend.models.perfil import Perfil
+from backend.models.usuarios import Usuario
 
 app = FastAPI()
 
@@ -81,7 +83,21 @@ app.include_router(publicaciones_admin_controller.router)
 app.include_router(help_controller.router)
 app.include_router(inscripcion_curso_controller.router)
 
-
+@app.get("/public/perfiles")
+def get_all_public_profiles(db: Session = Depends(get_db)):
+    perfiles = db.query(Perfil).join(Usuario).all()
+    resultado = []
+    for p in perfiles:
+        resultado.append({
+            "id": p.id,
+            "id_usuario": p.id_usuario,
+            "nombre": p.usuario.nombre,
+            "descripcion": p.descripcion or "",
+            "ubicacion": p.ubicacion or "",
+            "Tel": p.Tel,
+            "foto_perfil": p.foto_perfil or "/img/user.png"
+        })
+    return resultado
 
 # Servir archivos estáticos
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")

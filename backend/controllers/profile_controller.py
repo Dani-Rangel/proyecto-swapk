@@ -176,8 +176,36 @@ def update_perfil(
         db.refresh(usuario)
         return {
             "msg": "Perfil actualizado correctamente",
-            "foto_perfil": perfil.foto_perfil  # ✅ Devolvemos la ruta relativa
+            "foto_perfil": perfil.foto_perfil  # Devolvemos la ruta relativa
         }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Error al guardar en la base de datos")
+
+#Esta ruta para mostrar los usuarios en el perfil
+
+@router.get("/todos-publicos", include_in_schema=False)
+def get_todos_perfiles_publicos(db: Session = Depends(get_db)):
+    """
+    Endpoint público para listar todos los perfiles.
+    No requiere autenticación.
+    """
+    try:
+        perfiles = db.query(Perfil).join(Usuario).all()
+        print(f"✅ Encontrados {len(perfiles)} perfiles")
+        resultado = []
+        for p in perfiles:
+            print(f" - Perfil ID: {p.id}, Usuario: {p.usuario.nombre if p.usuario else 'N/A'}")
+            resultado.append({
+                "id": p.id,
+                "id_usuario": p.id_usuario,
+                "nombre": p.usuario.nombre,
+                "descripcion": p.descripcion or "",
+                "ubicacion": p.ubicacion or "",
+                "Tel": p.Tel,
+                "foto_perfil": p.foto_perfil or "/img/user.png"
+            })
+        return resultado
+    except Exception as e:
+        print("❌ Error en /perfil/todos-publicos:", str(e))
+        raise HTTPException(status_code=500, detail="Error interno al cargar perfiles")

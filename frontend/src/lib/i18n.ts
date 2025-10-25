@@ -345,7 +345,10 @@ export const translations = {
     cancel_enrollment_success: "Inscripción cancelada",
     view_enrollment_status: "Ver estado de inscripción",
 
-    volver: "Volver"
+    volver: "Volver",
+    posts: "Publicaciones",
+    profiles: "Perfiles",
+    noProfiles: "No hay perfiles disponibles.",
 
   },
 
@@ -690,6 +693,9 @@ export const translations = {
     viewLikes: "View Likes",
     likedBy: "Liked by:",
     errorLoadingLikes: "Error loading likes list.",
+    posts: "Publicaciones",
+    profiles: "Perfiles",
+    noProfiles: "No profiles available.",
 
     // ===== Course Enrollment =====
     cancel_enrollment: "Cancel enrollment",

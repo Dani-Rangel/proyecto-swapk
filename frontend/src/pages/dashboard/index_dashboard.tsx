@@ -30,7 +30,8 @@ import {
   X,
   PlusIcon,
   Edit,
-  Trash2
+  Trash2,
+  Users,
 } from "lucide-react"
 import Link from "next/link"
 import ProtectedRoute from "@/components/protected_routes/protected_routes"
@@ -80,6 +81,7 @@ function ForumLayoutComponent() {
 
   // Estados para publicaciones y comentarios
   const [publicaciones, setPublicaciones] = useState<any[]>([])
+  const [perfiles, setPerfiles] = useState<any[]>([]);
   const [likes, setLikes] = useState<Record<number, number>>({})
   const [userLikes, setUserLikes] = useState<Record<number, boolean>>({})
   const [comentarios, setComentarios] = useState<Record<number, any[]>>({})
@@ -87,6 +89,7 @@ function ForumLayoutComponent() {
   const [cursos, setCursos] = useState<any[]>([]) 
   const [nuevoComentario, setNuevoComentario] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<"posts" | "profiles">("posts");
   const [editingPost, setEditingPost] = useState<any | null>(null) // <-- Nuevo estado para edición
   const [newPost, setNewPost] = useState({
     titulo: "",
@@ -367,7 +370,7 @@ const handleLike = async (postId: number) => {
       }))
       setNuevoComentario("")
 
-      // 🚀 Notificar al autor de la publicación
+      // Notificar al autor de la publicación
       const user = getCurrentUser()
       const nombreUsuario = user?.nombre || "Un usuario"
 
@@ -606,6 +609,18 @@ const handleEditComment = (comment: any) => {
   setIsEditCommentModalOpen(true);
 };
 
+const cargarPerfiles = async () => {
+  try {
+    const res = await fetch(`http://localhost:8000/public/perfiles`);
+    if (!res.ok) throw new Error("Error al cargar perfiles");
+    const data = await res.json();
+    setPerfiles(Array.isArray(data) ? data : []);
+  } catch (error) {
+    console.error("Error al cargar perfiles:", error);
+    toast.error("No se pudieron cargar los perfiles");
+  }
+};
+
 // Función para cargar y mostrar quién dio like a una publicación
 const handleVerLikes = async (postId: number) => {
   if (!user) {
@@ -739,39 +754,42 @@ const handleVerLikes = async (postId: number) => {
                     <Flag className="w-4 h-4 mr-1" /> {t("report")}
                   </Button>
 
-                  {/* BOTONES DE EDITAR Y ELIMINAR (solo si es el autor) */}
-                  {user && user.id === post.id_usuario && (
-                  <div className="flex gap-1 ml-auto">
-                    {/* Botón Ver Likes (nuevo) */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleVerLikes(post.id);
-                      }}
-                    >
-                      👥 {t("viewLikes")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 transition-colors"
-                      onClick={() => handleEditPost(post)}
-                    >
-                      <Edit className="w-4 h-4 mr-1" /> {t("edit")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                      onClick={() => handleDeletePost(post.id)}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" /> {t("delete")}
-                    </Button>
-                  </div>
-                )}
+                    {/* BOTONES DE EDITAR Y ELIMINAR (solo si es el autor) */}
+                    {user && user.id === post.id_usuario && (
+                      <div className="flex gap-1 ml-auto">
+                        {/* Botón Ver Likes */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors rounded-md flex items-center gap-1"                                onClick={(e) => {
+                            e.stopPropagation();
+                            handleVerLikes(post.id);
+                          }}
+                        >
+                          <Users className="w-4 h-4" /> {t("viewLikes")}
+                        </Button>
+
+                        {/* Botón Editar */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors rounded-md flex items-center gap-1"
+                          onClick={() => handleEditPost(post)}
+                        >
+                          <Edit className="w-4 h-4 mr-1" /> {t("edit")}
+                        </Button>
+
+                        {/* Botón Eliminar */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="cursor-pointer text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors rounded-md"
+                          onClick={() => handleDeletePost(post.id)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" /> {t("delete")}
+                        </Button>
+                      </div>
+                    )}
 
                   {/* Menú de compartir */}
                   {showShareMenu === post.id && (
@@ -1019,44 +1037,75 @@ const handleVerLikes = async (postId: number) => {
         {/* Main Content */}
         <main className="flex-1 p-4">
           {/* Tabs */}
-          <div className="flex gap-5 mb-6">
-            {["Todo", "Intercambio", "Curso", "Pregunta", "Logro"].map((tab) => (
-              <Button
-                key={tab}
-                variant={activeTab === tab ? "default" : "ghost"}
-                size="sm"
-                className={`cursor-pointer transition-colors ${activeTab === tab ? "bg-blue-600 text-white" : isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}
-                onClick={() => handleTabChange(tab)}
-              >
-                {tabLabels[tab]}
-              </Button>
-            ))}
-            {/* Botón Nueva Publicación */}
-            <div className="flex justify-end mb-2">
-              <Button
-                variant="default"
-                size="lg"
-                className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg flex items-center gap-2"
-                onClick={() => {
-                  setEditingPost(null)
-                  setNewPost({ titulo: "", contenido: "", tipo: "Intercambio", imagen: "" })
-                  setIsModalOpen(true)
-                }}
-              >
-                <PlusIcon className="w-5 h-5" /> {t("newPost")}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="cursor-pointer ml-2 text-gray-500 hover:text-gray-700"
-                onClick={handleRefresh}
-              >
-                <RefreshCw className="w-4 h-4" />
-              </Button>
-            </div>
+          <div className="flex items-center gap-4 mb-6 border-b border-[#2E2E2E] pb-2">
+            {/* Botón "Publicaciones" */}
+            <Button
+              variant={viewMode === "posts" ? "default" : "ghost"}
+              size="sm"
+              className={`cursor-pointer ${
+                viewMode === "posts"
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "text-[#A0A0A0] hover:text-white hover:bg-[#2E2E2E]"
+              }`}
+              onClick={() => setViewMode("posts")}
+            >
+              {t("posts")}
+            </Button>
+
+            {/* Separador */}
+            <div className="h-6 w-px bg-[#404040] mx-2"></div>
+
+            {/* Botón "Perfiles" */}
+            <Button
+              variant={viewMode === "profiles" ? "default" : "ghost"}
+              size="sm"
+              className={`cursor-pointer ${
+                viewMode === "profiles"
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "text-[#A0A0A0] hover:text-white hover:bg-[#2E2E2E]"
+              }`}
+              onClick={() => {
+                setViewMode("profiles");
+                // Cargar perfiles solo la primera vez o cuando se cambie a esta vista
+                if (perfiles.length === 0) {
+                  cargarPerfiles();
+                }
+              }}
+            >
+              {t("profiles")}
+            </Button>
+
+            {/* Botón "+ Nueva Publicación" (solo visible en modo posts) */}
+            {viewMode === "posts" && (
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  variant="default"
+                  size="lg"
+                  className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg flex items-center gap-2"
+                  onClick={() => {
+                    setEditingPost(null);
+                    setNewPost({ titulo: "", contenido: "", tipo: "Intercambio", imagen: "" });
+                    setIsModalOpen(true);
+                  }}
+                >
+                  <PlusIcon className="w-5 h-5" /> {t("newPost")}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="cursor-pointer text-gray-500 hover:text-gray-700"
+                  onClick={handleRefresh}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Publicaciones */}
+
+        {viewMode === "posts" ? (
+          // Mostrar publicaciones
           <div className="space-y-6">
             {publicaciones.length > 0 ? (
               renderedPosts
@@ -1066,6 +1115,59 @@ const handleVerLikes = async (postId: number) => {
               </div>
             )}
           </div>
+        ) : (
+          // Mostrar perfiles
+          <div className="space-y-6">
+            {perfiles.length > 0 ? (
+              perfiles.map((perfil) => (
+                <Card key={perfil.id} className={`transition-colors ${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"}`}>
+                  <CardContent className="p-6">
+                    <div className="flex gap-4">
+                      {/* Foto de perfil */}
+                      <img
+                        src={perfil.foto_perfil || "/img/user.png"}
+                        alt={perfil.nombre}
+                        className="w-12 h-12 rounded-full"
+                      />
+                      <div className="flex-1">
+                        <h3 className={`text-lg font-semibold ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
+                          {perfil.nombre}
+                        </h3>
+                        <p className={`text-sm ${isDark ? "text-[#D0D0D0]" : "text-gray-700"}`}>
+                          {perfil.descripcion || "Sin descripción"}
+                        </p>
+                        {perfil.ubicacion && (
+                          <p className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-600"} mt-1`}>
+                            📍 {perfil.ubicacion}
+                          </p>
+                        )}
+                        {perfil.Tel && (
+                          <p className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-600"} mt-1`}>
+                            📞 {perfil.Tel}
+                          </p>
+                        )}
+                        {/* Botón para ver perfil completo (opcional) */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className={`mt-2 ${isDark ? "border-gray-700 text-gray-200 hover:bg-[#2E2E2E]" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
+                          onClick={() => router.push(`/profile/${perfil.id_usuario}`)}
+                        >
+                          Ver Perfil
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className={`text-center py-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                {t("noProfiles")}
+              </div>
+            )}
+          </div>
+        )}
+
         </main>
 
         {/* Right Sidebar */}

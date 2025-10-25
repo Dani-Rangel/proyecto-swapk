@@ -99,7 +99,7 @@ async def chat_ws(websocket: WebSocket, chat_id: int, token: str = Query(None)):
                     await ws_manager.broadcast(chat_id, {"type": "message", "message": firestore_data})
                     # print("Mensaje transmitido a todos los usuarios conectados")
 
-                    # ✅ Notificar actualización global
+                    # Notificar actualización global
                     await ws_manager.broadcast(0, {"type": "chat_update", "chat_id": chat_id})
                     # print(" Notificación global enviada")
 

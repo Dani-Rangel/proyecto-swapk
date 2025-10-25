@@ -265,7 +265,6 @@ def editar_publicacion(
     }
 
 # --- Eliminar Publicación ---
-# --- Eliminar Publicación ---
 @router.delete("/{id_publicacion}")
 def eliminar_publicacion(
     id_publicacion: int,
@@ -278,7 +277,7 @@ def eliminar_publicacion(
     if publicacion.id_usuario != current_user.id:
         raise HTTPException(status_code=403, detail="No autorizado")
 
-    # 🚨 NUEVO: Eliminar primero todos los likes asociados a esta publicación
+    # NUEVO: Eliminar primero todos los likes asociados a esta publicación
     db.query(Like).filter(Like.id_publicacion == id_publicacion).delete()
 
     # Luego eliminar la publicación
