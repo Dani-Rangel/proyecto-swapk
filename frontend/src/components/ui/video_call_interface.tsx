@@ -139,7 +139,7 @@ export default function VideoCallInterface() {
     });
   };
 
-  // ✅ Vista de llamada integrada directamente
+  // Vista de llamada integrada directamente
   const renderCallView = () => {
     if (!webRtcCallState.remoteStream && !webRtcCallState.localStream) {
       return (

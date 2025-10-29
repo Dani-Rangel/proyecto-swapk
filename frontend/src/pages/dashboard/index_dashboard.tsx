@@ -79,6 +79,11 @@ function ForumLayoutComponent() {
   const [user, setUser] = useState<Usuario | null>(null)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
 
+  // Paginacion
+  const [todosLosPerfiles, setTodosLosPerfiles] = useState<Perfil[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const perfilesPerPage = 12;
+
   // Estados para publicaciones y comentarios
   const [publicaciones, setPublicaciones] = useState<any[]>([])
   const [perfiles, setPerfiles] = useState<any[]>([]);
@@ -232,7 +237,7 @@ function ForumLayoutComponent() {
 
     const cargarPublicaciones = async () => {
       try {
-        const tipo = tabToApiSlug[activeTab] || "all";
+        const tipo = "all";
         const res = await fetch(`http://localhost:8000/api/publicaciones/${tipo}`, {
           signal: controller.signal,
         });
@@ -609,17 +614,24 @@ const handleEditComment = (comment: any) => {
   setIsEditCommentModalOpen(true);
 };
 
-const cargarPerfiles = async () => {
-  try {
-    const res = await fetch(`http://localhost:8000/public/perfiles`);
-    if (!res.ok) throw new Error("Error al cargar perfiles");
-    const data = await res.json();
-    setPerfiles(Array.isArray(data) ? data : []);
-  } catch (error) {
-    console.error("Error al cargar perfiles:", error);
-    toast.error("No se pudieron cargar los perfiles");
-  }
-};
+  const cargarPerfiles = async (page: number = 1) => {
+    try {
+      const res = await fetch(`http://localhost:8000/public/perfiles?page=${page}&limit=${perfilesPerPage}`);
+      if (!res.ok) throw new Error("Error al cargar perfiles");
+      const data = await res.json();
+      // Asume que tu backend ahora devuelve { items: [...], total, page, pages }
+      // Si NO lo hace, y solo devuelve un array, quita esta condición:
+      if (data.items !== undefined) {
+        setPerfiles(data.items);
+      } else {
+        // Fallback si tu backend sigue devolviendo un array plano
+        setPerfiles(Array.isArray(data) ? data.slice(0, perfilesPerPage) : []);
+      }
+    } catch (error) {
+      console.error("Error al cargar perfiles:", error);
+      toast.error("No se pudieron cargar los perfiles");
+    }
+  };
 
 // Función para cargar y mostrar quién dio like a una publicación
 const handleVerLikes = async (postId: number) => {
@@ -1015,7 +1027,8 @@ const handleVerLikes = async (postId: number) => {
         }
       `}</style>
 
-      <div className={`min-h-screen flex transition-colors duration-300 ${isDark ? "bg-[#141414] text-[#F5F5F5]" : "bg-gray-50 text-gray-900"}`}>
+      <div className={`min-h-screen relative overflow-hidden transition-colors duration-300 ${isDark ? "bg-[#141414] text-[#F5F5F5]" : "bg-gray-50 text-gray-900"}`}>
+        
         <Toaster position="top-right" />
 
         {/* Botón Hamburguesa */}
@@ -1026,35 +1039,35 @@ const handleVerLikes = async (postId: number) => {
         </div>
 
         {/* Sidebar Izquierdo */}
-         <MainSidebar
-                  isDark={isDark}
-                  toggleTheme={toggleTheme}
-                  isSidebarOpen={isSidebarOpen}
-                  setIsSidebarOpen={setIsSidebarOpen}
-                  user={user}
-                />
+        <div className="fixed left-0 top-0 bottom-0 w-64 z-40 h-screen">
+          <MainSidebar
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+            user={user}
+          />
+        </div>
 
         {/* Main Content */}
-        <main className="flex-1 p-4">
-          {/* Tabs */}
-          <div className="flex items-center gap-4 mb-6 border-b border-[#2E2E2E] pb-2">
-            {/* Botón "Publicaciones" */}
-            <Button
-              variant={viewMode === "posts" ? "default" : "ghost"}
-              size="sm"
-              className={`cursor-pointer ${
-                viewMode === "posts"
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "text-[#A0A0A0] hover:text-white hover:bg-[#2E2E2E]"
-              }`}
-              onClick={() => setViewMode("posts")}
-            >
-              {t("posts")}
-            </Button>
-
+        <main className="ml-64 mr-80 p-4 min-h-screen overflow-y-auto">
+        {/* Tabs */}
+        <div className="flex items-center gap-4 mb-6 border-b border-[#2E2E2E] pb-2">
+          {/* Botón "Publicaciones" */}
+          <Button
+            variant={viewMode === "posts" ? "default" : "ghost"}
+            size="sm"
+            className={`cursor-pointer ${
+              viewMode === "posts"
+                ? "bg-blue-600 text-white hover:bg-blue-700"
+                : "text-[#A0A0A0] hover:text-white hover:bg-[#2E2E2E]"
+            }`}
+            onClick={() => setViewMode("posts")}
+          >
+            {t("posts")}
+          </Button>
             {/* Separador */}
-            <div className="h-6 w-px bg-[#404040] mx-2"></div>
-
+              <div className="h-6 w-px bg-[#404040] mx-2"></div>
             {/* Botón "Perfiles" */}
             <Button
               variant={viewMode === "profiles" ? "default" : "ghost"}
@@ -1066,7 +1079,6 @@ const handleVerLikes = async (postId: number) => {
               }`}
               onClick={() => {
                 setViewMode("profiles");
-                // Cargar perfiles solo la primera vez o cuando se cambie a esta vista
                 if (perfiles.length === 0) {
                   cargarPerfiles();
                 }
@@ -1076,7 +1088,7 @@ const handleVerLikes = async (postId: number) => {
             </Button>
 
             {/* Botón "+ Nueva Publicación" (solo visible en modo posts) */}
-            {viewMode === "posts" && (
+          {viewMode === "posts" && (
               <div className="ml-auto flex items-center gap-2">
                 <Button
                   variant="default"
@@ -1104,98 +1116,112 @@ const handleVerLikes = async (postId: number) => {
 
           {/* Publicaciones */}
 
-        {viewMode === "posts" ? (
-          // Mostrar publicaciones
-          <div className="space-y-6">
-            {publicaciones.length > 0 ? (
-              renderedPosts
-            ) : (
-              <div className={`text-center py-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                {t("noPosts")}
+            {viewMode === "posts" ? (
+              <div className="space-y-6">
+                {publicaciones.length > 0 ? renderedPosts : (
+                  <div className={`text-center py-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                    {t("noPosts")}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ) : (
-          // Mostrar perfiles
-          <div className="space-y-6">
-            {perfiles.length > 0 ? (
-              perfiles.map((perfil) => (
-                <Card key={perfil.id} className={`transition-colors ${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"}`}>
-                  <CardContent className="p-6">
-                    <div className="flex gap-4">
-                      {/* Foto de perfil */}
-                      <img
-                        src={perfil.foto_perfil || "/img/user.png"}
-                        alt={perfil.nombre}
-                        className="w-12 h-12 rounded-full"
-                      />
-                      <div className="flex-1">
-                        <h3 className={`text-lg font-semibold ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
-                          {perfil.nombre}
-                        </h3>
-                        <p className={`text-sm ${isDark ? "text-[#D0D0D0]" : "text-gray-700"}`}>
-                          {perfil.descripcion || "Sin descripción"}
-                        </p>
-                        {perfil.ubicacion && (
-                          <p className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-600"} mt-1`}>
-                            📍 {perfil.ubicacion}
-                          </p>
-                        )}
-                        {perfil.Tel && (
-                          <p className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-600"} mt-1`}>
-                            📞 {perfil.Tel}
-                          </p>
-                        )}
-                        {/* Botón para ver perfil completo (opcional) */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className={`mt-2 ${isDark ? "border-gray-700 text-gray-200 hover:bg-[#2E2E2E]" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
-                          onClick={() => router.push(`/profile/${perfil.id_usuario}`)}
-                        >
-                          Ver Perfil
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
             ) : (
-              <div className={`text-center py-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
-                {t("noProfiles")}
-              </div>
-            )}
-          </div>
-        )}
+            <>
+    {/* ✅ Grid de perfiles compactos */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {perfiles.map((perfil) => (
+                      <Card
+                        key={perfil.id}
+                        className={`transition-colors ${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"} rounded-lg overflow-hidden`}
+                        style={{ height: "220px" }}
+                      >
+                        <CardContent className="p-4 h-full flex flex-col items-center text-center">
+                          <img
+                            src={perfil.foto_perfil || "/img/user.png"}
+                            alt={perfil.nombre}
+                            className="w-16 h-16 rounded-full object-cover mb-3"
+                          />
+                          <h3 className={`text-sm font-semibold truncate w-full ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
+                            {perfil.nombre}
+                          </h3>
+                          <p className={`text-xs mt-1 line-clamp-2 w-full ${isDark ? "text-[#D0D0D0]" : "text-gray-700"}`}>
+                            {perfil.descripcion || t("noDescription")}
+                          </p>
+                          {perfil.ubicacion && (
+                            <p className={`text-xs mt-1 ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
+                              📍 {perfil.ubicacion}
+                            </p>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={`mt-auto text-xs px-2 py-1 ${isDark ? "border-gray-700 text-gray-200 hover:bg-[#2E2E2E]" : "border-gray-300 text-gray-700 hover:bg-gray-100"}`}
+                            onClick={() => router.push(`/profile/${perfil.id_usuario}`)}
+                          >
+                            {t("viewProfile")}
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
 
-        </main>
+    {/* ✅ Controles de paginación */}
+                  {perfiles.length > 0 && (
+                    <div className="flex justify-center gap-2 mt-6">
+                      <Button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => {
+                          const newPage = Math.max(1, p - 1);
+                          cargarPerfiles(newPage);
+                          return newPage;
+                        })}
+                        variant="outline"
+                        size="sm"
+                      >
+                        ← {t("previous")}
+                      </Button>
+                      <span className={`px-3 py-1 rounded ${isDark ? "bg-[#2E2E2E]" : "bg-gray-100"}`}>
+                        Página {currentPage}
+                      </span>
+                      <Button
+                        onClick={() => setCurrentPage(p => {
+                          const newPage = p + 1;
+                          cargarPerfiles(newPage);
+                          return newPage;
+                        })}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {t("next")} →
+                      </Button>
+                    </div>
+                  )}
+
+                  {perfiles.length === 0 && (
+                    <div className={`text-center py-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
+                      {t("noProfiles")}
+                    </div>
+                  )}
+                </>
+              )}
+</main>
 
         {/* Right Sidebar */}
-        <aside className={`w-82 p-4 border-l ${isDark ? "border-[#2E2E2E]" : "border-gray-200"}`}>
-          <Card
-            className={`mb-4 ${
-              isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"
-            }`}
-          >
+                <aside className="fixed right-0 top-0 bottom-0 w-80 z-80 p-4 overflow-y-auto h-screen space-y-16">
+          <Card className={`${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"}`}>
             <CardContent className="p-4">
-              <h3
-                className={`text-base font-semibold mb-3 flex items-center gap-2 ${
-                  isDark ? "text-[#F5F5F5]" : "text-gray-900"
-                }`}
-              >
+              <h3 className={`text-base font-semibold mb-3 flex items-center gap-2 space-y-4 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
                 <TrendingUp className="w-4 h-4" /> {t("popularCourses")}
               </h3>
-
               {cursos.length === 0 ? (
-                <p className={`${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                  No hay cursos disponibles por el momento.
-                </p>
+                    <p className={`text-sm text-center mb-4 ${isDark ? "text-gray-500" : "text-gray-600"}`}>
+                      ¡Próximamente más cursos emocionantes! 🚀
+                    </p>
               ) : (
                 <>
                   <div className="space-y-3 max-h-[360px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
                     {cursos
                       .sort((a, b) => (b.inscritosCount || 0) - (a.inscritosCount || 0))
-                      .slice(0, 8) // muestra solo los primeros 8
+                      .slice(0, 8)
                       .map((curso, index) => {
                         const colores = [
                           "bg-blue-600",
@@ -1207,7 +1233,6 @@ const handleVerLikes = async (postId: number) => {
                           "bg-indigo-600",
                         ];
                         const color = colores[index % colores.length];
-
                         return (
                           <div
                             key={curso.id}
@@ -1218,15 +1243,12 @@ const handleVerLikes = async (postId: number) => {
                             }`}
                           >
                             <div className="flex items-center gap-3 w-full">
-                              {/* 🔵 Círculo uniforme */}
                               <div
                                 className={`flex-shrink-0 w-9 h-9 ${color} rounded-full flex items-center justify-center text-white font-bold`}
                               >
                                 {curso.titulo.charAt(0).toUpperCase()}
                               </div>
-
-                              {/* 🧾 Título e inscritos */}
-                              <div className="flex flex-col justify-center overflow-hidden w-[65%]">
+                              <div className="flex flex-col justify-center overflow-hidden space-y-3 w-[65%]">
                                 <span
                                   className={`text-sm font-medium truncate ${
                                     isDark ? "text-[#F5F5F5]" : "text-gray-900"
@@ -1260,8 +1282,16 @@ const handleVerLikes = async (postId: number) => {
                         );
                       })}
                   </div>
+                  
 
-                  {/* Botón que nos va a redirigir al apartado de cursos*/}
+                  {/* Mostrar mensaje si hay menos de 8 cursos */}
+                  {cursos.length < 8 && (
+                    <p className={`mt-3 text-center text-sm ${isDark ? "text-gray-500" : "text-gray-600"}`}>
+                      ¡Próximamente más cursos emocionantes! 🚀
+                    </p>
+                  )}
+
+                  {/* Botón que nos va a redirigir al apartado de cursos */}
                   <div className="mt-4 flex justify-center">
                     <Button
                       variant="outline"
@@ -1281,9 +1311,9 @@ const handleVerLikes = async (postId: number) => {
             </CardContent>
           </Card>
 
-          <Card className={`${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"}`}>
-            <CardContent className="p-3">
-              <h3 className={`text-base font-semibold mb-3 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
+          <Card className={`${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"} `}>
+            <CardContent className="p-6 ">
+              <h3 className={`text-base font-semibold mb-6 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
                 {t("yourStats")}
               </h3>
               <div className="grid grid-cols-2 gap-2">
@@ -1392,7 +1422,6 @@ const handleVerLikes = async (postId: number) => {
             </div>
           </div>
         )}
-
       </div>
     </>
   )

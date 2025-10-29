@@ -1,3 +1,4 @@
+// src/app/(landing)/page.tsx (o donde esté tu componente SwapkLanding)
 "use client"
 
 import type React from "react"
@@ -5,7 +6,21 @@ import { useState, useEffect } from "react"
 import { FileText, Search, Handshake, Star, Menu, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import axios from "axios"
 
+// 🔹 Interfaz para la respuesta del backend
+interface ResenaGeneral {
+  id: number
+  autor: {
+    id: number
+    nombre: string
+  }
+  calificacion: number
+  comentario: string
+  fecha: string
+}
+
+// 🔹 Interfaz para el carrusel
 interface Testimonial {
   id: number
   name: string
@@ -19,33 +34,66 @@ export default function SwapkLanding() {
   const [currentTestimonial, setCurrentTestimonial] = useState<number>(0)
   const [searchQuery, setSearchQuery] = useState<string>("")
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false)
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
 
-  const testimonials: Testimonial[] = [
-    {
-      id: 1,
-      name: "Ana Martínez",
-      role: "Estudiante de Diseño Gráfico",
-      image: "img/cat_profile.jpg",
-      text: "transformó mi manera de aprender! Los cursos son dinámicos y los instructores realmente dominan su tema. Ahora aplico habilidades que nunca creí posible desarrollar... ¡y todo gracias a esta comunidad!",
-      rating: 5,
-    },
-    {
-      id: 2,
-      name: "Carlos Rodriguez",
-      role: "Desarrollador Web",
-      image: "img/fox_profile.jpg",
-      text: "me permitió intercambiar mis conocimientos de programación por clases de marketing digital. Una experiencia increíble que me ayudó a crecer profesionalmente.",
-      rating: 5,
-    },
-    {
-      id: 3,
-      name: "María González",
-      role: "Profesora de Idiomas",
-      image: "img/men_profile.jpg",
-      text: "me ayudó a encontrar estudiantes increíbles que me enseñaron diseño mientras yo les enseñaba inglés. Hace posible el intercambio justo de conocimientos.",
-      rating: 5,
-    },
-  ]
+  const api = axios.create({
+    baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000",
+  })
+
+  // 🔹 Cargar y procesar reseñas
+  useEffect(() => {
+    const fetchResenas = async () => {
+      try {
+        const response = await api.get<ResenaGeneral[]>("/resenas/generales")
+        const allResenas = response.data
+
+        if (allResenas.length === 0) {
+          setTestimonials([
+            {
+              id: 0,
+              name: "Tú podrías ser el primero",
+              role: "Miembro de Swapk",
+              image: "/img/user.png",
+              text: "¡Deja tu reseña y ayúdanos a crecer!",
+              rating: 5,
+            },
+          ])
+        } else {
+          // Seleccionar 3 reseñas aleatorias
+          const shuffled = [...allResenas].sort(() => 0.5 - Math.random())
+          const selected = shuffled.slice(0, Math.min(3, shuffled.length))
+
+          const mappedTestimonials: Testimonial[] = selected.map((resena) => ({
+            id: resena.id,
+            name: resena.autor.nombre,
+            role: "Miembro de Swapk",
+            image: "/img/user.png",
+            text: resena.comentario,
+            rating: resena.calificacion,
+          }))
+
+          setTestimonials(mappedTestimonials)
+        }
+      } catch (error) {
+        console.error("Error al cargar reseñas:", error)
+        setTestimonials([
+          {
+            id: 0,
+            name: "¡Pronto reseñas reales!",
+            role: "Equipo Swapk",
+            image: "/img/user.png",
+            text: "Estamos trabajando para mostrarte las mejores experiencias de nuestra comunidad.",
+            rating: 5,
+          },
+        ])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchResenas()
+  }, [])
 
   const nextTestimonial = (): void => {
     setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)
@@ -60,9 +108,11 @@ export default function SwapkLanding() {
   }
 
   useEffect(() => {
-    const interval = setInterval(nextTestimonial, 5000)
-    return () => clearInterval(interval)
-  }, [])
+    if (testimonials.length > 0) {
+      const interval = setInterval(nextTestimonial, 5000)
+      return () => clearInterval(interval)
+    }
+  }, [testimonials])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,7 +148,6 @@ export default function SwapkLanding() {
         } lg:translate-x-0`}
       >
         <div className="flex flex-col h-full p-6">
-          {/* Logo */}
           <div className="flex items-center mb-10">
             <Image
               src="/img/logoswapk.png"
@@ -110,7 +159,6 @@ export default function SwapkLanding() {
             <span className="absolute top-5 left-16 text-white font-bold text-xl">Swapk</span>
           </div>
 
-          {/* Navigation Links */}
           <div className="flex flex-col gap-2 mb-10">
             <a href="#inicio" className="text-white font-medium text-left py-3 px-4 rounded-lg hover:bg-blue-800/20 hover:text-blue-600 transition-all block">
               INICIO
@@ -126,7 +174,6 @@ export default function SwapkLanding() {
             </a>
           </div>
 
-          {/* Search */}
           <div className="mb-8">
             <form onSubmit={handleSearch} className="flex flex-col gap-2">
               <input
@@ -146,7 +193,6 @@ export default function SwapkLanding() {
             </form>
           </div>
 
-          {/* Auth Buttons */}
           <div className="flex flex-col gap-3 mt-auto">
             <button
               className="cursor-pointer bg-transparent text-white border border-gray-600 px-5 py-3 rounded-lg font-semibold hover:border-blue-600 hover:text-blue-600 transition-all"
@@ -305,52 +351,64 @@ export default function SwapkLanding() {
         {/* SECCIÓN 4: RESEÑAS */}
         <section id="resenas" className="min-h-screen bg-[#141414] flex items-center px-5">
           <div className="max-w-4xl mx-auto w-full">
-            <div className="bg-gray-700/30 border border-gray-600 rounded-2xl p-10 relative flex items-center gap-10 mb-8">
-              <div className="flex-shrink-0">
-                <img
-                  src={testimonials[currentTestimonial].image || "/placeholder.svg"}
-                  alt={testimonials[currentTestimonial].name}
-                  className="w-20 h-20 rounded-full object-cover"
-                />
+            {loading ? (
+              <div className="bg-gray-700/30 border border-gray-600 rounded-2xl p-10 text-center">
+                <p className="text-gray-400">Cargando reseñas...</p>
               </div>
-              <div className="flex-1">
-                <p className="text-lg leading-relaxed mb-5 text-gray-300">
-                  <span className="text-blue-600 font-bold cursor-pointer">Swapk</span>{" "}
-                  {testimonials[currentTestimonial].text}
-                </p>
+            ) : (
+              <>
+                <div className="bg-gray-700/30 border border-gray-600 rounded-2xl p-10 relative flex items-center gap-10 mb-8">
+                  <div className="flex-shrink-0">
+                    <img
+                      src={testimonials[currentTestimonial]?.image || "/img/user.png"}
+                      alt={testimonials[currentTestimonial]?.name || "Usuario"}
+                      className="w-20 h-20 rounded-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-lg leading-relaxed mb-5 text-gray-300">
+                      <span className="text-blue-600 font-bold cursor-pointer">Swapk</span>{" "}
+                      {testimonials[currentTestimonial]?.text}
+                    </p>
 
-                <div className="mb-5">
-                  <p className="font-semibold text-white mb-1">— {testimonials[currentTestimonial].name}</p>
-                  <p className="text-gray-400 text-sm">{testimonials[currentTestimonial].role}</p>
+                    <div className="mb-5">
+                      <p className="font-semibold text-white mb-1">
+                        — {testimonials[currentTestimonial]?.name}
+                      </p>
+                      <p className="text-gray-400 text-sm">
+                        {testimonials[currentTestimonial]?.role}
+                      </p>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex gap-1">
+                        {[...Array(Math.floor(testimonials[currentTestimonial]?.rating || 5))].map((_, i) => (
+                          <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2 font-semibold">
+                        <span className="text-white">Sw</span>
+                        <span className="text-blue-600 font-bold cursor-pointer">a</span>
+                        <span className="text-white">pk</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-1">
-                    {[...Array(testimonials[currentTestimonial].rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-2 font-semibold">
-                    <span className="text-white">Sw</span>
-                    <span className="text-blue-600 font-bold cursor-pointer">a</span>
-                    <span className="text-white">pk</span>
-                  </div>
+                <div className="flex justify-center gap-3">
+                  {testimonials.map((_, index) => (
+                    <button
+                      key={index}
+                      className={`w-3 h-3 rounded-full border-none cursor-pointer transition-colors ${
+                        index === currentTestimonial ? "bg-blue-600" : "bg-gray-600"
+                      }`}
+                      onClick={() => goToTestimonial(index)}
+                      aria-label={`Ir al testimonio ${index + 1}`}
+                    />
+                  ))}
                 </div>
-              </div>
-            </div>
-
-            <div className="flex justify-center gap-3">
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  className={`w-3 h-3 rounded-full border-none cursor-pointer transition-colors ${
-                    index === currentTestimonial ? "bg-blue-600" : "bg-gray-600"
-                  }`}
-                  onClick={() => goToTestimonial(index)}
-                  aria-label={`Ir al testimonio ${index + 1}`}
-                />
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </section>
 

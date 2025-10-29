@@ -1,5 +1,3 @@
-# backend/api/reportes.py
-
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from backend.db.database import get_db

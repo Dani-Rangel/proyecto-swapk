@@ -22,11 +22,11 @@ export default function ActivityPrivacy() {
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState("")
 
-  // 🔁 Cargar configuración inicial
+  // Cargar configuración inicial
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        // ✅ Intenta cargar desde localStorage
+        // Intenta cargar desde localStorage
         const savedUserStr = localStorage.getItem("user")
         if (savedUserStr) {
           const savedUser = JSON.parse(savedUserStr)
@@ -38,7 +38,7 @@ export default function ActivityPrivacy() {
           }
         }
 
-        // ✅ Si no está en localStorage, intenta desde API
+        // Si no está en localStorage, intenta desde API
         const token = JSON.parse(localStorage.getItem("user") || "{}")?.token
         if (!token) return
 
@@ -68,7 +68,7 @@ export default function ActivityPrivacy() {
     loadSettings()
   }, [])
 
-  // ✅ Guardar cambios en backend
+  // Guardar cambios en backend
   const handleSave = async (field: keyof PrivacySettings, value: string) => {
     const newValue = value as PrivacySettings[keyof PrivacySettings]
     setSettings(prev => ({ ...prev, [field]: newValue }))
@@ -81,7 +81,7 @@ export default function ActivityPrivacy() {
       const savedUser = JSON.parse(savedUserStr)
       const token = savedUser.token
 
-      // ✅ Guarda en backend
+      // Guarda en backend
       const res = await fetch("http://localhost:8000/users/me", {
         method: "PUT",
         headers: {
@@ -101,14 +101,14 @@ export default function ActivityPrivacy() {
         throw new Error(error.detail || "Error al guardar")
       }
 
-      // ✅ Actualiza localStorage
+      // Actualiza localStorage
       const updatedUser = {
         ...savedUser,
         privacySettings: { ...settings, [field]: newValue }
       }
       localStorage.setItem("user", JSON.stringify(updatedUser))
 
-      setMessage("Configuración guardada ✅")
+      setMessage("Configuración guardada ")
     } catch (err: any) {
       setMessage(err.message)
       // Revertir cambio si falla
@@ -154,7 +154,7 @@ export default function ActivityPrivacy() {
               </p>
               <RadioGroup
                 value={settings.onlineStatus}
-                onValueChange={(value: string) => handleSave("onlineStatus", value)}
+                onValueChange={(value: string) => handleSave("lastAccess", value)}
                 className="mt-3 space-y-2"
               >
                 <div className="flex items-center space-x-2">

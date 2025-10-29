@@ -42,6 +42,7 @@ class Intercambio(Base):
     estado_trueque = Column(Boolean, default=True)
     estado = Column(Enum(EstadoIntercambio), default=EstadoIntercambio.Pendiente)
     fecha_creacion = Column(DateTime, default=datetime.utcnow)
+    ciclo = Column(Integer, default=1) 
 
     usuario1 = relationship("Usuario", foreign_keys=[id_usuario1])
     perfil = relationship("Perfil", foreign_keys=[id_perfil])

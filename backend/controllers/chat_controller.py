@@ -26,7 +26,7 @@ async def chat_ws(websocket: WebSocket, chat_id: int, token: str = Query(None)):
     await websocket.accept()
 
     if not token:
-        # print("❌ Token no proporcionado")  # LOG
+        # print("Token no proporcionado")  # LOG
         await websocket.close(code=1008)
         return
 
@@ -35,36 +35,36 @@ async def chat_ws(websocket: WebSocket, chat_id: int, token: str = Query(None)):
     try:
         user = get_user_from_token_sync(token, db)
         if user is None:
-            # print("❌ Usuario no autenticado")  # LOG
+            # print("Usuario no autenticado")  # LOG
             await websocket.close(code=1008)
             db.close()
             return
 
-        # print(f"✅ Usuario autenticado en WebSocket: {user.id}")  # LOG
+        # print(f"Usuario autenticado en WebSocket: {user.id}")  # LOG
         conn = Connection(websocket=websocket, user_id=user.id)
         ws_manager.add(chat_id, conn)
-        # print(f"👥 Usuario {user.id} conectado al chat {chat_id}")  # LOG
+        # print(f"Usuario {user.id} conectado al chat {chat_id}")  # LOG
 
         while True:
             payload = await websocket.receive_json()
-            # print(f"📩 Mensaje recibido: {payload}")  # LOG
+            # print(f"Mensaje recibido: {payload}")  # LOG
 
             if payload.get("type") == "message":
                 contenido_raw = payload.get("content")
                 if contenido_raw is None:
-                    # print("❌ Contenido es null, ignorado")
+                    # print("Contenido es null, ignorado")
                     continue
 
                 contenido = str(contenido_raw).strip()
                 
-                # print(f"📥 Mensaje recibido RAW: {repr(contenido_raw)}")
-                # print(f"📥 Mensaje después de strip(): '{contenido}'")
+                # print(f"Mensaje recibido RAW: {repr(contenido_raw)}")
+                # print(f"Mensaje después de strip(): '{contenido}'")
 
                 if not contenido:
-                    # print("⚠️ Mensaje vacío recibido, ignorado")
+                    # print("Mensaje vacío recibido, ignorado")
                     continue
 
-                # ✅ Abrir NUEVA sesión solo para esta operación
+                # Abrir NUEVA sesión solo para esta operación
                 db_msg = next(get_db())
                 try:
                     new_message = Mensaje(
@@ -134,7 +134,7 @@ def get_user_chats(db: Session = Depends(get_db), current_user=Depends(get_curre
 
     result = []
     for chat in chats:
-        # ✅ Obtener el último mensaje del chat
+        # Obtener el último mensaje del chat
         last_message = (
             db.query(Mensaje)
             .filter(Mensaje.chat_id == chat.id)
@@ -142,7 +142,7 @@ def get_user_chats(db: Session = Depends(get_db), current_user=Depends(get_curre
             .first()
         )
 
-        # ✅ Obtener los usuarios del chat
+        # Obtener los usuarios del chat
         usuarios = [{"id": cu.usuario.id, "nombre": cu.usuario.nombre} for cu in chat.usuarios]
 
         result.append({
@@ -159,18 +159,18 @@ def get_user_chats(db: Session = Depends(get_db), current_user=Depends(get_curre
 @router.get("/{chat_id}/messages")
 def get_messages(chat_id: int, limit: int = 50, after: str = None, current_user=Depends(get_current_user)):
     try:
-        # print(f"🔍 Obteniendo mensajes para chat_id: {chat_id}, usuario: {current_user.id}")  # LOG
+        # print(f"Obteniendo mensajes para chat_id: {chat_id}, usuario: {current_user.id}")  # LOG
 
         msgs_ref = firestore_db.collection("chats").document(str(chat_id)).collection("messages")
-        q = msgs_ref.order_by("fecha", direction=firestore.Query.ASCENDING).limit(limit)  # ✅ Orden ascendente
+        q = msgs_ref.order_by("fecha", direction=firestore.Query.ASCENDING).limit(limit)  # Orden ascendente
         docs = q.stream()
         messages = [d.to_dict() for d in docs]
 
-        # ✅ Filtrar mensajes con contenido null
+        # Filtrar mensajes con contenido null
         messages = [msg for msg in messages if msg.get("contenido") is not None]
 
-        # print(f"✅ Mensajes obtenidos: {len(messages)}")  # LOG
-        return {"messages": messages}  # ✅ No revertir el orden
+        # print(f"Mensajes obtenidos: {len(messages)}")  # LOG
+        return {"messages": messages}  # No revertir el orden
     except Exception as e:
         # print(f"❌ Error en get_messages: {e}")  # LOG
         raise HTTPException(status_code=500, detail=str(e))

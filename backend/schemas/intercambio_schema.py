@@ -2,10 +2,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
-
-# -------------------------------
 # Enums para Intercambio
-# -------------------------------
 class EstadoIntercambioEnum(str, Enum):
     Pendiente = "Pendiente"
     Confirmado = "Confirmado"
@@ -25,17 +22,11 @@ class IdiomaIntercambioEnum(str, Enum):
     Ingles = "Ingles"
     Espanol = "Espanol"
     Portugues = "Portugues"
-
-# -------------------------------
 # Enum para tipo habilidad
-# -------------------------------
 class TipoHabilidadEnum(str, Enum):
     ofrece = "ofrece"
     busca = "busca"
-
-# -------------------------------
 # Habilidad
-# -------------------------------
 class HabilidadBase(BaseModel):
     id: int
     nombre: str
@@ -43,9 +34,7 @@ class HabilidadBase(BaseModel):
     class Config:
         orm_mode = True
 
-# -------------------------------
 # IntercambioHabilidad
-# -------------------------------
 class IntercambioHabilidadBase(BaseModel):
     tipo: TipoHabilidadEnum
 
@@ -58,10 +47,7 @@ class IntercambioHabilidadResponse(IntercambioHabilidadBase):
 
     class Config:
         orm_mode = True
-
-# -------------------------------
 # Perfil
-# -------------------------------
 class PerfilBase(BaseModel):
     id: int
     ubicacion: Optional[str] = None
@@ -70,9 +56,7 @@ class PerfilBase(BaseModel):
     class Config:
         orm_mode = True
 
-# -------------------------------
 # Usuario (solo id y nombre)
-# -------------------------------
 class UsuarioBase(BaseModel):
     id: int
     nombre: str
@@ -80,9 +64,7 @@ class UsuarioBase(BaseModel):
     class Config:
         orm_mode = True
 
-# -------------------------------
 # Intercambio: Base
-# -------------------------------
 class IntercambioBase(BaseModel):
     id_usuario1: int
     id_perfil: int
@@ -94,17 +76,11 @@ class IntercambioBase(BaseModel):
     valoracion: Optional[float] = 0.0
     estado_trueque: Optional[bool] = True
     estado: Optional[EstadoIntercambioEnum] = EstadoIntercambioEnum.Pendiente
-
-# -------------------------------
 # Intercambio: Create/Update
-# -------------------------------
 class IntercambioCreate(IntercambioBase):
     habilidades_ofrecidas_ids: Optional[List[int]] = []
     habilidades_buscadas_ids: Optional[List[int]] = []
-
-# -------------------------------
 # Intercambio: Response
-# -------------------------------
 class IntercambioResponse(IntercambioBase):
     id: int
     fecha_creacion: datetime
@@ -123,9 +99,7 @@ class PropuestaAceptada(BaseModel):
     class Config:
         orm_mode = True        
 
-# -------------------------------
 # Intercambio: Response extendido con habilidades separadas
-# -------------------------------
 class IntercambioConHabilidadesSeparadas(BaseModel):
     id: int
     id_usuario1: int
@@ -153,25 +127,26 @@ class PropuestaResumen(BaseModel):
     id_propuesta: int
     id_usuario_interesado: int
     aceptada: bool
-    
 
     class Config:
         orm_mode = True   
 
-# backend/schemas/intercambio_schema.py
-
 class ResenaCreate(BaseModel):
     intercambio_id: int
-    usuario_id: int
-    calificacion: float
+    calificacion: float 
     comentario: str
 
     class Config:
         orm_mode = True
 
-class ResenaResponse(ResenaCreate):
+class ResenaResponse(BaseModel):
     id: int
+    intercambio_id: int
+    autor: UsuarioBase
+    destinatario: UsuarioBase  
+    calificacion: float
+    comentario: str
     fecha: datetime
 
     class Config:
-        orm_mode = True             
+        orm_mode = True            

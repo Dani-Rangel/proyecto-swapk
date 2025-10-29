@@ -35,6 +35,7 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
     {
       category: t("account_settings"),
       items: [
+        { id: "profile_edit", label: t("profile_edit"), icon: User },
         { id: "change_email", label: t("change_email"), icon: User },
         { id: "change_password", label: t("change_password"), icon: Shield },
         { id: "delete_account", label: t("delete_account"), icon: User },
@@ -45,16 +46,21 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
       category: t("platform_preferences"),
       items: [
         { id: "language", label: t("language"), icon: Globe },
-        { id: "theme", label: t("theme"), icon: Palette },
+        { id: "theme", label: t("theme"), icon: Palette, disabled: true, },
         { id: "preferred_mode", label: t("my_files"), icon: Archive },
-        { id: "activity_privacy", label: t("activity_privacy"), icon: Eye },
+        { 
+        id: "activity_privacy", 
+        label: t("activity_privacy"), 
+        icon: Eye,
+        disabled: true,
+        },
       ],
     },
     {
       category: t("privacy_security"),
       items: [
         { id: "certifications", label: t("certifications"), icon: Award },
-        { id: "upload_documents", label: t("upload_documents"), icon: Upload },      ],
+        ],
     },
     {
       category: t("extra_options"),
@@ -106,14 +112,21 @@ export default function SettingsLayout({ children, title }: SettingsLayoutProps)
                       return (
                         <li key={item.id}>
                           <button
-                            onClick={() => handleNavigation(item.id)}
-                            className={`cursor-pointer w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                              isActive 
-                                ? "bg-blue-600 text-white" 
-                                : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                            onClick={() => {
+                              if (!item.disabled) {
+                                handleNavigation(item.id)
+                              }
+                            }}
+                            disabled={item.disabled}
+                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                              item.disabled
+                                ? "text-gray-500 cursor-not-allowed"
+                                : isActive
+                                  ? "bg-blue-600 text-white"
+                                  : "text-gray-300 hover:bg-gray-800 hover:text-white cursor-pointer"
                             }`}
                           >
-                            <Icon className="w-4 h-4" />
+                            <Icon className={`w-4 h-4 ${item.disabled ? "opacity-50" : ""}`} />
                             <span className="text-sm">{item.label}</span>
                           </button>
                         </li>

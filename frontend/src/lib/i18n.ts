@@ -349,6 +349,7 @@ export const translations = {
     posts: "Publicaciones",
     profiles: "Perfiles",
     noProfiles: "No hay perfiles disponibles.",
+    profile_edit: "Editar perfil",
 
   },
 
@@ -696,6 +697,7 @@ export const translations = {
     posts: "Publicaciones",
     profiles: "Perfiles",
     noProfiles: "No profiles available.",
+    profile_edit: "Edit profile",
 
     // ===== Course Enrollment =====
     cancel_enrollment: "Cancel enrollment",

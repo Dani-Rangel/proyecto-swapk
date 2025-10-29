@@ -18,6 +18,7 @@ interface User {
 
 interface Message {
   id: string;
+  chat_id?: number; // Agregado para validación
   sender: string;
   content: string;
   timestamp: string;
@@ -54,36 +55,30 @@ export function ChatArea({
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [allUsers, setAllUsers] = useState<Map<string, User>>(new Map()); // ✅ Usar Map
+  const [allUsers, setAllUsers] = useState<Map<string, User>>(new Map());
   const [loading, setLoading] = useState(true);
 
-  // --- Estados para el modal ---
   const modalOpen = isModalOpen || false;
   const setModalOpen = setIsModalOpen || (() => {});
 
-  // --- WebSocket ---
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentChatId, setCurrentChatId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // --- Chats del usuario ---
   const [userChats, setUserChats] = useState<BackendChat[]>([]);
   const [loadingChats, setLoadingChats] = useState(true);
 
-  // --- Edición/eliminación ---
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [contextMenuOpen, setContextMenuOpen] = useState<string | null>(null);
 
-  // --- Refs ---
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-  // --- Obtener token y user ID ---
   let token: string | null = null;
   let myUserId: string | null = null;
 
@@ -100,7 +95,7 @@ export function ChatArea({
     }
   }
 
-  // --- Cargar usuarios de /users/all + chats ---
+  // --- Cargar usuarios y chats ---
   useEffect(() => {
     const fetchUsers = async () => {
       if (!myUserId) {
@@ -110,7 +105,7 @@ export function ChatArea({
 
       try {
         const res = await fetch(`${API_URL}/users/all`);
-        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
         const data = await res.json();
 
         const usersFromApi = data
@@ -122,10 +117,8 @@ export function ChatArea({
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&size=128`,
           }));
 
-        // ✅ Combinar con usuarios de chats
         const combinedUsers = new Map<string, User>();
 
-        // Agregar usuarios de chats
         userChats.forEach(chat => {
           chat.usuarios.forEach(u => {
             if (String(u.id) !== String(myUserId)) {
@@ -139,7 +132,6 @@ export function ChatArea({
           });
         });
 
-        // Agregar usuarios de API (sobrescriben si ya existen)
         usersFromApi.forEach(user => {
           combinedUsers.set(user.id, user);
         });
@@ -154,7 +146,7 @@ export function ChatArea({
     };
 
     fetchUsers();
-  }, [myUserId, userChats]); // ✅ Dependencia crítica
+  }, [myUserId, userChats]);
 
   // --- Cargar chats del usuario ---
   useEffect(() => {
@@ -166,17 +158,14 @@ export function ChatArea({
 
       try {
         const res = await fetch(`${API_URL}/chats`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) throw new Error(`Error ${res.status}: ${res.statusText}`);
+        if (!res.ok) throw new Error(`Error ${res.status}`);
         const data = await res.json();
-
         setUserChats(data.chats || []);
 
-        if (data.chats && data.chats.length > 0 && !currentContact && onContactSelect) {
+        if (data.chats?.length > 0 && !currentContact && onContactSelect) {
           const firstChat = data.chats[0];
           const otherUser = firstChat.usuarios.find((u: any) => String(u.id) !== String(myUserId));
           if (otherUser) {
@@ -196,6 +185,8 @@ export function ChatArea({
 
   // --- Conectar WebSocket cuando cambia el contacto ---
   useEffect(() => {
+    let isCurrent = true;
+
     if (!currentContact || !token || !myUserId) {
       if (ws) {
         ws.close();
@@ -206,14 +197,10 @@ export function ChatArea({
       return;
     }
 
-    // ✅ Buscar contacto en `allUsers` o en `userChats`
     const findUserInChats = (): User | null => {
       for (const chat of userChats) {
         const otherUser = chat.usuarios.find(
-          (u: any) => 
-            String(u.id) !== String(myUserId) && 
-            u.nombre === currentContact &&
-            u.id !== undefined
+          (u: any) => String(u.id) !== String(myUserId) && u.nombre === currentContact
         );
         if (otherUser) {
           return {
@@ -227,24 +214,19 @@ export function ChatArea({
       return null;
     };
 
-    const otherUser = Array.from(allUsers.values()).find(
-      (u) => u.name === currentContact
-    ) || findUserInChats();
+    const otherUser = Array.from(allUsers.values()).find(u => u.name === currentContact) || findUserInChats();
 
-    if (!otherUser) {
-      setError("Usuario no encontrado");
+    if (!otherUser || String(otherUser.id) === String(myUserId)) {
+      setError("Usuario no válido");
       return;
     }
 
-    // ✅ Validación explícita antes de iniciar el chat
-    if (String(otherUser.id) === String(myUserId)) {
-      setError("No puedes chatear contigo mismo");
-      console.warn("⚠️ Bloqueado intento de chat consigo mismo:", { otherUser, myUserId });
-      return;
-    }
-
+    // Limpiar mensajes y cerrar WebSocket anterior
     setMessages([]);
-    
+    if (ws) {
+      ws.close();
+    }
+
     const initializeChat = async () => {
       try {
         const res = await fetch(`${API_URL}/chats/start/${otherUser.id}`, {
@@ -256,45 +238,34 @@ export function ChatArea({
         });
 
         if (!res.ok) {
-          let errorMessage = `Error ${res.status}`;
-          try {
-            const errorData = await res.json();
-            errorMessage = errorData.detail || errorMessage;
-          } catch (e) {}
-          throw new Error(errorMessage);
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Error ${res.status}`);
         }
 
         const data = await res.json();
         const chatId = data.chat_id;
-        setCurrentChatId(chatId);
+
+        if (!isCurrent) return;
 
         const messagesRes = await fetch(`${API_URL}/chats/${chatId}/messages`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         });
+
         if (!messagesRes.ok) {
-          let msgError = `Error ${messagesRes.status}`;
-          try {
-            const errorData = await messagesRes.json();
-            msgError = errorData.detail || msgError;
-          } catch (e) {}
-          throw new Error(msgError);
+          const errorData = await messagesRes.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Error ${messagesRes.status}`);
         }
 
         const messagesData = await messagesRes.json();
+        const validMessages = messagesData.messages.filter((msg: any) => msg.contenido);
 
-        const validMessages = messagesData.messages.filter(
-          (msg: any) => msg.contenido !== null && msg.contenido !== ""
-        );
-
-        // ✅ CORREGIDO: Usar `allUsers` para encontrar el nombre real
         const loadedMessages = validMessages.map((msg: any) => {
           const isOwn = msg.id_usuario.toString() === myUserId;
-          const senderUser = allUsers.get(String(msg.id_usuario)); // ✅ Usar Map
+          const senderUser = allUsers.get(String(msg.id_usuario));
           return {
             id: msg.id.toString(),
-            sender: isOwn ? "Tú" : (senderUser?.name || "Usuario desconocido"), // ✅ .name, no .nombre
+            chat_id: msg.chat_id,
+            sender: isOwn ? "Tú" : (senderUser?.name || "Usuario desconocido"),
             content: msg.contenido,
             timestamp: new Date(msg.fecha).toLocaleTimeString("es-ES", {
               hour: "2-digit",
@@ -307,32 +278,43 @@ export function ChatArea({
           };
         });
 
-        setMessages(loadedMessages);
+        if (isCurrent) {
+          setMessages(loadedMessages);
+          setCurrentChatId(chatId);
+        }
 
         const wsUrl = `ws://localhost:8000/chats/ws/${chatId}?token=${token}`;
         const websocket = new WebSocket(wsUrl);
 
         websocket.onopen = () => {
-          console.log("✅ WebSocket conectado al chat:", chatId);
-          setIsConnected(true);
-          setError(null);
+          if (isCurrent) {
+            setIsConnected(true);
+            setError(null);
+            setWs(websocket);
+          }
         };
 
         websocket.onmessage = (event) => {
+          if (!isCurrent) return;
+
           const data = JSON.parse(event.data);
           if (data.type === "message") {
             const receivedMsg = data.message;
-            const isOwnMessage = receivedMsg.id_usuario.toString() === myUserId;
 
-            if (!receivedMsg.contenido) {
-              console.warn("⚠️ Mensaje recibido con contenido null, ignorado");
+            // Verificación crítica: ¿pertenece al chat actual?
+            if (receivedMsg.chat_id !== chatId) {
+              console.warn("Mensaje ignorado: chat_id no coincide", receivedMsg.chat_id, chatId);
               return;
             }
 
-            const senderUser = allUsers.get(String(receivedMsg.id_usuario)); // ✅ Usar Map
+            if (!receivedMsg.contenido) return;
+
+            const isOwnMessage = receivedMsg.id_usuario.toString() === myUserId;
+            const senderUser = allUsers.get(String(receivedMsg.id_usuario));
             const newMessage: Message = {
               id: receivedMsg.id.toString(),
-              sender: isOwnMessage ? "Tú" : (senderUser?.name || "Usuario desconocido"), // ✅ .name
+              chat_id: receivedMsg.chat_id, // ✅ Ya lo tienes, pero...
+              sender: isOwnMessage ? "Tú" : (senderUser?.name || "Usuario desconocido"),
               content: receivedMsg.contenido,
               timestamp: new Date(receivedMsg.fecha).toLocaleTimeString("es-ES", {
                 hour: "2-digit",
@@ -345,49 +327,55 @@ export function ChatArea({
             };
 
             setMessages((prev) => {
-              const exists = prev.some(msg => msg.id === newMessage.id);
-              if (exists) return prev;
+              if (prev.some(msg => msg.id === newMessage.id)) return prev;
               return [...prev, newMessage];
             });
           }
         };
 
         websocket.onclose = () => {
-          console.log("🔌 WebSocket desconectado");
-          setIsConnected(false);
+          if (isCurrent) {
+            setIsConnected(false);
+            setWs(null);
+          }
         };
 
         websocket.onerror = (err) => {
-          console.error("❌ WebSocket Error:", err);
-          setError("Error de conexión con el servidor");
-          setIsConnected(false);
+          if (isCurrent) {
+            console.error("❌ WebSocket Error:", err);
+            setError("Error de conexión con el servidor");
+            setIsConnected(false);
+            setWs(null);
+          }
         };
-
-        setWs(websocket);
       } catch (err) {
-        console.error("❌ Error al inicializar chat:", err);
-        setError(err instanceof Error ? err.message : "No se pudo iniciar el chat");
+        if (isCurrent) {
+          console.error("❌ Error al inicializar chat:", err);
+          setError(err instanceof Error ? err.message : "No se pudo iniciar el chat");
+        }
       }
     };
 
     initializeChat();
+
+    return () => {
+      isCurrent = false;
+      if (ws) {
+        ws.close();
+        setWs(null);
+      }
+    };
   }, [currentContact, allUsers, userChats, myUserId, token]);
 
   // Auto-scroll
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const currentUser = "Jefferson Correa";
 
-  // Enviar mensaje
   const handleSendMessage = () => {
-    if (!message.trim() || !ws || ws.readyState !== WebSocket.OPEN) {
-      console.warn("⚠️ WebSocket no listo");
-      return;
-    }
+    if (!message.trim() || !ws || ws.readyState !== WebSocket.OPEN || !currentChatId) return;
 
     const payload = {
       type: "message",
@@ -441,7 +429,6 @@ export function ChatArea({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Editar mensaje
   const handleEditMessage = async (messageId: string, newContent: string) => {
     if (!token || !currentChatId) return;
 
@@ -493,16 +480,13 @@ export function ChatArea({
     }
   };
 
-  // Eliminar mensaje
   const handleDeleteMessage = async (messageId: string) => {
     if (!token || !currentChatId) return;
 
     try {
       const res = await fetch(`${API_URL}/chats/messages/${messageId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) throw new Error(`Error ${res.status}`);
@@ -524,7 +508,6 @@ export function ChatArea({
     }
   };
 
-  // Renderizado condicional
   if (loading || loadingChats) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#141414]">
@@ -538,9 +521,7 @@ export function ChatArea({
       <div className="flex-1 flex flex-col items-center justify-start bg-[#141414] p-6 sm:p-8 pt-16">
         {userChats.length > 0 ? (
           <div className="w-full max-w-md">
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">
-              Tus Chats Recientes
-            </h2>
+            <h2 className="text-2xl font-bold text-white mb-6 text-center">Tus Chats Recientes</h2>
             <div className="space-y-3">
               {userChats.map((chat) => {
                 const otherUser = chat.usuarios.find((u: any) => String(u.id) !== String(myUserId));
@@ -575,12 +556,8 @@ export function ChatArea({
             <div className="w-20 h-20 sm:w-24 sm:h-24 mb-6 rounded-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center shadow-lg border border-gray-700">
               <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400" />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
-              {t("messages")}
-            </h2>
-            <p className="text-gray-400 text-sm sm:text-base mb-8">
-              {t("private_chat_description")}
-            </p>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">{t("messages")}</h2>
+            <p className="text-gray-400 text-sm sm:text-base mb-8">{t("private_chat_description")}</p>
             <button
               onClick={() => setModalOpen(true)}
               className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-full transition-all duration-300"
@@ -606,178 +583,171 @@ export function ChatArea({
     );
   }
 
-  // Chat activo
   return (
     <div className="flex h-full relative">
       <div className="flex-1 flex flex-col bg-[#141414] h-full">
-        {/* Mensajes */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-160px)]">
           {messages.length === 0 ? (
-            <div className="text-gray-500 text-sm text-center mt-10">
-              {t("no_messages_yet")}
-            </div>
+            <div className="text-gray-500 text-sm text-center mt-10">{t("no_messages_yet")}</div>
           ) : (
-            messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex ${msg.isOwn ? "justify-end" : "justify-start"} group relative`}
-              >
+            messages
+              .filter(msg => msg.chat_id === currentChatId) // ✅ Filtrado adicional
+              .map((msg) => (
                 <div
-                  className={`max-w-xs lg:max-w-md ${msg.isOwn ? "order-2" : "order-1"} ${
-                    msg.isOwn ? "mr-12" : "ml-12"
-                  }`}
+                  key={msg.id}
+                  className={`flex ${msg.isOwn ? "justify-end" : "justify-start"} group relative`}
                 >
-                  {!msg.isOwn && (
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-xs">
-                        {msg.sender.charAt(0).toUpperCase()}
+                  <div
+                    className={`max-w-xs lg:max-w-md ${msg.isOwn ? "order-2" : "order-1"} ${
+                      msg.isOwn ? "mr-12" : "ml-12"
+                    }`}
+                  >
+                    {!msg.isOwn && (
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center text-xs">
+                          {msg.sender.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="text-xs text-gray-400">{msg.sender}</span>
                       </div>
-                      <span className="text-xs text-gray-400">{msg.sender}</span>
-                    </div>
-                  )}
+                    )}
 
-                  {msg.type === "file" ? (
-                    <div className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-white relative">
-                      {msg.fileUrl && msg.fileName?.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                        <img
-                          src={msg.fileUrl}
-                          alt={msg.fileName}
-                          className="rounded-lg max-w-full mb-2"
-                        />
-                      ) : null}
-                      <p className="text-sm break-words">
-                        <a
-                          href={msg.fileUrl}
-                          download={msg.fileName}
-                          className="text-blue-400 underline"
-                        >
-                          {msg.fileName}
-                        </a>
-                      </p>
-                      <p className="text-xs mt-1 text-gray-400">{msg.timestamp}</p>
-                    </div>
-                  ) : (
+                    {msg.type === "file" ? (
+                      <div className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-white relative">
+                        {msg.fileUrl && msg.fileName?.match(/\.(jpg|jpeg|png|gif)$/i) ? (
+                          <img
+                            src={msg.fileUrl}
+                            alt={msg.fileName}
+                            className="rounded-lg max-w-full mb-2"
+                          />
+                        ) : null}
+                        <p className="text-sm break-words">
+                          <a
+                            href={msg.fileUrl}
+                            download={msg.fileName}
+                            className="text-blue-400 underline"
+                          >
+                            {msg.fileName}
+                          </a>
+                        </p>
+                        <p className="text-xs mt-1 text-gray-400">{msg.timestamp}</p>
+                      </div>
+                    ) : (
                       <div
                         className={`px-4 py-2 rounded-lg relative ${
-                          msg.isOwn 
-                            ? "bg-blue-800 text-white shadow-sm" 
-                            : "bg-[#1a1a1a] text-white"
+                          msg.isOwn ? "bg-blue-800 text-white shadow-sm" : "bg-[#1a1a1a] text-white"
                         }`}
                       >
-                      {msg.isOwn && (
-                        <div className="absolute -top-2 -right-9 z-10">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setContextMenuOpen(msg.id);
-                            }}
-                            className="p-1 bg-gray-700 hover:bg-gray-600 rounded-full text-white transition-all duration-200"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <circle cx="12" cy="12" r="1"></circle>
-                              <circle cx="19" cy="12" r="1"></circle>
-                              <circle cx="5" cy="12" r="1"></circle>
-                            </svg>
-                          </button>
+                        {msg.isOwn && (
+                          <div className="absolute -top-2 -right-9 z-10">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setContextMenuOpen(msg.id);
+                              }}
+                              className="p-1 bg-gray-700 hover:bg-gray-600 rounded-full text-white transition-all duration-200"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="1"></circle>
+                                <circle cx="19" cy="12" r="1"></circle>
+                                <circle cx="5" cy="12" r="1"></circle>
+                              </svg>
+                            </button>
 
-                          {contextMenuOpen === msg.id && (
-                            <div className="absolute top-8 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-48 message-options-menu overflow-hidden">
+                            {contextMenuOpen === msg.id && (
+                              <div className="absolute top-8 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-48 message-options-menu overflow-hidden">
+                                <button
+                                  onClick={() => {
+                                    setEditingMessageId(msg.id);
+                                    setEditContent(msg.content);
+                                    setContextMenuOpen(null);
+                                  }}
+                                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-800 hover:bg-gray-50 transition-colors"
+                                >
+                                  <Edit2 className="w-4 h-4 text-blue-600" />
+                                  <span className="font-medium">Editar</span>
+                                </button>
+                                <div className="border-t border-gray-100"></div>
+                                <button
+                                  onClick={() => {
+                                    setShowDeleteConfirm(msg.id);
+                                    setContextMenuOpen(null);
+                                  }}
+                                  className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  <span className="font-medium">Eliminar</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {editingMessageId === msg.id ? (
+                          <div className="flex flex-col gap-1">
+                            <textarea
+                              value={editContent}
+                              onChange={(e) => setEditContent(e.target.value)}
+                              className="w-full bg-gray-800 text-white text-sm p-2 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
+                              rows={2}
+                              autoFocus
+                            />
+                            <div className="flex gap-1">
                               <button
-                                onClick={() => {
-                                  setEditingMessageId(msg.id);
-                                  setEditContent(msg.content);
-                                  setContextMenuOpen(null);
-                                }}
-                                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-800 hover:bg-gray-50 transition-colors"
+                                onClick={() => handleEditMessage(msg.id, editContent)}
+                                className="text-xs bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-white transition-colors"
                               >
-                                <Edit2 className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium">Editar</span>
+                                Guardar
                               </button>
-                              <div className="border-t border-gray-100"></div>
                               <button
                                 onClick={() => {
-                                  setShowDeleteConfirm(msg.id);
-                                  setContextMenuOpen(null);
+                                  setEditingMessageId(null);
+                                  setEditContent("");
                                 }}
-                                className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                className="text-xs bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-white transition-colors"
                               >
-                                <Trash2 className="w-4 h-4" />
-                                <span className="font-medium">Eliminar</span>
+                                Cancelar
                               </button>
                             </div>
-                          )}
-                        </div>
-                      )}
-
-                      {editingMessageId === msg.id ? (
-                        <div className="flex flex-col gap-1">
-                          <textarea
-                            value={editContent}
-                            onChange={(e) => setEditContent(e.target.value)}
-                            className="w-full bg-gray-800 text-white text-sm p-2 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
-                            rows={2}
-                            autoFocus
-                          />
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => handleEditMessage(msg.id, editContent)}
-                              className="text-xs bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-white transition-colors"
-                            >
-                              Guardar
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingMessageId(null);
-                                setEditContent("");
-                              }}
-                              className="text-xs bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-white transition-colors"
-                            >
-                              Cancelar
-                            </button>
                           </div>
-                        </div>
-                      ) : (
-                        <>
-                          <p className="text-sm break-words">{msg.content}</p>
-                          <p
-                            className={`text-xs mt-1 ${
-                              msg.isOwn ? "text-blue-200" : "text-gray-400"
-                            }`}
-                          >
-                            {msg.timestamp}
-                          </p>
-                        </>
-                      )}
+                        ) : (
+                          <>
+                            <p className="text-sm break-words">{msg.content}</p>
+                            <p
+                              className={`text-xs mt-1 ${msg.isOwn ? "text-blue-200" : "text-gray-400"}`}
+                            >
+                              {msg.timestamp}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {showDeleteConfirm === msg.id && (
+                    <div className="absolute top-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-30 p-4 min-w-64">
+                      <p className="text-gray-800 text-sm font-medium mb-3">¿Quieres eliminar este mensaje?</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                        <button
+                          onClick={() => setShowDeleteConfirm(null)}
+                          className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium py-2 px-3 rounded-lg transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
-
-                {showDeleteConfirm === msg.id && (
-                  <div className="absolute top-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-30 p-4 min-w-64">
-                    <p className="text-gray-800 text-sm font-medium mb-3">¿Quieres eliminar este mensaje?</p>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleDeleteMessage(msg.id)}
-                        className="flex-1 bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-2 px-3 rounded-lg transition-colors"
-                      >
-                        Eliminar
-                      </button>
-                      <button
-                        onClick={() => setShowDeleteConfirm(null)}
-                        className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-medium py-2 px-3 rounded-lg transition-colors"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))
+              ))
           )}
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
         <div className="p-4 border-t border-gray-700 bg-[#1a1a1a] relative h-20">
           <div className="flex items-center gap-3">
             <button
@@ -799,9 +769,7 @@ export function ChatArea({
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={
-                  isConnected ? t("write_message_placeholder") : "Conectando..."
-                }
+                placeholder={isConnected ? t("write_message_placeholder") : "Conectando..."}
                 disabled={!isConnected}
                 className="w-full bg-[#141414] border border-gray-600 rounded-lg px-4 py-2 pr-12 focus:outline-none focus:border-blue-500 text-white placeholder-gray-400"
               />
@@ -828,11 +796,7 @@ export function ChatArea({
             </div>
           )}
 
-          {error && (
-            <div className="mt-2 text-red-500 text-sm text-center">
-              {error}
-            </div>
-          )}
+          {error && <div className="mt-2 text-red-500 text-sm text-center">{error}</div>}
         </div>
       </div>
 

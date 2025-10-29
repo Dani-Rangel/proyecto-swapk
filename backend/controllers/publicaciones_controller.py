@@ -328,5 +328,3 @@ def editar_comentario(
         "foto_perfil": current_user.perfil.foto_perfil if current_user.perfil else "/img/default.png",
         "fecha": comentario.fecha_creacion.isoformat()
     }
-
-

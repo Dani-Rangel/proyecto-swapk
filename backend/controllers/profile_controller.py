@@ -12,6 +12,7 @@ from backend.services.auth_service import hash_password
 
 # 👇 Instala con: pip install Pillow
 from PIL import Image as PILImage
+from math import ceil
 
 UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -116,14 +117,12 @@ def update_perfil(
     if not perfil or not usuario:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
-    # --- Actualizar nombre del usuario ---
     if nombre is not None:
         nombre = nombre.strip()
         if not nombre:
             raise HTTPException(status_code=400, detail="El nombre no puede estar vacío")
         usuario.nombre = nombre
 
-    # --- Actualizar campos del perfil ---
     if descripcion is not None:
         perfil.descripcion = descripcion if descripcion != "null" else ""
 
@@ -142,29 +141,21 @@ def update_perfil(
             except ValueError:
                 raise HTTPException(status_code=400, detail="Tel debe ser un entero no negativo o null")
 
-    # --- Subir foto de perfil ---
     if foto_perfil is not None:
-        # Validar tipo de archivo
         if not foto_perfil.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="Solo se permiten imágenes")
 
-        # Generar nombre único y forzar extensión .jpg
         filename = f"{uuid.uuid4().hex}.jpg"
         filepath = os.path.join(UPLOAD_DIR, filename)
 
         try:
-            # Leer la imagen con PIL y guardar como JPG
             img = PILImage.open(foto_perfil.file)
-            img = img.convert("RGB")  # Eliminar transparencia si existe
+            img = img.convert("RGB")
             img.save(filepath, "JPEG", quality=85)
-
-            # Actualizar ruta en DB (ruta relativa desde frontend)
-            perfil.foto_perfil = f"/{filepath.replace(os.sep, '/')}"  # Ej: "/uploads/abc123.jpg"
-
+            perfil.foto_perfil = f"/{filepath.replace(os.sep, '/')}"
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error al procesar la imagen: {str(e)}")
 
-    # --- Actualizar contraseña ---
     if contrasena is not None:
         if len(contrasena) < 6:
             raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
@@ -176,26 +167,19 @@ def update_perfil(
         db.refresh(usuario)
         return {
             "msg": "Perfil actualizado correctamente",
-            "foto_perfil": perfil.foto_perfil  # Devolvemos la ruta relativa
+            "foto_perfil": perfil.foto_perfil
         }
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail="Error al guardar en la base de datos")
 
-#Esta ruta para mostrar los usuarios en el perfil
-
+# Ruta pública existente (sin cambios)
 @router.get("/todos-publicos", include_in_schema=False)
 def get_todos_perfiles_publicos(db: Session = Depends(get_db)):
-    """
-    Endpoint público para listar todos los perfiles.
-    No requiere autenticación.
-    """
     try:
         perfiles = db.query(Perfil).join(Usuario).all()
-        print(f"✅ Encontrados {len(perfiles)} perfiles")
         resultado = []
         for p in perfiles:
-            print(f" - Perfil ID: {p.id}, Usuario: {p.usuario.nombre if p.usuario else 'N/A'}")
             resultado.append({
                 "id": p.id,
                 "id_usuario": p.id_usuario,

@@ -1,6 +1,6 @@
 frontend/node_modules/
 node_modules/
-.next/dist/}
+.next/dist/
 build/
 .next
 out/

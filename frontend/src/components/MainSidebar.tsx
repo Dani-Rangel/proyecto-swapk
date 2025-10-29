@@ -44,14 +44,14 @@ export function MainSidebar({
   // Rutas visibles para todos los usuarios
   const navItems = [
     { icon: Home, label: t("home"), href: "/dashboard/index_dashboard" },
-    { icon: TrendingUp, label: t("popular"), href: "/message/messages" },
+    { icon: TrendingUp, label: t("popular"), href: "/popular/popular" },
     { icon: RefreshCw, label: t("exchanges"), href: "/intercambio/intercambio" },
     { icon: BookOpen, label: t("myCourses"), href: "/Cursos/community_courses" },
   ]
 
   return (
     <div
-      className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ${
+      className={`fixed inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 h-screen ${
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
       } md:translate-x-0 md:static md:flex flex-col border-r ${
         isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"
@@ -94,7 +94,7 @@ export function MainSidebar({
         </div>
 
         {/* Botones superiores: Mensajes, Notificaciones, Perfil, Ajustes */}
-        <div className="flex gap-1 mb-3">
+        <div className="flex gap-1 mb-9">
           <Button
             variant="ghost"
             size="sm"
@@ -107,7 +107,7 @@ export function MainSidebar({
             <MessageSquare className="w-4 h-4" />
           </Button>
 
-          {/* 🔔 Componente de Notificaciones */}
+          {/* Componente de Notificaciones */}
           <div className="flex-1 h-8 flex items-center justify-center">
             <Notificaciones />
           </div>
@@ -146,7 +146,7 @@ export function MainSidebar({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`w-full justify-start h-8 cursor-pointer transition-colors ${
+                  className={`w-full justify-start h-10 mb-4 cursor-pointer transition-colors gap-4 ${
                     isActive
                       ? "bg-blue-600 text-white hover:bg-blue-700"
                       : isDark
@@ -161,7 +161,6 @@ export function MainSidebar({
           })}
         </nav>
 
-        {/* ======================= */}
         {/* Sección exclusiva para Moderador */}
         {user?.rol === "Moderador" && (
           <div className="mt-4">
