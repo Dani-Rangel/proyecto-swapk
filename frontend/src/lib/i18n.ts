@@ -359,6 +359,10 @@ sending: "Enviando...",
 report_context_info_prefix: "Se incluirá automáticamente el ID del trueque",
 report_context_info_suffix: "en tu reporte.",
 
+// ===== Contenido de Cursos =====
+content_saved_success: "¡Contenido guardado correctamente!",
+error_saving_content: "Error al guardar el contenido. Inténtalo de nuevo.",
+
   },
 
   en: {
@@ -725,6 +729,9 @@ sending: "Sending...",
 report_context_info_prefix: "The exchange ID",
 report_context_info_suffix: "will be automatically included in your report.",
 
+// ===== Course Content =====
+content_saved_success: "Content saved successfully!",
+error_saving_content: "Error saving content. Please try again.",
   },
 } as const;
 

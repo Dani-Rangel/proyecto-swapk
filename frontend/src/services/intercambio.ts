@@ -1,11 +1,21 @@
 import axios from "axios";
 
-export const api = axios.create({
+// services/intercambio.ts
+const api = axios.create({
   baseURL: "http://localhost:8000",
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true,
+});
+
+// Añadir token a cada petición
+api.interceptors.request.use((config) => {
+  const userStr = localStorage.getItem("user");
+  if (userStr) {
+    const user = JSON.parse(userStr);
+    config.headers.Authorization = `Bearer ${user.token}`;
+  }
+  return config;
 });
 
 // ✅ ENUMS

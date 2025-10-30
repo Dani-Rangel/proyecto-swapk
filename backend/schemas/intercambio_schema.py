@@ -1,4 +1,4 @@
-from pydantic import BaseModel 
+from pydantic import BaseModel,  ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
@@ -40,8 +40,7 @@ class HabilidadBase(BaseModel):
     id: int
     nombre: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # -------------------------------
 # IntercambioHabilidad
@@ -52,12 +51,11 @@ class IntercambioHabilidadBase(BaseModel):
 class IntercambioHabilidadCreate(IntercambioHabilidadBase):
     habilidad_id: int
 
-class IntercambioHabilidadResponse(IntercambioHabilidadBase):
+class IntercambioHabilidadResponse(BaseModel):
     id: int
     habilidad: HabilidadBase
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # -------------------------------
 # Perfil
@@ -67,18 +65,13 @@ class PerfilBase(BaseModel):
     ubicacion: Optional[str] = None
     foto_perfil: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
-# -------------------------------
-# Usuario (solo id y nombre)
-# -------------------------------
 class UsuarioBase(BaseModel):
     id: int
     nombre: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 # -------------------------------
 # Intercambio: Base
@@ -121,7 +114,17 @@ class PropuestaAceptada(BaseModel):
     usuario_interesado: UsuarioBase
 
     class Config:
-        orm_mode = True        
+        orm_mode = True  
+
+class ResenaResponse(BaseModel):
+    id: int
+    autor: UsuarioBase
+    destinatario: UsuarioBase
+    calificacion: float
+    comentario: str
+    fecha: datetime
+
+    model_config = ConfigDict(from_attributes=True)                
 
 # -------------------------------
 # Intercambio: Response extendido con habilidades separadas
@@ -144,9 +147,10 @@ class IntercambioConHabilidadesSeparadas(BaseModel):
     habilidades_ofrece: List[HabilidadBase] = []
     habilidades_busca: List[HabilidadBase] = []
     propuestas: List[PropuestaAceptada] = []
+    reseñas: List[ResenaResponse] = []
+    ya_participaste: bool = False 
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PropuestaResumen(BaseModel):
     id_intercambio: int
@@ -169,14 +173,4 @@ class ResenaCreate(BaseModel):
         orm_mode = True
 
 
-class ResenaResponse(BaseModel):
-    id: int
-    intercambio_id: int
-    autor: UsuarioBase          # 👈 Mostrar datos del autor
-    destinatario: UsuarioBase   # 👈 Mostrar datos del destinatario
-    calificacion: float
-    comentario: str
-    fecha: datetime
-
-    class Config:
-        orm_mode = True            
+        

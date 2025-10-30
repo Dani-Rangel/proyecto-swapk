@@ -29,7 +29,8 @@ from backend.controllers import notificacion_controller
 from backend.controllers import help_controller
 from backend.controllers import inscripcion_curso_controller
 from backend.controllers import reporte_controller as reportes_api
-
+from backend.controllers.contenido_curso_controller import router as contenido_router
+from backend.controllers.bloque_contenido_controller import router as bloque_contenido_router
 
 
 
@@ -83,6 +84,8 @@ app.include_router(publicaciones_admin_controller.router)
 app.include_router(help_controller.router)
 app.include_router(inscripcion_curso_controller.router)
 app.include_router(reportes_api.router)
+app.include_router(contenido_router)
+app.include_router(bloque_contenido_router)
 
 
 

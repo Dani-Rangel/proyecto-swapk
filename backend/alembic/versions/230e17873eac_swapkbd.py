@@ -1,8 +1,8 @@
-"""Swapkbdm
+"""Swapkbd
 
-Revision ID: f774129085f7
+Revision ID: 230e17873eac
 Revises: 
-Create Date: 2025-10-13 00:27:17.766447
+Create Date: 2025-10-28 13:02:28.766621
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'f774129085f7'
+revision: str = '230e17873eac'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -175,6 +175,21 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_attachments_id'), 'attachments', ['id'], unique=False)
+    op.create_table('contenido_curso',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('curso_id', sa.Integer(), nullable=False),
+    sa.Column('titulo', sa.String(length=255), nullable=False),
+    sa.Column('tipo', sa.Enum('texto', 'video', 'archivo', 'imagen', name='tipocontenido'), nullable=False),
+    sa.Column('contenido', sa.Text(), nullable=False),
+    sa.Column('orden', sa.Integer(), nullable=False),
+    sa.Column('nivel', sa.Integer(), nullable=True),
+    sa.Column('parent_id', sa.Integer(), nullable=True),
+    sa.Column('creado_en', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.ForeignKeyConstraint(['curso_id'], ['cursos.id'], ),
+    sa.ForeignKeyConstraint(['parent_id'], ['contenido_curso.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_contenido_curso_id'), 'contenido_curso', ['id'], unique=False)
     op.create_table('curso_habilidad',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('curso_id', sa.Integer(), nullable=True),
@@ -239,6 +254,16 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['id_usuario'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('bloque_contenido',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('leccion_id', sa.Integer(), nullable=False),
+    sa.Column('tipo', sa.Enum('texto', 'video', 'imagen', 'archivo', name='tipobloque'), nullable=False),
+    sa.Column('contenido', sa.Text(), nullable=False),
+    sa.Column('orden', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['leccion_id'], ['contenido_curso.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_bloque_contenido_id'), 'bloque_contenido', ['id'], unique=False)
     op.create_table('comentarios',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('contenido', sa.Text(), nullable=False),
@@ -305,11 +330,15 @@ def downgrade() -> None:
     op.drop_table('likes')
     op.drop_table('intercambio_habilidad')
     op.drop_table('comentarios')
+    op.drop_index(op.f('ix_bloque_contenido_id'), table_name='bloque_contenido')
+    op.drop_table('bloque_contenido')
     op.drop_table('archivos')
     op.drop_table('publicaciones')
     op.drop_table('intercambios')
     op.drop_table('inscripciones_cursos')
     op.drop_table('curso_habilidad')
+    op.drop_index(op.f('ix_contenido_curso_id'), table_name='contenido_curso')
+    op.drop_table('contenido_curso')
     op.drop_index(op.f('ix_attachments_id'), table_name='attachments')
     op.drop_table('attachments')
     op.drop_table('archivo')

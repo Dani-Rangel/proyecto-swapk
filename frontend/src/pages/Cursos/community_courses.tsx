@@ -50,7 +50,8 @@ import ProtectedRoute from "@/components/protected_routes/protected_routes"; // 
 import { MainSidebar } from "@/components/MainSidebar"
 import { inscripcionCursoAPI } from "@/services/inscripcionCursoApi"
 import ManageEnrollmentsModal from "@/components/ui/ManageEnrollmentsModal"
-
+import { CursoContenidoEditor } from "@/components/ui/contenido_curso/CursoContenidoEditor"
+import { CursoContenidoViewer } from "@/components/ui/contenido_curso/CursoContenidoViewer"
 
 interface NewCourseData {
   title: string
@@ -592,11 +593,17 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
             </div>
           </section>
           <section>
-            {isCreator || (inscrito && estadoInscripcion === "Confirmado") ? (
-              <div className="p-6 bg-green-100 border rounded">
-                <h3 className="font-bold text-green-800">Contenido del curso disponible</h3>
-                {/* Aquí iría el contenido real del curso */}
-                <p>Lecciones, videos, materiales, etc.</p>
+           {isCreator || (inscrito && estadoInscripcion === "Confirmado") ? (
+              <div className="p-6">
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>Contenido del curso</h3>
+                <Button
+                  asChild
+                  className={`w-full ${isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"} text-white`}
+                >
+                  <Link href={`/Cursos/${course.id}`}>
+                    Ver curso en modo completo →
+                  </Link>
+                </Button>
               </div>
             ) : (
               <div className="h-40 w-full p-6 border border-red-400 bg-red-400/20 flex items-center justify-center rounded text-white">

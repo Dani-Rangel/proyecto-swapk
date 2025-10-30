@@ -8,3 +8,62 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* app/globals.css */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Estilos para el sidebar */
+.sidebar-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #3e3e3e;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.sidebar-item:hover {
+  background-color: #3e3e3e;
+}
+
+.sidebar-item.active {
+  background-color: #2e2e2e;
+  color: #00ff00;
+}
+
+/* Estilos para las lecciones */
+.lesson-item {
+  padding: 8px 16px;
+  margin-left: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.lesson-item:hover {
+  background-color: #3e3e3e;
+}
+
+.lesson-item .progress {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lesson-item .progress span {
+  font-size: 12px;
+  color: #a0a0a0;
+}
+
+.lesson-item .progress svg {
+  width: 16px;
+  height: 16px;
+  fill: #00ff00;
+  opacity: 0;
+}
+
+.lesson-item.completed .progress svg {
+  opacity: 1;
+}
