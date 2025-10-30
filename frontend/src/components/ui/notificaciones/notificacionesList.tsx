@@ -21,7 +21,7 @@ export const NotificacionesList: React.FC = () => {
       const timeout = setTimeout(() => {
         marcarComoLeida(notif.id)
         setVisibles((prev) => prev.filter((id) => id !== notif.id))
-      }, 5000) // 5 segundos
+      }, 5000)
       timeouts.current.push(timeout)
     })
 
@@ -57,7 +57,9 @@ export const NotificacionesList: React.FC = () => {
       {notificacionesVisibles.map((notif) => (
         <div
           key={notif.id}
-          className={`relative bg-gradient-to-r ${getBgColor(notif.tipo)} text-white p-4 rounded-lg shadow-lg border-l-4 transform transition-all duration-500 ease-out animate-fade-in-up`}
+          className={`relative bg-gradient-to-r ${getBgColor(
+            notif.tipo
+          )} text-white p-4 rounded-lg shadow-lg border-l-4 transform transition-all duration-500 ease-out animate-fade-in-up`}
           style={{
             animation: "fade-in-up 0.3s ease-out",
             animationFillMode: "forwards",
@@ -85,11 +87,13 @@ export const NotificacionesList: React.FC = () => {
                   {new Date(notif.fecha).toLocaleTimeString()}
                 </span>
               </div>
-              <p className="text-sm leading-relaxed break-words">{notif.contenido}</p>
+              <p className="text-sm leading-relaxed break-words">
+                {notif.contenido}
+              </p>
             </div>
           </div>
 
-          {/* Barra de progreso de tiempo */}
+          {/* Barra de progreso */}
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
             <div
               className="h-full bg-white/60 animate-progress"

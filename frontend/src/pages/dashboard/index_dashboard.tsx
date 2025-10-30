@@ -1,5 +1,4 @@
 "use client"
-
 import { useTranslation } from "../../lib/useTranslations"
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useRouter } from "next/navigation"
@@ -49,7 +48,6 @@ interface Usuario {
   rol: "Administrador" | "Moderador" | "Usuario";
   fecha_creacion?: string;
 }
-
 interface Perfil {
   id: number;
   id_usuario: number;
@@ -63,7 +61,6 @@ function ForumLayoutComponent() {
   const router = useRouter()
   const { t } = useTranslation()
   const { agregarNotificacion } = useNotificaciones()
-
   // activeTab usa valores fijos (no traducciones)
   const [activeTab, setActiveTab] = useState("Intercambio")
   const tabLabels: Record<string, string> = {
@@ -73,17 +70,14 @@ function ForumLayoutComponent() {
     Logro: t("postTypeAchievements"),
     Todo: t("todo"),
   }
-
   const [isDark, setIsDark] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [user, setUser] = useState<Usuario | null>(null)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
-
   // Paginacion
   const [todosLosPerfiles, setTodosLosPerfiles] = useState<Perfil[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const perfilesPerPage = 12;
-
   // Estados para publicaciones y comentarios
   const [publicaciones, setPublicaciones] = useState<any[]>([])
   const [perfiles, setPerfiles] = useState<any[]>([]);
@@ -107,10 +101,13 @@ function ForumLayoutComponent() {
   const [isEditCommentModalOpen, setIsEditCommentModalOpen] = useState(false);
  const [editingComment, setEditingComment] = useState<any | null>(null);
  const [editedCommentText, setEditedCommentText] = useState("");
- const [publicacionLikes, setPublicacionLikes] = useState<Record<number, any[]>>({})
+ // Nuevo estado para el modal de likes de Instagram
+ const [isInstagramLikesModalOpen, setIsInstagramLikesModalOpen] = useState(false);
+ const [instagramLikesData, setInstagramLikesData] = useState<any[]>([]); // Para almacenar los datos de los likes
+ const [currentPostId, setCurrentPostId] = useState<number | null>(null); // Para saber qué publicación estamos viendo
+
   // Referencia para evitar memory leaks
   const isMountedRef = useRef(true)
-
   const tabToApiSlug: Record<string, string> = {
     Intercambio: "intercambios",
     Curso: "cursos",
@@ -118,21 +115,16 @@ function ForumLayoutComponent() {
     Logro: "logros",
     Todo: "all",
   }
-
   const getApiTipo = (tab: string) => {
     return tab === "Todo" ? "all" : tabToApiSlug[tab] || "all"
   }
-
   //  Cargar usuario desde localStorage (memoizado para evitar renders innecesarios)
   useEffect(() => {
     isMountedRef.current = true;
-
     const savedUser = localStorage.getItem("user");
-
     if (savedUser && isMountedRef.current) {
       try {
         const parsed = JSON.parse(savedUser);
-
         // Asegurar que el rol siempre exista y tenga un valor válido
         const usuario: Usuario = parsed.usuario || { 
           id: parsed.id, 
@@ -140,15 +132,12 @@ function ForumLayoutComponent() {
           correo: parsed.correo, 
           rol: parsed.rol || "Usuario" // <- Por defecto "Usuario" si no viene
         };
-
         const perfilData: Perfil | null = parsed.perfil || null;
-
         // Evitar actualizaciones innecesarias en el estado del usuario
         setUser((prev: Usuario | null) => {
           if (prev?.id === usuario.id && prev?.rol === usuario.rol) return prev;
           return usuario;
         });
-
         // Evitar actualizaciones innecesarias en el estado del perfil
         setPerfil((prev: Perfil | null) => {
           if (JSON.stringify(prev) === JSON.stringify(perfilData)) return prev;
@@ -162,13 +151,10 @@ function ForumLayoutComponent() {
         setPerfil(null);
       }
     }
-
     return () => {
       isMountedRef.current = false;
     };
   }, []);
-
-
   // Cleanup para el menú de compartir
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -176,13 +162,11 @@ function ForumLayoutComponent() {
         setShowShareMenu(null);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showShareMenu]);
-
   // Obtener configuración de tipo (color, slug, display)
   const getTipoConfig = useCallback((tipo: string) => {
     switch (tipo) {
@@ -198,7 +182,6 @@ function ForumLayoutComponent() {
         return { color: "bg-gray-600", slug: "all", display: tipo }
     }
   }, [t])
-
   // Formatear fecha
   const formatFecha = useCallback((fechaStr: string) => {
     const fecha = new Date(fechaStr)
@@ -206,18 +189,15 @@ function ForumLayoutComponent() {
       console.warn("Fecha inválida:", fechaStr)
       return "Fecha inválida"
     }
-
     const ahora = new Date()
     const diffMs = ahora.getTime() - fecha.getTime()
     const diffMin = Math.floor(diffMs / (1000 * 60))
     const diffHrs = Math.floor(diffMs / (1000 * 60 * 60))
-
     if (diffMin < 1) return t("justNow")
     if (diffMin < 60) return `${diffMin} ${t("minutesAgo")}`
     if (diffHrs < 24) return `${diffHrs} ${t("hoursAgo")}`
     return fecha.toLocaleDateString()
   }, [t])
-
   useEffect(() => {
   const fetchCursos = async () => {
     try {
@@ -229,34 +209,26 @@ function ForumLayoutComponent() {
   };
     fetchCursos();
   }, []);
-
   useEffect(() => {
     if (!user?.id) return;
-
     const controller = new AbortController();
-
     const cargarPublicaciones = async () => {
       try {
         const tipo = "all";
         const res = await fetch(`http://localhost:8000/api/publicaciones/${tipo}`, {
           signal: controller.signal,
         });
-
         if (!res.ok) throw new Error("Error al cargar publicaciones");
         const data = await res.json();
         const posts = Array.isArray(data) ? data : [];
-
         setPublicaciones(posts);
-
         const likesMap: Record<number, number> = {};
         const userLikesMap: Record<number, boolean> = {};
-
         posts.forEach((post: any) => {
           likesMap[post.id] = post.likes?.length || 0;
           userLikesMap[post.id] =
             post.likes?.some((like: any) => like.id_usuario === user?.id) || false;
         });
-
         setLikes(likesMap);
         setUserLikes(userLikesMap);
       } catch (error: any) {
@@ -266,13 +238,10 @@ function ForumLayoutComponent() {
         }
       }
     };
-
     cargarPublicaciones();
     return () => controller.abort();
   }, [activeTab, user?.id, refreshTrigger]);
-
   const toggleTheme = () => setIsDark(!isDark)
-
   // Manejar like
 const handleLike = async (postId: number) => {
   if (!user) {
@@ -300,12 +269,10 @@ const handleLike = async (postId: number) => {
     const data = await res.json()
     setLikes((prev) => ({ ...prev, [postId]: data.total_likes }))
     setUserLikes((prev) => ({ ...prev, [postId]: data.liked }))
-
     // Solo si el usuario dio like (no si lo quitó), enviar notificación
     if (data.liked) {
       const currentUser = getCurrentUser()
       const nombreUsuario = currentUser?.nombre || "Un usuario"
-
       // buscar la publicación para obtener el autor
       const post = publicaciones.find(p => p.id === postId)
       if (post && post.id_usuario !== currentUser?.id) { // No notificar si es el mismo usuario
@@ -320,7 +287,6 @@ const handleLike = async (postId: number) => {
     toast.error(t("likeError"))
   }
 }
-
   // manejar comentarios
   const toggleComentarios = async (postId: number) => {
     if (comentariosAbiertos === postId) {
@@ -340,7 +306,6 @@ const handleLike = async (postId: number) => {
       }
     }
   }
-
   // comentar
  const handleComentar = async (postId: number, post: any) => {
   if (!nuevoComentario.trim()) return
@@ -374,11 +339,9 @@ const handleLike = async (postId: number) => {
         [postId]: Array.isArray(updatedComments) ? updatedComments : []
       }))
       setNuevoComentario("")
-
       // Notificar al autor de la publicación
       const user = getCurrentUser()
       const nombreUsuario = user?.nombre || "Un usuario"
-
       if (post.id_usuario && post.id_usuario !== user?.id) {
         agregarNotificacion({
           tipo: "comentario",
@@ -386,7 +349,6 @@ const handleLike = async (postId: number) => {
           id_usuario: post.id_usuario,
         })
       }
-
       toast.success(t("commentPosted"))
     } else {
       const error = await res.json()
@@ -396,25 +358,21 @@ const handleLike = async (postId: number) => {
     toast.error(t("connectionError"))
   }
 }
-
   const handleShare = (postId: number) => {
     setShowShareMenu(showShareMenu === postId ? null : postId)
   }
-
   const copyLink = (postId: number) => {
     const postUrl = `${window.location.origin}/post/${postId}`
     navigator.clipboard.writeText(postUrl)
     toast.success(t("linkCopied"))
     setShowShareMenu(null)
   }
-
   // ➕ Crear nueva publicación
   const handleCreatePost = async () => {
     if (!newPost.titulo.trim() || !newPost.contenido.trim()) {
       toast.error("Completa título y contenido")
       return
     }
-
     const savedUser = localStorage.getItem("user");
     if (!savedUser) {
       toast.error(t("mustLogin"));
@@ -422,14 +380,11 @@ const handleLike = async (postId: number) => {
     }
     const parsedUser = JSON.parse(savedUser);
     const token = parsedUser.token;
-
     try {
       const url = editingPost 
         ? `http://localhost:8000/api/publicaciones/${editingPost.id}` 
         : "http://localhost:8000/api/publicaciones";
-
       const method = editingPost ? "PUT" : "POST";
-
       const res = await fetch(url, {
         method,
         headers: {
@@ -442,22 +397,18 @@ const handleLike = async (postId: number) => {
           id_perfil: parsedUser.perfil?.id || null
         }),
       })
-
       if (res.ok) {
         toast.success(editingPost ? t("postUpdated") : t("postCreated"))
-
         // Solo si es una NUEVA publicación (no edición), crear notificación
         if (!editingPost) {
           const user = getCurrentUser()
           const nombreUsuario = user?.nombre || "Un usuario"
-
           agregarNotificacion({
             tipo: "Publicacion", 
             contenido: `El usuario ${nombreUsuario} ha creado una nueva publicación: "${newPost.titulo}".`,
             id_usuario: user?.id || 0,
           })
         }
-
         setIsModalOpen(false)
         setNewPost({ titulo: "", contenido: "", tipo: "Intercambio", imagen: "" })
         setEditingPost(null)
@@ -470,7 +421,6 @@ const handleLike = async (postId: number) => {
       toast.error(t("connectionError"))
     }
   }
-
   // Editar publicación — abre el mismo modal con los datos cargados
   const handleEditPost = (post: any) => {
     setEditingPost(post)
@@ -482,11 +432,9 @@ const handleLike = async (postId: number) => {
     })
     setIsModalOpen(true)
   }
-
   // eliminar publicación
   const handleDeletePost = async (postId: number) => {
     if (!confirm(t("confirmDeletePost"))) return
-
     const savedUser = localStorage.getItem("user");
     if (!savedUser) {
       toast.error(t("mustLogin"));
@@ -497,7 +445,6 @@ const handleLike = async (postId: number) => {
       toast.error(t("mustLogin"));
       return;
     }
-
     try {
       const res = await fetch(`http://localhost:8000/api/publicaciones/${postId}`, {
         method: "DELETE",
@@ -505,7 +452,6 @@ const handleLike = async (postId: number) => {
           "Authorization": `Bearer ${token}`
         }
       })
-
       if (res.ok) {
         toast.success(t("postDeleted"))
         setPublicaciones(prev => prev.filter(p => p.id !== postId))
@@ -518,11 +464,9 @@ const handleLike = async (postId: number) => {
       toast.error(t("connectionError"))
     }
   }
-
   // Editar comentario 
  const handleSaveEditedComment = async () => {
   if (!editedCommentText.trim() || !editingComment) return;
-
   const savedUser = localStorage.getItem("user");
   if (!savedUser) {
     toast.error(t("mustLogin"));
@@ -533,7 +477,6 @@ const handleLike = async (postId: number) => {
     toast.error(t("mustLogin"));
     return;
   }
-
   try {
     const res = await fetch(
       `http://localhost:8000/api/publicaciones/comentarios/${editingComment.id}`,
@@ -548,7 +491,6 @@ const handleLike = async (postId: number) => {
         })
       }
     );
-
     if (res.ok) {
       const updated = await res.json();
       setComentarios(prev => ({
@@ -569,11 +511,9 @@ const handleLike = async (postId: number) => {
     toast.error(t("connectionError"));
   }
 };
-
   // eliminar comentario
   const handleDeleteComment = async (commentId: number, postId: number) => {
     if (!confirm(t("confirmDeleteComment"))) return
-
     const savedUser = localStorage.getItem("user");
     if (!savedUser) {
       toast.error(t("mustLogin"));
@@ -584,7 +524,6 @@ const handleLike = async (postId: number) => {
       toast.error(t("mustLogin"));
       return;
     }
-
     try {
       const res = await fetch(`http://localhost:8000/api/publicaciones/comentarios/${commentId}`, {
         method: "DELETE",
@@ -592,7 +531,6 @@ const handleLike = async (postId: number) => {
           "Authorization": `Bearer ${token}`
         }
       })
-
       if (res.ok) {
         toast.success(t("commentDeleted"))
         setComentarios(prev => ({
@@ -607,13 +545,11 @@ const handleLike = async (postId: number) => {
       toast.error(t("connectionError"))
     }
   }
-
 const handleEditComment = (comment: any) => {
   setEditingComment(comment);
   setEditedCommentText(comment.contenido);
   setIsEditCommentModalOpen(true);
 };
-
   const cargarPerfiles = async (page: number = 1) => {
     try {
       const res = await fetch(`http://localhost:8000/public/perfiles?page=${page}&limit=${perfilesPerPage}`);
@@ -632,14 +568,13 @@ const handleEditComment = (comment: any) => {
       toast.error("No se pudieron cargar los perfiles");
     }
   };
-
 // Función para cargar y mostrar quién dio like a una publicación
+// Esta función ahora abre el modal de Instagram
 const handleVerLikes = async (postId: number) => {
   if (!user) {
     toast.error(t("mustLogin"));
     return;
   }
-
   const savedUser = localStorage.getItem("user");
   if (!savedUser) {
     toast.error(t("mustLogin"));
@@ -650,7 +585,6 @@ const handleVerLikes = async (postId: number) => {
     toast.error(t("mustLogin"));
     return;
   }
-
   try {
     const res = await fetch(`http://localhost:8000/api/publicaciones/${postId}/likes`, {
       method: "GET",
@@ -658,14 +592,12 @@ const handleVerLikes = async (postId: number) => {
         "Authorization": `Bearer ${token}`
       }
     });
-
     if (res.ok) {
       const likesData = await res.json();
       // Guardamos los datos en el estado
-      setPublicacionLikes((prev) => ({
-        ...prev,
-        [postId]: likesData
-      }));
+      setInstagramLikesData(likesData);
+      setCurrentPostId(postId); // Guardamos el ID de la publicación actual
+      setIsInstagramLikesModalOpen(true); // Abrimos el modal de Instagram
     } else {
       const error = await res.json();
       toast.error(error.detail || t("errorLoadingLikes"));
@@ -675,15 +607,14 @@ const handleVerLikes = async (postId: number) => {
     toast.error(t("connectionError"));
   }
 };
+
   // Handlers optimizados con useCallback
   const handleTabChange = useCallback((tab: string) => {
     setActiveTab(tab);
   }, []);
-
   const handleRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
   }, []);
-
   // Memoizar publicaciones renderizadas
   const renderedPosts = useMemo(() => {
     return publicaciones.map((post) => {
@@ -693,7 +624,6 @@ const handleVerLikes = async (postId: number) => {
           <CardContent className="p-6">
             <div className="flex gap-4">
               {/* Likes */}
-                  
                     {/* Si no es el autor, muestra el botón de like y el contador*/}
                     <div className="flex flex-col items-center gap-1">
                       <Button 
@@ -712,7 +642,6 @@ const handleVerLikes = async (postId: number) => {
                         {likes[post.id] ?? 0}
                       </span>
                     </div>
-            
               {/* Contenido */}
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
@@ -735,18 +664,14 @@ const handleVerLikes = async (postId: number) => {
                     {formatFecha(post.fecha_creacion)}
                   </span>
                 </div>
-
                 <h2 className={`text-xl font-semibold mb-3 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{post.titulo}</h2>
                 <p className={`mb-4 ${isDark ? "text-[#D0D0D0]" : "text-gray-700"}`}>{post.contenido}</p>
-
                 {post.imagen && (
                   <img src={post.imagen} alt="Publicación" className="w-full h-auto rounded-lg mb-4" />
                 )}
-
                 <div className={`flex gap-2 mb-4 ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
                   <Badge className={`${config.color} text-white`}>#{config.slug}</Badge>
                 </div>
-
                 <div className={`flex items-center gap-4 text-sm ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
                   <Button variant="ghost" size="sm" onClick={() => toggleComentarios(post.id)} className="transition-colors">
                     <MessageSquare className="w-4 h-4 mr-1" /> {comentarios[post.id]?.length || 0} {t("comments")}
@@ -765,22 +690,21 @@ const handleVerLikes = async (postId: number) => {
                   <Button variant="ghost" size="sm" className="transition-colors">
                     <Flag className="w-4 h-4 mr-1" /> {t("report")}
                   </Button>
-
                     {/* BOTONES DE EDITAR Y ELIMINAR (solo si es el autor) */}
                     {user && user.id === post.id_usuario && (
                       <div className="flex gap-1 ml-auto">
-                        {/* Botón Ver Likes */}
+                        {/* Botón Ver Likes (ahora abre el modal de Instagram) */}
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="cursor-pointer text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors rounded-md flex items-center gap-1"                                onClick={(e) => {
+                          className="cursor-pointer text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 transition-colors rounded-md flex items-center gap-1"
+                                onClick={(e) => {
                             e.stopPropagation();
                             handleVerLikes(post.id);
                           }}
                         >
                           <Users className="w-4 h-4" /> {t("viewLikes")}
                         </Button>
-
                         {/* Botón Editar */}
                         <Button
                           variant="ghost"
@@ -790,7 +714,6 @@ const handleVerLikes = async (postId: number) => {
                         >
                           <Edit className="w-4 h-4 mr-1" /> {t("edit")}
                         </Button>
-
                         {/* Botón Eliminar */}
                         <Button
                           variant="ghost"
@@ -802,7 +725,6 @@ const handleVerLikes = async (postId: number) => {
                         </Button>
                       </div>
                     )}
-
                   {/* Menú de compartir */}
                   {showShareMenu === post.id && (
                     <div
@@ -826,7 +748,8 @@ const handleVerLikes = async (postId: number) => {
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
-                              const text = encodeURIComponent(`Mira esta publicación: ${post.titulo}\n${window.location.origin}/post/${post.id}`)
+                              const text = encodeURIComponent(`Mira esta publicación: ${post.titulo}
+${window.location.origin}/post/${post.id}`)
                               window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer')
                               setShowShareMenu(null)
                             }}
@@ -905,9 +828,7 @@ const handleVerLikes = async (postId: number) => {
                       </div>
                     </div>
                   )}
-                  
                 </div>
-
                 {/* Comentarios */}
                 {comentariosAbiertos === post.id && (
                   <div className="mt-4 pt-4 border-t space-y-4">
@@ -930,7 +851,6 @@ const handleVerLikes = async (postId: number) => {
                           <img src={com.foto_perfil || "/img/user.png"} alt="" className="w-6 h-6 rounded-full" />
                           <span className="font-medium text-sm">{com.nombre_usuario}</span>
                           <span className="text-xs text-gray-500">{new Date(com.fecha).toLocaleDateString()}</span>
-
                           {/* BOTONES DE EDITAR Y ELIMINAR (solo si es el autor del comentario) */}
                           {user?.id === com.id_usuario && (
                             <div className="absolute right-0 top-0 flex gap-1">
@@ -963,15 +883,14 @@ const handleVerLikes = async (postId: number) => {
                   </div>
                 )}
                 {/* Sección para mostrar quién dio like (solo visible si se han cargado) */}
-                {publicacionLikes[post.id] && publicacionLikes[post.id].length > 0 && (
+                {/* Este bloque ya no se usa, porque lo reemplazamos por el modal de Instagram */}
+                {/* {publicacionLikes[post.id] && publicacionLikes[post.id].length > 0 && (
                   <div className="mt-4 pt-4 border-t relative">
-                    {/* Botón de Cerrar */}
                     <button
                       onClick={() => {
-                        // Eliminamos la lista de likes de este post del estado
                         setPublicacionLikes((prev) => {
                           const nuevoEstado = { ...prev };
-                          delete nuevoEstado[post.id]; // Elimina la clave para este post
+                          delete nuevoEstado[post.id];
                           return nuevoEstado;
                         });
                       }}
@@ -980,7 +899,6 @@ const handleVerLikes = async (postId: number) => {
                     >
                       <X className="w-4 h-4" />
                     </button>
-
                     <h4 className={`text-sm font-medium mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
                       {t("likedBy")}:
                     </h4>
@@ -1002,7 +920,7 @@ const handleVerLikes = async (postId: number) => {
                       ))}
                     </div>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           </CardContent>
@@ -1018,6 +936,13 @@ const handleVerLikes = async (postId: number) => {
     setNewPost({ titulo: "", contenido: "", tipo: "Intercambio", imagen: "" })
   }
 
+  // Función para cerrar el modal de Instagram
+  const closeInstagramLikesModal = () => {
+    setIsInstagramLikesModalOpen(false);
+    setInstagramLikesData([]); // Limpiamos los datos cuando se cierra
+    setCurrentPostId(null);
+  };
+
   return (
     <>
       <style jsx>{`
@@ -1025,19 +950,107 @@ const handleVerLikes = async (postId: number) => {
           from { opacity: 0; transform: scale(0.9) translateY(10px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
+        /* Estilos para el modal de Instagram */
+        .instagram-likes-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.8);
+          backdrop-filter: blur(10px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          padding: 20px;
+        }
+        .instagram-likes-modal-content {
+          background: #242424;
+          border-radius: 12px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+          width: 100%;
+          max-width: 400px;
+          max-height: 600px;
+          overflow-y: auto;
+        }
+        .instagram-likes-modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 16px 20px;
+          border-bottom: 1px solid #333;
+        }
+        .instagram-likes-modal-title {
+          font-size: 18px;
+          font-weight: bold;
+          color: white;
+        }
+        .instagram-likes-modal-close {
+          background: none;
+          border: none;
+          color: white;
+          font-size: 24px;
+          cursor: pointer;
+        }
+        .instagram-likes-modal-list {
+          padding: 16px 20px;
+        }
+        .instagram-likes-modal-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 0;
+          border-bottom: 1px solid #333;
+        }
+        .instagram-likes-modal-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          object-fit: cover;
+          margin-right: 12px;
+        }
+        .instagram-likes-modal-user-info {
+          flex: 1;
+          overflow: hidden;
+        }
+        .instagram-likes-modal-username {
+          font-size: 14px;
+          font-weight: bold;
+          color: white;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .instagram-likes-modal-name {
+          font-size: 12px;
+          color: #aaa;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .instagram-likes-modal-view-profile-btn {
+          background-color: #0095f6;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          padding: 6px 12px;
+          font-size: 14px;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+        .instagram-likes-modal-view-profile-btn:hover {
+          background-color: #0077b6;
+        }
       `}</style>
-
       <div className={`min-h-screen relative overflow-hidden transition-colors duration-300 ${isDark ? "bg-[#141414] text-[#F5F5F5]" : "bg-gray-50 text-gray-900"}`}>
-        
         <Toaster position="top-right" />
-
         {/* Botón Hamburguesa */}
         <div className="absolute top-4 left-4 md:hidden z-50">
           <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-600 dark:text-gray-300">
             {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </Button>
         </div>
-
         {/* Sidebar Izquierdo */}
         <div className="fixed left-0 top-0 bottom-0 w-64 z-40 h-screen">
           <MainSidebar
@@ -1048,7 +1061,6 @@ const handleVerLikes = async (postId: number) => {
             user={user}
           />
         </div>
-
         {/* Main Content */}
         <main className="ml-64 mr-80 p-4 min-h-screen overflow-y-auto">
         {/* Tabs */}
@@ -1086,7 +1098,6 @@ const handleVerLikes = async (postId: number) => {
             >
               {t("profiles")}
             </Button>
-
             {/* Botón "+ Nueva Publicación" (solo visible en modo posts) */}
           {viewMode === "posts" && (
               <div className="ml-auto flex items-center gap-2">
@@ -1113,9 +1124,7 @@ const handleVerLikes = async (postId: number) => {
               </div>
             )}
           </div>
-
           {/* Publicaciones */}
-
             {viewMode === "posts" ? (
               <div className="space-y-6">
                 {publicaciones.length > 0 ? renderedPosts : (
@@ -1163,8 +1172,7 @@ const handleVerLikes = async (postId: number) => {
                       </Card>
                     ))}
                   </div>
-
-    {/* ✅ Controles de paginación */}
+    {/* paginación */}
                   {perfiles.length > 0 && (
                     <div className="flex justify-center gap-2 mt-6">
                       <Button
@@ -1195,7 +1203,6 @@ const handleVerLikes = async (postId: number) => {
                       </Button>
                     </div>
                   )}
-
                   {perfiles.length === 0 && (
                     <div className={`text-center py-10 ${isDark ? "text-gray-400" : "text-gray-500"}`}>
                       {t("noProfiles")}
@@ -1204,7 +1211,6 @@ const handleVerLikes = async (postId: number) => {
                 </>
               )}
 </main>
-
         {/* Right Sidebar */}
                 <aside className="fixed right-0 top-0 bottom-0 w-80 z-80 p-4 overflow-y-auto h-screen space-y-16">
           <Card className={`${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"}`}>
@@ -1266,7 +1272,6 @@ const handleVerLikes = async (postId: number) => {
                                     : "0 inscritos"}
                                 </span>
                               </div>
-
                               {/* 🔘 Botón Join */}
                               <Button
                                 onClick={() =>
@@ -1282,15 +1287,12 @@ const handleVerLikes = async (postId: number) => {
                         );
                       })}
                   </div>
-                  
-
                   {/* Mostrar mensaje si hay menos de 8 cursos */}
                   {cursos.length < 8 && (
                     <p className={`mt-3 text-center text-sm ${isDark ? "text-gray-500" : "text-gray-600"}`}>
                       ¡Próximamente más cursos emocionantes! 🚀
                     </p>
                   )}
-
                   {/* Botón que nos va a redirigir al apartado de cursos */}
                   <div className="mt-4 flex justify-center">
                     <Button
@@ -1310,7 +1312,6 @@ const handleVerLikes = async (postId: number) => {
               )}
             </CardContent>
           </Card>
-
           <Card className={`${isDark ? "bg-[#1E1E1E] border-[#2E2E2E]" : "bg-white border-gray-200"} `}>
             <CardContent className="p-6 ">
               <h3 className={`text-base font-semibold mb-6 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
@@ -1327,17 +1328,16 @@ const handleVerLikes = async (postId: number) => {
                 </div>
                 <div className={`p-3 rounded-lg text-center ${isDark ? "bg-[#141414]" : "bg-gray-100"}`}>
                   <div className="text-xl font-bold text-yellow-400">4.8</div>
-                  <div className={`text-xs uppercase ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>{t("rating")}</div>
+                  <div className={`text-xs uppercase ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>{t("messages")}</div>
                 </div>
                 <div className={`p-2 rounded-lg text-center ${isDark ? "bg-[#141414]" : "bg-gray-100"}`}>
                   <div className="text-xl font-bold text-purple-400">23</div>
-                  <div className={`text-xs uppercase ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>{t("connections")}</div>
+                  <div className={`text-xs uppercase ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>{t("review")}</div>
                 </div>
               </div>
             </CardContent>
           </Card>
         </aside>
-
         {/* Modal Nueva Publicación / Editar Publicación */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
@@ -1422,11 +1422,52 @@ const handleVerLikes = async (postId: number) => {
             </div>
           </div>
         )}
+
+        {/* Modal de Likes */}
+        {isInstagramLikesModalOpen && (
+          <div className="instagram-likes-modal">
+            <div className="instagram-likes-modal-content">
+              <div className="instagram-likes-modal-header">
+                <h3 className="instagram-likes-modal-title">Likes</h3>
+                <button className="instagram-likes-modal-close" onClick={closeInstagramLikesModal}>×</button>
+              </div>
+              <div className="instagram-likes-modal-list">
+                {instagramLikesData.length > 0 ? (
+                  instagramLikesData.map((likeUser) => (
+                    <div key={likeUser.id} className="instagram-likes-modal-item">
+                      <div className="instagram-likes-modal-user-info">
+                        <img
+                          src={likeUser.foto_perfil || "/img/user.png"}
+                          alt={likeUser.nombre}
+                          className="instagram-likes-modal-avatar"
+                        />
+                        <div>
+                          {/* Nombre de usuario y nombre completo en la misma línea */}
+                          <div className="instagram-likes-modal-username">{likeUser.nombre_usuario}</div>
+                          <div className="instagram-likes-modal-name">{likeUser.nombre}</div>
+                        </div>
+                      </div>
+                      {/* Botón "Ver perfil" que redirige */}
+                      <button
+                        className="instagram-likes-modal-view-profile-btn"
+                        onClick={() => router.push(`/profile/${likeUser.id_usuario}`)}
+                      >
+                        Ver perfil
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-center text-gray-400 py-4">No hay likes aún.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </>
   )
 }
-
 export default function ForumLayout() {
   return (
     <ProtectedRoute>

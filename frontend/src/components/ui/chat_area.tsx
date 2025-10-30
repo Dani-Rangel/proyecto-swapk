@@ -126,7 +126,7 @@ export function ChatArea({
                 id: u.id,
                 name: u.nombre,
                 username: u.nombre,
-                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nombre)}&background=random&size=128`,
+                avatar: `  https://ui-avatars.com/api/?name=${encodeURIComponent(u.nombre)}&background=random&size=128`,
               });
             }
           });
@@ -207,7 +207,7 @@ export function ChatArea({
             id: otherUser.id,
             name: otherUser.nombre,
             username: otherUser.nombre,
-            avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.nombre)}&background=random&size=128`,
+            avatar: `  https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.nombre)}&background=random&size=128`,
           };
         }
       }
@@ -585,8 +585,34 @@ export function ChatArea({
 
   return (
     <div className="flex h-full relative">
+      {/* Estilos personalizados para la barra de scroll */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #1a1a1a;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #ffffff;
+          border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #e0e0e0;
+        }
+
+        /* Eliminar las flechas de arriba y abajo */
+        .custom-scrollbar::-webkit-scrollbar-button {
+          display: none;
+        }
+      `}</style>
+
       <div className="flex-1 flex flex-col bg-[#141414] h-full">
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-160px)]">
+        {/* Aquí está el cambio principal: añadimos la clase custom-scrollbar */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-160px)] custom-scrollbar">
           {messages.length === 0 ? (
             <div className="text-gray-500 text-sm text-center mt-10">{t("no_messages_yet")}</div>
           ) : (

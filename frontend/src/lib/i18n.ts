@@ -125,6 +125,8 @@ export const translations = {
     "facebook": "Facebook",
     "website": "Website",
 
+    "review": "Reseñas",
+
     // ===== Profile =====
     
     "search_placeholder": "Buscar...",
@@ -350,11 +352,16 @@ export const translations = {
     profiles: "Perfiles",
     noProfiles: "No hay perfiles disponibles.",
     profile_edit: "Editar perfil",
-
+    noDescription: "No hay descripción disponible",
+    viewProfile: "Ver perfil",
+    next: "Siguiente",
+    previous: "Anterior",
   },
 
   en: {
     // ===== General =====
+    previous: "Previous",
+    next: "Next",
     language: "Language",
     selectLanguage: "Select language",
     close: "Close",
@@ -390,6 +397,9 @@ export const translations = {
     todo: "All",
     title: "Title",
 
+    review: "Reviews",
+    noDescription: "No description available",
+    viewProfile: "View Profile",
     // ==== Profile ====
 
       "search_placeholder": "Search...",

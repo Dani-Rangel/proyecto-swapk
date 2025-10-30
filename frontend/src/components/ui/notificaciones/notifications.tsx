@@ -5,8 +5,13 @@ import { Bell, X } from "lucide-react"
 import { useNotificaciones } from "@/context/notificacionesContext"
 import { motion, AnimatePresence } from "framer-motion"
 
-export function Notificaciones() {
-  const { notificaciones, marcarComoLeida, eliminarNotificacion, notificacionesNoLeidas } = useNotificaciones()
+export function Notificaciones({ isDark }: { isDark: boolean }) {
+  const {
+    notificaciones,
+    marcarComoLeida,
+    eliminarNotificacion,
+    notificacionesNoLeidas,
+  } = useNotificaciones()
   const [showModal, setShowModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadingId, setLoadingId] = useState<number | null>(null)
@@ -63,19 +68,37 @@ export function Notificaciones() {
           >
             {/* Contenedor del modal */}
             <motion.div
-              className="relative w-[90%] max-w-lg bg-[#121212] text-white rounded-2xl shadow-2xl overflow-hidden border border-gray-800"
+              className={`relative w-[90%] max-w-lg rounded-2xl shadow-2xl overflow-hidden border transition-colors duration-300 ${
+                isDark
+                  ? "bg-[#121212] text-white border-gray-800"
+                  : "bg-white text-gray-900 border-gray-200"
+              }`}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ type: "spring", damping: 18, stiffness: 200 }}
             >
               {/* Encabezado */}
-              <div className="flex justify-between items-center px-5 py-3 border-b border-gray-700">
-                <h2 className="text-lg font-semibold text-gray-200">Notificaciones</h2>
+              <div
+                className={`flex justify-between items-center px-5 py-3 border-b ${
+                  isDark ? "border-gray-700" : "border-gray-200"
+                }`}
+              >
+                <h2
+                  className={`text-lg font-semibold ${
+                    isDark ? "text-gray-200" : "text-gray-800"
+                  }`}
+                >
+                  Notificaciones
+                </h2>
                 <button
                   onClick={() => setShowModal(false)}
                   aria-label="Cerrar"
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className={`transition-colors ${
+                    isDark
+                      ? "text-gray-400 hover:text-white"
+                      : "text-gray-500 hover:text-gray-900"
+                  }`}
                 >
                   <X size={20} />
                 </button>
@@ -84,21 +107,37 @@ export function Notificaciones() {
               {/* Cuerpo */}
               <div className="max-h-[400px] overflow-y-auto p-4">
                 {error && (
-                  <div className="p-3 text-red-500 text-sm border border-red-700 rounded-md mb-3">
+                  <div
+                    className={`p-3 text-sm border rounded-md mb-3 ${
+                      isDark
+                        ? "text-red-400 border-red-700"
+                        : "text-red-600 border-red-300"
+                    }`}
+                  >
                     {error}
                   </div>
                 )}
 
                 {notificaciones.length === 0 ? (
-                  <div className="text-center text-gray-500 py-6">
+                  <div
+                    className={`text-center py-6 ${
+                      isDark ? "text-gray-500" : "text-gray-600"
+                    }`}
+                  >
                     No tienes notificaciones nuevas
                   </div>
                 ) : (
                   notificaciones.map((n) => (
                     <div
                       key={n.id}
-                      className={`p-3 mb-2 rounded-lg border border-gray-700 transition-all duration-200 hover:bg-gray-800 flex justify-between items-start ${
-                        n.leido ? "text-gray-400" : "text-white font-medium bg-gray-900/40"
+                      className={`p-3 mb-2 rounded-lg border transition-all duration-200 flex justify-between items-start ${
+                        isDark
+                          ? n.leido
+                            ? "border-gray-700 text-gray-400 hover:bg-gray-800"
+                            : "border-gray-600 bg-gray-900/40 text-white font-medium"
+                          : n.leido
+                            ? "border-gray-200 text-gray-500 hover:bg-gray-50"
+                            : "border-gray-300 bg-gray-100 text-gray-900 font-medium"
                       }`}
                     >
                       <div
@@ -106,7 +145,11 @@ export function Notificaciones() {
                         onClick={() => handleMarcarComoLeida(n.id)}
                       >
                         <div className="font-semibold">{n.contenido}</div>
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div
+                          className={`text-xs mt-1 ${
+                            isDark ? "text-gray-500" : "text-gray-400"
+                          }`}
+                        >
                           {new Date(n.fecha).toLocaleString()}
                         </div>
                       </div>
@@ -114,7 +157,11 @@ export function Notificaciones() {
                       <button
                         onClick={() => handleEliminar(n.id)}
                         disabled={loadingId === n.id}
-                        className="ml-2 text-gray-500 hover:text-red-500 transition-colors"
+                        className={`ml-2 transition-colors ${
+                          isDark
+                            ? "text-gray-500 hover:text-red-500"
+                            : "text-gray-400 hover:text-red-600"
+                        }`}
                       >
                         <X size={16} />
                       </button>
@@ -123,8 +170,14 @@ export function Notificaciones() {
                 )}
               </div>
 
-              {/* Pie (opcional) */}
-              <div className="px-5 py-3 border-t border-gray-700 text-center text-sm text-gray-500">
+              {/* Pie */}
+              <div
+                className={`px-5 py-3 border-t text-center text-sm transition-colors ${
+                  isDark
+                    ? "border-gray-700 text-gray-500"
+                    : "border-gray-200 text-gray-500"
+                }`}
+              >
                 {notificacionesNoLeidas > 0
                   ? `${notificacionesNoLeidas} sin leer`
                   : "Todas las notificaciones leídas"}
