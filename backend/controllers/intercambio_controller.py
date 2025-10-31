@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from backend.models.Propuesta_Intercambio import PropuestaIntercambio
-from backend.models import Intercambio, Usuario, Resena
+from backend.models import Intercambio, Usuario, Resena, Habilidad, IntercambioHabilidad
 from backend.db.database import get_db
 from backend.services.oauth2 import get_current_user
 from backend.services import intercambio_service
@@ -12,16 +12,20 @@ from backend.schemas.intercambio_schema import (
     EstadoIntercambioEnum,
     PropuestaResumen,
     ResenaCreate, 
-    ResenaResponse
+    ResenaResponse,
+    TipoHabilidadEnum,
+    HabilidadBase,
+    PropuestaAceptada
 )
 from typing import List, Optional
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
 
-
+# -------------------------------
 # Configuración de correo (FastMail)
+# -------------------------------
 mail_conf = ConnectionConfig(
     MAIL_USERNAME="swapk.soporte@gmail.com",
-    MAIL_PASSWORD="pyaa ihkw byse cacr",  
+    MAIL_PASSWORD="pyaa ihkw byse cacr",  # App Password de Gmail
     MAIL_SERVER="smtp.gmail.com",
     MAIL_PORT=587,
     MAIL_FROM="swapk.soporte@gmail.com",
@@ -56,6 +60,99 @@ def obtener_mis_propuestas(db: Session = Depends(get_db), current_user: Usuario 
         for p in propuestas
     ]
 
+# -------------------------------
+# ✅ NUEVO: Obtener intercambios finalizados con reseñas donde el usuario participó
+# -------------------------------
+@router.get("/resenas/por-usuario/{usuario_id}", response_model=List[IntercambioConHabilidadesSeparadas])
+def obtener_intercambios_con_resenas_por_usuario(
+    usuario_id: int,
+    db: Session = Depends(get_db)
+):
+    # Buscar intercambios donde el usuario es creador (cualquier estado)
+    intercambios_creados = db.query(Intercambio).filter(
+        Intercambio.id_usuario1 == usuario_id
+    ).all()
+
+    # Buscar intercambios donde el usuario es proponente con propuesta aceptada
+    propuestas_aceptadas = db.query(PropuestaIntercambio).filter(
+        PropuestaIntercambio.id_usuario_interesado == usuario_id,
+        PropuestaIntercambio.aceptada == True
+    ).all()
+
+    ids_intercambios_propuestos = [p.id_intercambio for p in propuestas_aceptadas]
+    intercambios_propuestos = db.query(Intercambio).filter(
+        Intercambio.id.in_(ids_intercambios_propuestos)
+    ).all()
+
+    # Unir y eliminar duplicados
+    todos_intercambios = list({i.id: i for i in intercambios_creados + intercambios_propuestos}.values())
+
+    resultado = []
+    for inter in todos_intercambios:
+        # Cargar habilidades
+        ofrece = db.query(Habilidad).join(IntercambioHabilidad).filter(
+            IntercambioHabilidad.intercambio_id == inter.id,
+            IntercambioHabilidad.tipo == TipoHabilidadEnum.ofrece
+        ).all()
+        busca = db.query(Habilidad).join(IntercambioHabilidad).filter(
+            IntercambioHabilidad.intercambio_id == inter.id,
+            IntercambioHabilidad.tipo == TipoHabilidadEnum.busca
+        ).all()
+
+        # Cargar propuestas aceptadas
+        propuestas = db.query(PropuestaIntercambio).filter(
+            PropuestaIntercambio.id_intercambio == inter.id,
+            PropuestaIntercambio.aceptada == True
+        ).all()
+
+        # Cargar reseñas del intercambio
+        reseñas_db = db.query(Resena).filter(
+            Resena.intercambio_id == inter.id
+        ).all()
+
+        # Construir el objeto de respuesta
+        intercambio_respuesta = IntercambioConHabilidadesSeparadas(
+            id=inter.id,
+            id_usuario1=inter.id_usuario1,
+            id_perfil=inter.id_perfil,
+            nivel=inter.nivel,
+            modo=inter.modo,
+            disponibilidad=inter.disponibilidad,
+            idioma=inter.idioma,
+            descripcion=inter.descripcion,
+            valoracion=inter.valoracion,
+            estado_trueque=inter.estado_trueque,
+            estado=inter.estado,
+            fecha_creacion=inter.fecha_creacion,
+            usuario1=inter.usuario1,
+            perfil=inter.perfil,
+            habilidades_ofrece=[HabilidadBase(id=h.id, nombre=h.nombre) for h in ofrece],
+            habilidades_busca=[HabilidadBase(id=h.id, nombre=h.nombre) for h in busca],
+            propuestas=[
+                PropuestaAceptada(
+                    id=p.id,
+                    id_usuario_interesado=p.id_usuario_interesado,
+                    aceptada=p.aceptada,
+                    usuario_interesado=p.usuario_interesado
+                )
+                for p in propuestas
+            ],
+            reseñas=[
+                ResenaResponse(
+                    id=r.id,
+                    autor=r.autor,
+                    destinatario=r.destinatario,
+                    calificacion=r.calificacion,
+                    comentario=r.comentario,
+                    fecha=r.fecha
+                )
+                for r in reseñas_db  # ✅ Aquí r es un objeto Resena
+            ]
+        )
+        resultado.append(intercambio_respuesta)
+
+    return resultado
+
 @router.get("/{id}", response_model=IntercambioConHabilidadesSeparadas)
 def obtener_intercambio(id: int, db: Session = Depends(get_db)):
     intercambio = intercambio_service.obtener_intercambio(db, id)
@@ -82,7 +179,7 @@ def eliminar_intercambio(id: int, db: Session = Depends(get_db)):
     return {"message": "Intercambio eliminado correctamente"}
 
 # -------------------------------
-# Endpoint para crear propuesta + enviar correo
+# ✅ Endpoint para crear propuesta + enviar correo
 # -------------------------------
 @router.post("/{id}/propuesta")
 async def crear_propuesta(
@@ -114,7 +211,7 @@ async def crear_propuesta(
     db.add(nueva_propuesta)
     db.commit()
 
-    # Enviar notificación por correo al creador del intercambio
+    # ✅ Enviar notificación por correo al creador del intercambio
     creador = db.query(Usuario).filter(Usuario.id == intercambio.id_usuario1).first()
     if creador and creador.correo:
         try:
@@ -144,6 +241,9 @@ async def crear_propuesta(
 
     return {"message": "Propuesta enviada"}
 
+# -------------------------------
+# Otros endpoints (sin cambios)
+# -------------------------------
 @router.get("/{id}/propuestas")
 def obtener_propuestas(id: int, db: Session = Depends(get_db), current_user: Usuario = Depends(get_current_user)):
     intercambio = db.query(Intercambio).filter(Intercambio.id == id).first()
@@ -236,20 +336,13 @@ def restablecer_intercambio(
         raise HTTPException(status_code=404, detail="Intercambio no encontrado")
     
     if intercambio.id_usuario1 != current_user.id:
-        raise HTTPException(status_code=403, detail="Solo el creador puede restablecer el intercambio")
-    
-    # Incrementar el ciclo
+        raise HTTPException(status_code=403, detail="Solo el creador puede restablecer")
+
     intercambio.ciclo = (intercambio.ciclo or 0) + 1
-    
-    # Eliminar SOLO propuestas (no reseñas)
-    db.query(PropuestaIntercambio).filter(
-        PropuestaIntercambio.id_intercambio == id
-    ).delete()
-    
     intercambio.estado = EstadoIntercambioEnum.Pendiente
-    db.commit()
+    db.commit()  # ✅ Sin eliminar propuestas
     
-    return {"message": "Intercambio restablecido a estado pendiente"}
+    return {"message": "Intercambio restablecido"}
 
 @router.post("/{id}/finalizar")
 def finalizar_intercambio(
@@ -262,38 +355,35 @@ def finalizar_intercambio(
     if not intercambio:
         raise HTTPException(status_code=404, detail="Intercambio no encontrado")
 
-    # Obtener la propuesta aceptada
     propuesta_aceptada = db.query(PropuestaIntercambio).filter(
         PropuestaIntercambio.id_intercambio == id,
         PropuestaIntercambio.aceptada == True
     ).first()
 
     if not propuesta_aceptada:
-        raise HTTPException(status_code=400, detail="No hay propuesta aceptada para este intercambio")
+        raise HTTPException(status_code=400, detail="No hay propuesta aceptada")
 
     creador_id = intercambio.id_usuario1
     proponente_id = propuesta_aceptada.id_usuario_interesado
 
     if current_user.id not in (creador_id, proponente_id):
-        raise HTTPException(status_code=403, detail="Solo los participantes pueden finalizar este intercambio")
+        raise HTTPException(status_code=403, detail="No autorizado")
 
-    # Determinar quién es el autor y quién es el destinatario
     autor_id = current_user.id
     destinatario_id = proponente_id if current_user.id == creador_id else creador_id
 
-    # Crear reseña si se proporciona
     if resena:
         if not (1 <= resena.calificacion <= 5):
-            raise HTTPException(status_code=400, detail="La calificación debe estar entre 1 y 5")
+            raise HTTPException(status_code=400, detail="Calificación inválida")
 
         reseña_existente = db.query(Resena).filter(
             Resena.intercambio_id == id,
             Resena.autor_id == autor_id,
-            Resena.ciclo == intercambio.ciclo  # Validar por ciclo
+            Resena.ciclo == intercambio.ciclo
         ).first()
 
         if reseña_existente:
-            raise HTTPException(status_code=400, detail="Ya has dejado una reseña para este ciclo del intercambio")
+            raise HTTPException(status_code=400, detail="Reseña ya existente")
 
         nueva_resena = Resena(
             intercambio_id=id,
@@ -301,15 +391,11 @@ def finalizar_intercambio(
             destinatario_id=destinatario_id,
             calificacion=resena.calificacion,
             comentario=resena.comentario,
-            ciclo=intercambio.ciclo  # 👈 Asignar el ciclo
+            ciclo=intercambio.ciclo
         )
         db.add(nueva_resena)
 
-    # Limpiar propuestas y finalizar
-    db.query(PropuestaIntercambio).filter(
-        PropuestaIntercambio.id_intercambio == id
-    ).delete()
-
+    # ✅ SOLO CAMBIA EL ESTADO, NO ELIMINES PROPUESTAS
     intercambio.estado = EstadoIntercambioEnum.Finalizado
     db.commit()
     db.refresh(intercambio)
@@ -338,6 +424,7 @@ def obtener_resenas_escritas(
     reseñas = db.query(Resena).filter(Resena.autor_id == current_user.id).all()
     return reseñas        
 
+# En tu archivo de rutas de intercambios
 @router.get("/resenas/todas", response_model=List[ResenaResponse])
 def obtener_todas_las_resenas(
     db: Session = Depends(get_db)
@@ -346,4 +433,6 @@ def obtener_todas_las_resenas(
     Obtiene todas las reseñas públicas (sin necesidad de autenticación).
     """
     reseñas = db.query(Resena).order_by(Resena.fecha.desc()).all()
-    return reseñas    
+    return reseñas   
+
+  

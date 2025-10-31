@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import toast, { Toaster } from 'react-hot-toast';
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter, useParams } from "next/navigation"; // <-- Añadido useParams
+import { useRouter } from "next/navigation";
 import axios from "axios";
 import {
   X, 
@@ -44,6 +44,7 @@ import ProtectedRoute from "@/components/protected_routes/protected_routes";
 import { getCurrentUser, clearCurrentUser } from "@/lib/auth";
 import { MainSidebar } from "@/components/MainSidebar";
 import { expedienteService, TipoExpedienteEnum, TipoEstadoEnum } from "@/services/expediente";
+import { intercambioService, IntercambioConResena } from "@/services/api_profile_intercambio";
 
 interface Perfil {
   id: number; 
@@ -71,7 +72,6 @@ function ProfilePageComponent() {
   const skillContainerRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<any>(null); 
   const router = useRouter();
-  const params = useParams(); // <-- Obtiene los parámetros de la URL
   const [habilidadesDisponibles, setHabilidadesDisponibles] = useState<Skill[]>([]);
   const [habilidadesPerfil, setHabilidadesPerfil] = useState<SkillAssociationResponse[]>([]);
   const [imageSrc, setImageSrc] = useState<string>("/img/user.png");
@@ -79,6 +79,9 @@ function ProfilePageComponent() {
   // ✅ Estado para certificados
   const [certificaciones, setCertificaciones] = useState<any[]>([]);
   const [loadingCertificados, setLoadingCertificados] = useState(true);
+  const [intercambiosConResenas, setIntercambiosConResenas] = useState<IntercambioConResena[]>([]);
+  const [loadingIntercambios, setLoadingIntercambios] = useState(true);
+  const [selectedIntercambio, setSelectedIntercambio] = useState<IntercambioConResena | null>(null);
 
   // ✅ Función para obtener URL completa de la foto
   const getProfileImageUrl = (foto_perfil?: string): string => {
@@ -104,46 +107,40 @@ function ProfilePageComponent() {
     }
   };
 
-  // ✅ Cargar perfil del usuario (propio o de otro)
+  // ✅ Cargar perfil del usuario
   useEffect(() => {
-    const loadProfile = async () => {
-      const currentUser = getCurrentUser();
-      if (!currentUser || !currentUser.token) {
-        console.warn("❌ No hay usuario autenticado");
+    const currentUser = getCurrentUser();
+    
+    if (!currentUser || !currentUser.token) {
+      console.warn("❌ No hay usuario autenticado");
+      router.push("/auth/login");
+      return;
+    }
+
+    console.log("✅ Usuario cargado:", currentUser);
+    setUser(currentUser);
+
+    axios.get(`http://localhost:8000/perfil/usuario/${currentUser.id}`, {
+      headers: {
+        Authorization: `Bearer ${currentUser.token}`
+      }
+    })
+    .then(response => {
+      setPerfil(response.data);
+    })
+    .catch(error => {
+      console.error("Error al obtener el perfil:", error);
+      if (error.response?.status === 401) {
+        clearCurrentUser();
         router.push("/auth/login");
-        return;
+      } else {
+        setError("No se pudo cargar el perfil.");
       }
-
-      setUser(currentUser);
-      
-      // Determina qué ID de usuario cargar
-      const targetUserId = params?.id ? Number(params.id) : currentUser.id;
-      const isOwnProfile = targetUserId === currentUser.id;
-
-      try {
-        setLoading(true);
-        // Asumiendo que tu backend tiene un endpoint para obtener cualquier perfil por ID de usuario
-        const response = await axios.get(`http://localhost:8000/perfil/usuario/${targetUserId}`, {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`
-          }
-        });
-        setPerfil(response.data);
-      } catch (error) {
-        console.error("Error al obtener el perfil:", error);
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
-          clearCurrentUser();
-          router.push("/auth/login");
-        } else {
-          setError("No se pudo cargar el perfil.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadProfile();
-  }, [router, params]); // <-- Ahora depende de `params`
+    })
+    .finally(() => {
+      setLoading(false);
+    });
+  }, [router]);
 
   // ✅ Cargar habilidades disponibles
   useEffect(() => {
@@ -162,11 +159,9 @@ function ProfilePageComponent() {
       .catch(err => console.error(err));
   }, [perfil?.id]);
 
-  // ✅ Cargar certificados del usuario (solo si es tu propio perfil)
+  // ✅ Cargar certificados del usuario
   useEffect(() => {
-    // Solo carga certificados si es tu propio perfil
-    const isOwnProfile = perfil?.id_usuario === user?.id;
-    if (!isOwnProfile || !user?.id) return;
+    if (!user?.id) return;
 
     const fetchCertificaciones = async () => {
       try {
@@ -194,7 +189,27 @@ function ProfilePageComponent() {
     };
 
     fetchCertificaciones();
-  }, [user?.id, perfil?.id_usuario]); // <-- Añadida dependencia
+  }, [user?.id]);
+
+  // ✅ Cargar intercambios con reseñas
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchIntercambios = async () => {
+      try {
+        setLoadingIntercambios(true);
+        const data = await intercambioService.getIntercambiosConResenas(user.id);
+        setIntercambiosConResenas(data);
+      } catch (error) {
+        console.error("Error al cargar intercambios con reseñas:", error);
+        toast.error("No se pudieron cargar los intercambios.");
+      } finally {
+        setLoadingIntercambios(false);
+      }
+    };
+
+    fetchIntercambios();
+  }, [user?.id]);
 
   // ✅ Actualizar imagen de perfil
   useEffect(() => {
@@ -205,15 +220,12 @@ function ProfilePageComponent() {
     }
   }, [perfil?.foto_perfil]);
 
-  // ✅ Guardar asociación de habilidad (solo si es tu propio perfil)
+  // ✅ Guardar asociación de habilidad
   const handleSaveAssociation = async (assoc: SkillAssociation) => {
-    const isOwnProfile = perfil?.id_usuario === user?.id;
-    if (!isOwnProfile || !perfil) {
-      toast.error("No puedes editar el perfil de otro usuario.");
-      return;
-    }
     try {
+      if (!perfil) return;
       setLoading(true);
+
       const nuevaAsociacion = await skillsAPI.associateSkill({
         Perfil_id: perfil.id,
         habilidad_id: assoc.habilidad_id,
@@ -222,6 +234,7 @@ function ProfilePageComponent() {
       });
 
       const habilidadCompleta = habilidadesDisponibles.find(h => h.id === assoc.habilidad_id);
+
       setHabilidadesPerfil(prev => [
         ...prev,
         { ...nuevaAsociacion, habilidad_nombre: habilidadCompleta?.nombre || "" }
@@ -235,13 +248,9 @@ function ProfilePageComponent() {
     }
   };
 
-  // ✅ Eliminar habilidad (solo si es tu propio perfil)
+  // ✅ Eliminar habilidad
   const handleRemoveSkill = async (idAsociacion: number) => {
-    const isOwnProfile = perfil?.id_usuario === user?.id;
-    if (!isOwnProfile || !perfil) {
-      toast.error("No puedes editar el perfil de otro usuario.");
-      return;
-    }
+    if (!perfil) return;
     try {
       setLoading(true);
       await skillsAPI.deleteSkillAssociation(idAsociacion);
@@ -287,8 +296,6 @@ function ProfilePageComponent() {
   }
 
   const toggleTheme = () => setIsDark(!isDark);
-  const profileImageUrl = getProfileImageUrl(perfil?.foto_perfil);
-  const isOwnProfile = perfil?.id_usuario === user?.id; // <-- Determina si es tu perfil
 
   return (
     <div className="min-h-screen bg-[#141414] flex">
@@ -334,20 +341,15 @@ function ProfilePageComponent() {
                       }}
                     />
                   </div>
-                  {/* Solo muestra el botón de editar si es tu propio perfil */}
-                  {isOwnProfile && (
-                    <button className="absolute -bottom-1 -right-1 bg-blue-600 p-2 rounded-full hover:bg-blue-700 transition-colors">
-                      <Camera className="w-4 h-4 text-white" />
-                    </button>
-                  )}
+                  <button className="absolute -bottom-1 -right-1 bg-blue-600 p-2 rounded-full hover:bg-blue-700 transition-colors">
+                    <Camera className="w-4 h-4 text-white" />
+                  </button>
                 </div>
 
                 <div className="relative inline-block">
                   <h2 className="text-white text-2xl font-bold mb-1 flex items-center justify-center gap-2 w-100">
                     {perfil?.nombre || "Cargando..."}
-                    {isOwnProfile && ( // <-- El círculo verde solo para tu perfil
-                      <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center"></div>
-                    )}
+                    <div className="w-3 h-3 bg-green-500 rounded-full flex items-center justify-center"></div>
                   </h2>
 
                   <div className="flex items-center justify-center gap-1 text-gray-400 mb-3">
@@ -364,16 +366,13 @@ function ProfilePageComponent() {
                   ))}
                 </div>
 
-                {/* Solo muestra el botón de editar si es tu propio perfil */}
-                {isOwnProfile && (
-                  <button 
-                    className="bg-gradient-to-r from-gray-900 to-gray-600 text-white px-6 py-2.5 rounded-lg hover:from-gray-600 hover:to-gray-500 transition-all duration-200 flex items-center gap-2 mx-auto shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => router.push("/settings/profile_edit")}
-                  >
-                    <Edit className="w-4 h-4" />
-                    Editar perfil
-                  </button>
-                )}
+                <button 
+                  className="bg-gradient-to-r from-gray-900 to-gray-600 text-white px-6 py-2.5 rounded-lg hover:from-gray-600 hover:to-gray-500 transition-all duration-200 flex items-center gap-2 mx-auto shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => router.push("/settings/profile_edit")}
+                >
+                  <Edit className="w-4 h-4" />
+                  Editar perfil
+                </button>
               </div>
             </div>
             <div className="mt-6 p-4 bg-gray-900/50 rounded-lg">
@@ -391,7 +390,7 @@ function ProfilePageComponent() {
 
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-gray-900/50 rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold text-white mb-1">5</div>
+                  <div className="text-3xl font-bold text-white mb-1">{intercambiosConResenas.length}</div>
                   <div className="text-gray-400 text-sm">intercambios realizados</div>
                   <div className="text-gray-500 text-xs">cursos completos</div>
                 </div>
@@ -403,8 +402,14 @@ function ProfilePageComponent() {
                 </div>
 
                 <div className="bg-gray-900/50 rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold text-white mb-1">7</div>
-                  <div className="text-gray-400 text-sm">Persona conocidas</div>
+                  <div className="text-3xl font-bold text-white mb-1">
+                    {new Set(intercambiosConResenas.map(i => 
+                      i.id_usuario1 === user.id 
+                        ? i.propuestas?.find(p => p.aceptada)?.usuario_interesado?.id 
+                        : i.id_usuario1
+                    ).filter(Boolean)).size}
+                  </div>
+                  <div className="text-gray-400 text-sm">Personas conocidas</div>
                 </div>
 
                 <div className="bg-gray-900/50 rounded-lg p-4 text-center">
@@ -413,87 +418,82 @@ function ProfilePageComponent() {
                 </div>
               </div>
 
-              {/* Certificados en Perfil (solo para tu propio perfil) */}
-              {isOwnProfile && (
-                <div className="border-t border-gray-700 pt-10">
-                  <div className="flex items-center justify-between mb-6">
-                    <h4 className="text-white text-lg font-semibold">Certificados</h4>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-blue-400 border-blue-500 hover:bg-blue-500/10"
-                      onClick={() => router.push("/settings/certifications")}
-                    >
-                      <Eye className="w-4 h-4 mr-1" />
-                      Ver todos
-                    </Button>
+              {/* Certificados en Perfil */}
+              <div className="border-t border-gray-700 pt-10">
+                <div className="flex items-center justify-between mb-6">
+                  <h4 className="text-white text-lg font-semibold">Certificados</h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-blue-400 border-blue-500 hover:bg-blue-500/10"
+                    onClick={() => router.push("/settings/certifications")}
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    Ver todos
+                  </Button>
+                </div>
+
+                {loadingCertificados ? (
+                  <div className="text-center py-4 text-gray-400">Cargando certificados...</div>
+                ) : certificaciones.length === 0 ? (
+                  <div className="bg-gray-900/50 rounded-lg p-6 text-center">
+                    <Award className="w-10 h-10 mx-auto text-gray-500 mb-3" />
+                    <p className="text-gray-400 text-sm">Aún no has agregado certificados</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Sube tus credenciales en <span className="text-blue-400">Configuración</span> para mostrarlas aquí.
+                    </p>
                   </div>
+                ) : (
+                  <div className="space-y-4">
+                    {certificaciones.map((cert) => (
+                      <div
+                        key={cert.id}
+                        className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-gray-700 transition-colors"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div>
+                            <h5 className="text-white font-medium">{cert.name}</h5>
+                            <p className="text-gray-400 text-sm">por {cert.issuer}</p>
+                            <p className="text-gray-500 text-xs mt-1">
+                              {new Date(cert.date).toLocaleDateString("es-ES")}
+                            </p>
+                          </div>
 
-                  {loadingCertificados ? (
-                    <div className="text-center py-4 text-gray-400">Cargando certificados...</div>
-                  ) : certificaciones.length === 0 ? (
-                    <div className="bg-gray-900/50 rounded-lg p-6 text-center">
-                      <Award className="w-10 h-10 mx-auto text-gray-500 mb-3" />
-                      <p className="text-gray-400 text-sm">Aún no has agregado certificados</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Sube tus credenciales en <span className="text-blue-400">Configuración</span> para mostrarlas aquí.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {certificaciones.map((cert) => (
-                        <div
-                          key={cert.id}
-                          className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-gray-700 transition-colors"
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div>
-                              <h5 className="text-white font-medium">{cert.name}</h5>
-                              <p className="text-gray-400 text-sm">por {cert.issuer}</p>
-                              <p className="text-gray-500 text-xs mt-1">
-                                {new Date(cert.date).toLocaleDateString("es-ES")}
-                              </p>
-                            </div>
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
+                            <Badge className={`${getStatusColor(cert.status)} text-white text-xs px-2 py-1`}>
+                              {cert.status}
+                            </Badge>
 
-                            <div className="flex items-center gap-2 flex-wrap justify-end">
-                              <Badge className={`${getStatusColor(cert.status)} text-white text-xs px-2 py-1`}>
-                                {cert.status}
-                              </Badge>
-
-                              {cert.archivos && cert.archivos.length > 0 && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-gray-300 hover:text-white hover:bg-gray-800"
-                                  title="Ver certificado"
-                                  onClick={() => {
-                                    const url = `http://localhost:8000/uploads/${cert.archivos[0].ruta}`;
-                                    window.open(url, "_blank");
-                                  }}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
+                            {cert.archivos && cert.archivos.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-300 hover:text-white hover:bg-gray-800"
+                                title="Ver certificado"
+                                onClick={() => {
+                                  const url = `http://localhost:8000/uploads/${cert.archivos[0].ruta}`;
+                                  window.open(url, "_blank");
+                                }}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Skills Section */}
             <div className="bg-[#1E1E1E] border-[#2E2E2E] rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-white text-lg font-bold">Habilidades</h3>
-                {/* Solo muestra el botón de añadir si es tu propio perfil */}
-                {isOwnProfile && (
-                  <button onClick={() => setShowAddForm(true)} className="bg-blue-600 px-3 py-2 rounded mt-3 text-white">
-                    Añadir habilidad
-                  </button>
-                )}
+                <button onClick={() => setShowAddForm(true)} className="bg-blue-600 px-3 py-2 rounded mt-3 text-white">
+                  Añadir habilidad
+                </button>
               </div>
 
               <div ref={skillContainerRef} className="flex flex-wrap gap-3 mb-6 relative">
@@ -505,15 +505,12 @@ function ProfilePageComponent() {
                     >
                       #{skill.habilidad_nombre || `Habilidad ${index + 1}`}
                     </span>
-                    {/* Solo muestra el botón de eliminar si es tu propio perfil */}
-                    {isOwnProfile && (
-                      <button
-                        onClick={() => handleRemoveSkill(skill.id)}
-                        className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        ×
-                      </button>
-                    )}
+                    <button
+                      onClick={() => handleRemoveSkill(skill.id)}
+                      className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
                     {activeSkillIndex === index && (
                       <div className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs p-3 rounded-lg shadow-lg z-10 w-max max-w-xs">
                         <p className="mb-1">
@@ -530,7 +527,7 @@ function ProfilePageComponent() {
                 )}
               </div>
 
-              {showAddForm && isOwnProfile && (
+              {showAddForm && (
                 <AddSkillForm
                   onClose={() => setShowAddForm(false)}
                   onSave={handleSaveAssociation}
@@ -539,36 +536,160 @@ function ProfilePageComponent() {
                 />
               )}
 
-              {/* Exchange History */}
+              {/* Historial de intercambios */}
               <div className="border-t border-gray-700 pt-10">
                 <h4 className="text-white text-lg font-bold mb-4">Historial de intercambios</h4>
-                <div className="bg-gray-900/50 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">U</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-white font-medium">Usuario</span>
-                        <span className="text-gray-400 text-sm">Clases de cocina por lecciones de fotografía</span>
-                      </div>
-                      <div className="flex gap-1 mb-4">
-                        {[...Array(4)].map((_, i) => (
-                          <Star key={i} className="w-3 h-3 text-yellow-400 fill-current" />
-                        ))}
-                      </div>
-                      <p className="text-gray-400 text-sm italic mb-3">
-                        "Me encantó el intercambio, aprendí mucho y la experiencia fue genial."
-                      </p>
-                    </div>
+
+                {loadingIntercambios ? (
+                  <div className="text-center py-4 text-gray-400">Cargando intercambios...</div>
+                ) : intercambiosConResenas.length === 0 ? (
+                  <div className="bg-gray-900/50 rounded-lg p-6 text-center">
+                    <BookOpen className="w-12 h-12 mx-auto text-gray-500 mb-3" />
+                    <p className="text-gray-400 text-sm">Aún no has realizado intercambios</p>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    {intercambiosConResenas.map((intercambio) => {
+                      // ✅ Obtener el otro usuario de forma segura
+                      const otroUsuario = intercambio.id_usuario1 === user.id
+                        ? intercambio.propuestas?.find(p => p.aceptada)?.usuario_interesado
+                        : intercambio.usuario1;
+
+                      const habilidadesOfrece = intercambio.habilidades_ofrece.map(h => h.nombre).join(", ");
+                      const habilidadesBusca = intercambio.habilidades_busca.map(h => h.nombre).join(", ");
+
+                      return (
+                        <div
+                          key={intercambio.id}
+                          className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer"
+                          onClick={() => setSelectedIntercambio(intercambio)}
+                        >
+                          <div className="flex items-start gap-3">
+                            {/* ✅ Avatar con inicial */}
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0">
+                              {otroUsuario?.nombre?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-white font-medium">
+                                  {habilidadesOfrece} ↔ {habilidadesBusca}
+                                </span>
+                              </div>
+                              {intercambio.resenas && intercambio.resenas.length > 0 ? (
+                                <p className="text-gray-300 text-sm italic mb-3">
+                                  "{intercambio.resenas[0].comentario}"
+                                </p>
+                              ) : (
+                                <p className="text-gray-500 text-sm italic mb-3">
+                                  Sin reseña aún.
+                                </p>
+                              )}
+                              <div className="flex items-center gap-1 mb-3">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star key={i} className={`w-4 h-4 ${i < 4 ? 'text-yellow-400 fill-current' : 'text-gray-500'}`} />
+                                ))}
+                              </div>
+                              <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-sm font-medium transition-colors">
+                                Ver detalles
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
       <Toaster position="top-right" />
+
+      {/* Modal de detalle */}
+      {selectedIntercambio && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1E1E1E] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#2E2E2E]">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h3 className="text-white text-xl font-bold">Detalle del intercambio</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedIntercambio(null)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Otro usuario */}
+              <div className="flex items-center gap-4 mb-6">
+                {/* ✅ Avatar con inicial */}
+                <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-lg font-bold bg-gradient-to-br from-blue-500 to-purple-600">
+                  {selectedIntercambio.id_usuario1 === user.id
+                    ? selectedIntercambio.propuestas?.find(p => p.aceptada)?.usuario_interesado?.nombre?.charAt(0).toUpperCase() || '?'
+                    : selectedIntercambio.usuario1.nombre?.charAt(0).toUpperCase() || '?'}
+                </div>
+                <div>
+                  <h4 className="text-white text-lg font-semibold">
+                    {selectedIntercambio.id_usuario1 === user.id
+                      ? selectedIntercambio.propuestas?.find(p => p.aceptada)?.usuario_interesado?.nombre || "Usuario"
+                      : selectedIntercambio.usuario1.nombre}
+                  </h4>
+                  <p className="text-gray-400 text-sm">Intercambio finalizado</p>
+                </div>
+              </div>
+
+              {/* Habilidades */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-900/50 p-4 rounded-lg">
+                  <h5 className="text-white font-medium mb-2">Ofrece:</h5>
+                  <ul className="text-gray-300 text-sm">
+                    {selectedIntercambio.habilidades_ofrece.map((h, i) => (
+                      <li key={i}>• {h.nombre}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="bg-gray-900/50 p-4 rounded-lg">
+                  <h5 className="text-white font-medium mb-2">Busca:</h5>
+                  <ul className="text-gray-300 text-sm">
+                    {selectedIntercambio.habilidades_busca.map((h, i) => (
+                      <li key={i}>• {h.nombre}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Reseña */}
+              <div className="mb-6">
+                <h5 className="text-white font-medium mb-2">Tu reseña:</h5>
+                <div className="flex items-center gap-1 mb-2">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className={`w-5 h-5 ${i < 4 ? 'text-yellow-400 fill-current' : 'text-gray-500'}`} />
+                  ))}
+                </div>
+               {selectedIntercambio?.resenas?.length > 0 ? (
+                <p className="text-gray-300 italic">{selectedIntercambio.resenas[0].comentario}</p>
+              ) : (
+                <p className="text-gray-300 italic">Sin reseña aún.</p>
+              )}
+              </div>
+
+              {/* Acciones */}
+              <div className="flex gap-3">
+                <Button variant="outline" className="text-blue-400 border-blue-500">
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Mensaje
+                </Button>
+                <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700">
+                  ¡Swapk!
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

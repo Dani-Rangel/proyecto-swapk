@@ -1,8 +1,11 @@
-from pydantic import BaseModel 
+from pydantic import BaseModel,  ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
+
+# -------------------------------
 # Enums para Intercambio
+# -------------------------------
 class EstadoIntercambioEnum(str, Enum):
     Pendiente = "Pendiente"
     Confirmado = "Confirmado"
@@ -22,49 +25,57 @@ class IdiomaIntercambioEnum(str, Enum):
     Ingles = "Ingles"
     Espanol = "Espanol"
     Portugues = "Portugues"
+
+# -------------------------------
 # Enum para tipo habilidad
+# -------------------------------
 class TipoHabilidadEnum(str, Enum):
     ofrece = "ofrece"
     busca = "busca"
+
+# -------------------------------
 # Habilidad
+# -------------------------------
 class HabilidadBase(BaseModel):
     id: int
     nombre: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
+# -------------------------------
 # IntercambioHabilidad
+# -------------------------------
 class IntercambioHabilidadBase(BaseModel):
     tipo: TipoHabilidadEnum
 
 class IntercambioHabilidadCreate(IntercambioHabilidadBase):
     habilidad_id: int
 
-class IntercambioHabilidadResponse(IntercambioHabilidadBase):
+class IntercambioHabilidadResponse(BaseModel):
     id: int
     habilidad: HabilidadBase
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
+
+# -------------------------------
 # Perfil
+# -------------------------------
 class PerfilBase(BaseModel):
     id: int
     ubicacion: Optional[str] = None
     foto_perfil: Optional[str] = None
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
-# Usuario (solo id y nombre)
 class UsuarioBase(BaseModel):
     id: int
     nombre: str
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
+# -------------------------------
 # Intercambio: Base
+# -------------------------------
 class IntercambioBase(BaseModel):
     id_usuario1: int
     id_perfil: int
@@ -76,11 +87,17 @@ class IntercambioBase(BaseModel):
     valoracion: Optional[float] = 0.0
     estado_trueque: Optional[bool] = True
     estado: Optional[EstadoIntercambioEnum] = EstadoIntercambioEnum.Pendiente
+
+# -------------------------------
 # Intercambio: Create/Update
+# -------------------------------
 class IntercambioCreate(IntercambioBase):
     habilidades_ofrecidas_ids: Optional[List[int]] = []
     habilidades_buscadas_ids: Optional[List[int]] = []
+
+# -------------------------------
 # Intercambio: Response
+# -------------------------------
 class IntercambioResponse(IntercambioBase):
     id: int
     fecha_creacion: datetime
@@ -97,9 +114,21 @@ class PropuestaAceptada(BaseModel):
     usuario_interesado: UsuarioBase
 
     class Config:
-        orm_mode = True        
+        orm_mode = True  
 
-# Intercambio: Response extendido con habilidades separadas
+class ResenaResponse(BaseModel):
+    id: int
+    autor: UsuarioBase
+    destinatario: UsuarioBase
+    calificacion: float
+    comentario: str
+    fecha: datetime
+
+    model_config = ConfigDict(from_attributes=True)                
+
+# -------------------------------
+# Intercambio
+# -------------------------------
 class IntercambioConHabilidadesSeparadas(BaseModel):
     id: int
     id_usuario1: int
@@ -118,35 +147,28 @@ class IntercambioConHabilidadesSeparadas(BaseModel):
     habilidades_ofrece: List[HabilidadBase] = []
     habilidades_busca: List[HabilidadBase] = []
     propuestas: List[PropuestaAceptada] = []
+    reseñas: List[ResenaResponse] = []
+    ya_participaste: bool = False 
 
-    class Config:
-        orm_mode = True
+    model_config = ConfigDict(from_attributes=True)
 
 class PropuestaResumen(BaseModel):
     id_intercambio: int
     id_propuesta: int
     id_usuario_interesado: int
     aceptada: bool
+    
 
     class Config:
         orm_mode = True   
 
 class ResenaCreate(BaseModel):
     intercambio_id: int
-    calificacion: float 
+    calificacion: float
     comentario: str
 
     class Config:
         orm_mode = True
 
-class ResenaResponse(BaseModel):
-    id: int
-    intercambio_id: int
-    autor: UsuarioBase
-    destinatario: UsuarioBase  
-    calificacion: float
-    comentario: str
-    fecha: datetime
 
-    class Config:
-        orm_mode = True            
+        

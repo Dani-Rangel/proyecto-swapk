@@ -363,9 +363,7 @@ function ProfilePageComponent() {
                   {!isOwnProfile && ( // Basicamente el botón de mensaje no hace nada por ahora, pero la idea es que abra un chat con esa persona, si no es tu propio perfil el boton te saldra, pero en caso de que si sea tu propio perfil te saldra la opcion de "editar perfil".
                     <div className="flex justify-center mt-1">
                       <Button
-                        onClick={() => {
-                          toast.success(`!Redireccionante a un chat con ${perfil?.nombre}! (Funcionalidad en desarrollo)`);
-                        }}
+                        onClick={() => router.push("/message/messages")}
                         className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-lg flex items-center gap-1"
                       >
                         <MessageSquare className="w-5 h-4" />

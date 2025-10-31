@@ -44,13 +44,12 @@ import { cursoHabilidadAPI } from '@/services/api_cursoHabilidad'
 import { Notificaciones } from "@/components/ui/notificaciones/notifications"
 import { useNotificaciones } from "../../context/notificacionesContext"
 import { useTranslation } from "@/lib/useTranslations"
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import ProtectedRoute from "@/components/protected_routes/protected_routes"; 
+import ProtectedRoute from "@/components/protected_routes/protected_routes";
 import { MainSidebar } from "@/components/MainSidebar"
 import { inscripcionCursoAPI } from "@/services/inscripcionCursoApi"
 import ManageEnrollmentsModal from "@/components/ui/ManageEnrollmentsModal"
-import { useSearchParams } from "next/navigation";
 
 
 interface NewCourseData {
@@ -85,7 +84,6 @@ interface CursoConContador extends Curso {
 }
 
 function CursosComunidadComponent() {
-  // Definición de estados y variables
   const { t } = useTranslation()
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [currentUser, setCurrentUser] = useState<UserData | null>(null)
@@ -119,8 +117,6 @@ function CursosComunidadComponent() {
   const [estadoInscripcion, setEstadoInscripcion] = useState<string | null>(null)
   const [inscripcionId, setInscripcionId] = useState<number | null>(null);
   const [showManageModal, setShowManageModal] = useState(false)
-  const searchParams = useSearchParams(); // Hook para obtener los parámetros de búsqueda
-  const cursoIdParam = searchParams.get("cursoId"); // Obtener el parámetro cursoId si existe
   
 
   const loadCursos = async () => {
@@ -165,16 +161,6 @@ function CursosComunidadComponent() {
   }, []);
 
   useEffect(() => {
-    if (cursoIdParam && cursos.length > 0) {
-      const cursoEncontrado = cursos.find(c => c.id === parseInt(cursoIdParam));
-      if (cursoEncontrado) {
-        setSelectedCourse(cursoEncontrado);
-        setShowCourseForm(false);
-      }
-    }
-  }, [cursoIdParam, cursos]);
-
-  useEffect(() => {
     async function loadCursoHabilidades() {
       if (!selectedCourse) return;
       try {
@@ -187,8 +173,8 @@ function CursosComunidadComponent() {
     loadCursoHabilidades();
   }, [selectedCourse]);
 
- 
- // Crear curso
+  // 🔹 Crear curso
+ // 🔹 Crear curso
 const handleSubmitCourse = async (e: React.FormEvent) => {
   e.preventDefault();
   setFormSubmitting(true);
@@ -208,35 +194,36 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
         ? await convertImageToBase64(newCourse.courseImage)
         : editingCourse?.img_Cursos || "",
       user_id: currentUserId,
+      habilidades_ids: newCourse.skills.map((h) => h.id),
     };
     let cursoId: number;
     // 2. Crear o editar
     if (editingCourse) {
-      // EDITAR
+      // 🟢 EDITAR
       const updatedCurso = await updateCurso(editingCourse.id, cursoPayload);
       cursoId = updatedCurso.id;
-      // Eliminar habilidades anteriores
+      // 🧹 Eliminar habilidades anteriores
       await cursoHabilidadAPI.deleteAllForCurso(cursoId);
       // Actualizar lista
       setCursos((prev) =>
         prev.map((c) => (c.id === cursoId ? updatedCurso : c))
       );
     } else {
-      // CREAR
+      // 🟢 CREAR
       const createdCurso = await createCurso(cursoPayload);
       cursoId = createdCurso.id;
       // Agregar a la lista
       setCursos((prev) => [createdCurso, ...prev]);
 
-      // Obtener el nombre directamente de localStorage (no del estado)
+      // 🚨 Obtener el nombre directamente de localStorage (no del estado)
       const userFromStorage = getCurrentUser();
       const nombreUsuario = userFromStorage?.nombre || "Un usuario";
 
-      // Depuración
+      // 🚨 Depuración
       console.log("🚀 Usuario desde storage:", userFromStorage);
       console.log("🚀 Nombre del usuario:", nombreUsuario);
 
-      //  Notificación con el nombre correcto
+      // ✅ Notificación con el nombre correcto
       agregarNotificacion({
         tipo: "Curso",
         contenido: `El usuario ${nombreUsuario} ha creado el curso "${newCourse.title}".`,
@@ -264,7 +251,7 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
   }
 };
 
-  // Convertir imagen a base64 para enviar a la API
+  // 🔹 Convertir imagen a base64 para enviar a la API
   const convertImageToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -274,7 +261,7 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
     });
   };
 
-  // Actualizar curso
+  // 🔹 Actualizar curso
   const handleUpdateCourse = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingCourse) return
@@ -292,9 +279,9 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
         User_Id: currentUserId,
         habilidades_ids: newCourse.skills.map((h) => h.id),
       }
-      // Actualizar curso principal
+      // 🟢 Actualizar curso principal
       const updatedCurso = await updateCurso(editingCourse.id, updatedData)
-      // Eliminar habilidades anteriores y asociar nuevas
+      // 🟡 Eliminar habilidades anteriores y asociar nuevas
       await cursoHabilidadAPI.deleteAllForCurso(editingCourse.id)
       for (const habilidad of newCourse.skills) {
         await cursoHabilidadAPI.associateHabilidad({
@@ -302,11 +289,11 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
           habilidad_id: habilidad.id,
         })
       }
-      // Subir archivos si hay
+      // 🔵 Subir archivos si hay
       if (newCourse.attachments.length > 0) {
         await uploadAttachments(editingCourse.id, newCourse.attachments)
       }
-      // Actualizar en estado
+      // 🧹 Actualizar en estado
       setCursos(cursos.map((course) => (course.id === editingCourse.id ? updatedCurso : course)))
       setShowCourseForm(false)
       setEditingCourse(null)
@@ -318,7 +305,7 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
     }
   }
 
-  //  Eliminar curso
+  // 🔹 Eliminar curso
   const handleDeleteCourse = async (courseId: number) => {
     if (!window.confirm(t("delete_confirm_alert"))) return
     setIsDeleting(true)
@@ -336,7 +323,7 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
     }
   }
 
-  // Cerrar formulario
+  // 🔹 Cerrar formulario
   const handleCloseForm = () => {
     setShowCourseForm(false)
     setEditingCourse(null)
@@ -350,26 +337,26 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
     })
   }
 
-  //  Cambiar tema
+  // 🔹 Cambiar tema
   const toggleTheme = () => {
     setIsDark(!isDark)
   }
 
-  //  Ver más
+  // 🔹 Ver más
   const handleViewMore = (course: CursoConContador) => {
   setSelectedCourse(course)
   setShowCourseForm(false)
   setEditingCourse(null)
 }
 
-  //  Crear curso (abrir form)
+  // 🔹 Crear curso (abrir form)
   const handleCreateCourse = () => {
     setEditingCourse(null)
     setSelectedCourse(null)
     setShowCourseForm(true)
   }
 
-  //  Editar curso
+  // 🔹 Editar curso
  const handleEdit = (course: CursoConContador) => {
   setEditingCourse(course)
   setSelectedCourse(null)
@@ -438,7 +425,8 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
     console.log("Searching:", searchQuery)
   }
 
-// Componente para mostrar detalles del curso
+  // Componente para mostrar detalles del curso
+ // Componente para mostrar detalles del curso
 const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailViewProps) => {
   const [isCreator, setIsCreator] = useState<boolean>(false)
   const [inscrito, setInscrito] = useState<boolean>(false)
@@ -604,11 +592,17 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
             </div>
           </section>
           <section>
-            {isCreator || (inscrito && estadoInscripcion === "Confirmado") ? (
-              <div className="p-6 bg-green-100 border rounded">
-                <h3 className="font-bold text-green-800">Contenido del curso disponible</h3>
-                {/* Aquí iría el contenido real del curso */}
-                <p>Lecciones, videos, materiales, etc.</p>
+           {isCreator || (inscrito && estadoInscripcion === "Confirmado") ? (
+              <div className="p-6">
+                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>Contenido del curso</h3>
+                <Button
+                  asChild
+                  className={`w-full ${isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"} text-white`}
+                >
+                  <Link href={`/Cursos/${course.id}`}>
+                    Ver curso en modo completo →
+                  </Link>
+                </Button>
               </div>
             ) : (
               <div className="h-40 w-full p-6 border border-red-400 bg-red-400/20 flex items-center justify-center rounded text-white">
@@ -1261,7 +1255,6 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
   )
 }
 
-//  Exportamos el componente protegido
 export default function CursosComunidad() {
   return (
     <ProtectedRoute>

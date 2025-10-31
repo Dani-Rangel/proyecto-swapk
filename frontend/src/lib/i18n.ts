@@ -356,6 +356,13 @@ export const translations = {
     viewProfile: "Ver perfil",
     next: "Siguiente",
     previous: "Anterior",
+
+
+    // ===== Contenido de Cursos =====
+    content_saved_success: "¡Contenido guardado correctamente!",
+    error_saving_content: "Error al guardar el contenido. Inténtalo de nuevo.",
+
+    back_to_dashboard: "Volver al panel de control",
   },
 
   en: {
@@ -396,7 +403,6 @@ export const translations = {
     errorLoading: "Could not load posts.",
     todo: "All",
     title: "Title",
-
     review: "Reviews",
     noDescription: "No description available",
     viewProfile: "View Profile",
@@ -717,7 +723,11 @@ export const translations = {
     cancel_enrollment_success: "Enrollment canceled",
     view_enrollment_status: "View enrollment status",
 
-    volver: "return"
+    volver: "return",
+
+    // ===== Course Content =====
+    content_saved_success: "Content saved successfully!",
+    error_saving_content: "Error saving content. Please try again.",
 
   },
 } as const;

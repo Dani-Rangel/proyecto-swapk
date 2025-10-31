@@ -17,4 +17,4 @@ class Curso(Base):
     attachments = relationship("Attachment", back_populates="curso")
     curso_habilidades = relationship("CursoHabilidad", back_populates="curso")
     inscripciones = relationship("InscripcionCurso", back_populates="curso")
-    
+    contenido = relationship("ContenidoCurso", back_populates="curso", cascade="all, delete-orphan")
