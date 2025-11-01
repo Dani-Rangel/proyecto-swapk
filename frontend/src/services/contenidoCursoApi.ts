@@ -24,7 +24,7 @@ export interface ContenidoItem {
   nivel: number
   parent_id: number | null
   children?: ContenidoItem[]
-  bloques?: BloqueContenido[] // ✅ nuevo campo
+  bloques?: BloqueContenido[] 
 }
 
 export interface CursoContenidoResponse {
@@ -109,8 +109,9 @@ export const bloqueContenidoAPI = {
       body: JSON.stringify(data),
     })
     if (!res.ok) {
-      const error = await res.json().catch(() => ({}))
-      throw new Error(error.detail || "Error al crear bloque")
+    const error = await res.json().catch(() => ({}))
+    console.error("Error al crear bloque:", error)
+    throw new Error(JSON.stringify(error))
     }
     return res.json()
   },

@@ -667,7 +667,13 @@ const handleVerLikes = async (postId: number) => {
                 <h2 className={`text-xl font-semibold mb-3 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{post.titulo}</h2>
                 <p className={`mb-4 ${isDark ? "text-[#D0D0D0]" : "text-gray-700"}`}>{post.contenido}</p>
                 {post.imagen && (
-                  <img src={post.imagen} alt="Publicación" className="w-full h-auto rounded-lg mb-4" />
+                  <div className="w-full h-64 mb-4 overflow-hidden rounded-lg">
+                    <img
+                      src={post.imagen}
+                      alt="Publicación"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 )}
                 <div className={`flex gap-2 mb-4 ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
                   <Badge className={`${config.color} text-white`}>#{config.slug}</Badge>

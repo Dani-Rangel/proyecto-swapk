@@ -1,34 +1,28 @@
-// src/components/ui/contenido-curso/CursoContenidoEditorArea.tsx
+"use client"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ImageIcon, Video, FileText, Plus, Trash2, Move } from "lucide-react"
-import { BloqueContenido, bloqueContenidoAPI } from "@/services/contenidoCursoApi"
+import { ImageIcon, Video, FileText, Trash2, GripVertical, Type } from "lucide-react"
+import { type BloqueContenido, bloqueContenidoAPI } from "@/services/contenidoCursoApi"
+import { RichTextEditor } from "@/components/ui/text_editor"
 
 interface BloqueEditable extends BloqueContenido {
-  tempId?: string // para nuevos bloques no guardados
+  tempId?: string
 }
 
 interface CursoContenidoEditorAreaProps {
-  leccion: any | null // ahora incluye bloques
+  leccion: any | null
   cursoId: number
-  isDark: boolean
   isCreator: boolean
   onGuardar: () => void
 }
 
-export function CursoContenidoEditorArea({
-  leccion,
-  isDark,
-  isCreator,
-  onGuardar,
-}: CursoContenidoEditorAreaProps) {
+export function CursoContenidoEditorArea({ leccion, isCreator, onGuardar }: CursoContenidoEditorAreaProps) {
   const [bloques, setBloques] = useState<BloqueEditable[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Cargar bloques al cambiar de lección
   useEffect(() => {
     if (!leccion) {
       setBloques([])
@@ -40,7 +34,7 @@ export function CursoContenidoEditorArea({
       try {
         if (leccion.nivel === 2 && leccion.id) {
           const data = await bloqueContenidoAPI.obtenerPorLeccion(leccion.id)
-          setBloques(data.map(b => ({ ...b })))
+          setBloques(data.map((b) => ({ ...b })))
         } else {
           setBloques([])
         }
@@ -63,11 +57,11 @@ export function CursoContenidoEditorArea({
       orden: bloques.length,
       tempId: `temp-${Date.now()}`,
     }
-    setBloques(prev => [...prev, nuevo])
+    setBloques((prev) => [...prev, nuevo])
   }
 
   const actualizarBloque = (index: number, campo: keyof BloqueContenido, valor: string) => {
-    setBloques(prev => {
+    setBloques((prev) => {
       const nuevos = [...prev]
       nuevos[index] = { ...nuevos[index], [campo]: valor }
       return nuevos
@@ -75,11 +69,13 @@ export function CursoContenidoEditorArea({
   }
 
   const eliminarBloque = (index: number) => {
-    setBloques(prev => prev.filter((_, i) => i !== index))
+    if (confirm("¿Eliminar este bloque?")) {
+      setBloques((prev) => prev.filter((_, i) => i !== index))
+    }
   }
 
   const moverBloque = (from: number, to: number) => {
-    setBloques(prev => {
+    setBloques((prev) => {
       const nuevos = [...prev]
       const [movido] = nuevos.splice(from, 1)
       nuevos.splice(to, 0, movido)
@@ -91,25 +87,17 @@ export function CursoContenidoEditorArea({
     if (!leccion || leccion.nivel !== 2) return
 
     try {
-      // Guardar/actualizar/eliminar bloques
       for (let i = 0; i < bloques.length; i++) {
         const b = bloques[i]
         const datos = { tipo: b.tipo, contenido: b.contenido, orden: i }
 
         if (b.tempId) {
-          // Nuevo bloque
           const nuevo = await bloqueContenidoAPI.crear(leccion.id, datos)
-          setBloques(prev =>
-            prev.map(p => (p.tempId === b.tempId ? { ...nuevo, orden: i } : p))
-          )
+          setBloques((prev) => prev.map((p) => (p.tempId === b.tempId ? { ...nuevo, orden: i } : p)))
         } else {
-          // Actualizar
           await bloqueContenidoAPI.actualizar(b.id, datos)
         }
       }
-
-      // TODO: eliminar bloques que ya no están (comparar con backend)
-      // Por simplicidad, asumimos que no se eliminan bloques existentes aquí
 
       onGuardar()
       alert("✅ Contenido guardado correctamente.")
@@ -120,77 +108,115 @@ export function CursoContenidoEditorArea({
   }
 
   const renderBloqueEditor = (bloque: BloqueEditable, index: number) => {
-    const commonClasses = isDark
-      ? "bg-[#2E2E2E] border-[#4E4E4E] text-[#F5F5F5]"
-      : "bg-white border-gray-300"
+    const tipoIcons = {
+      texto: <Type size={16} />,
+      video: <Video size={16} />,
+      imagen: <ImageIcon size={16} />,
+      archivo: <FileText size={16} />,
+    }
 
     return (
       <div
         key={bloque.tempId || bloque.id}
-        className={`p-4 rounded-lg mb-4 border ${commonClasses} relative`}
+        className="group relative bg-[#2E2E2E] border border-[#3E3E3E] rounded-lg p-4 hover:border-blue-800 hover:shadow-md transition-all"
       >
-        {/* Controles de edición (solo creador) */}
-        {isCreator && (
-          <div className="absolute top-2 right-2 flex gap-1">
+        {/* Block controls */}
+        <div className="flex items-center justify-between mb-3 pb-3 border-b border-[#3E3E3E]">
+          <div className="flex items-center gap-2">
+            <button className="text-gray-400 hover:text-gray-200 cursor-move">
+              <GripVertical size={16} />
+            </button>
+            <Select value={bloque.tipo} onValueChange={(val) => actualizarBloque(index, "tipo", val)}>
+              <SelectTrigger className="w-36 h-8 text-sm border-[#4E4E4E] bg-[#1A1A1A] text-gray-300">
+                <div className="flex items-center gap-2">
+                  {tipoIcons[bloque.tipo]}
+                  <SelectValue />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-[#2E2E2E] border-[#3E3E3E]">
+                <SelectItem value="texto" className="text-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Type size={14} />
+                    Texto
+                  </div>
+                </SelectItem>
+                <SelectItem value="video" className="text-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Video size={14} />
+                    Video
+                  </div>
+                </SelectItem>
+                <SelectItem value="imagen" className="text-gray-300">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon size={14} />
+                    Imagen
+                  </div>
+                </SelectItem>
+                <SelectItem value="archivo" className="text-gray-300">
+                  <div className="flex items-center gap-2">
+                    <FileText size={14} />
+                    Archivo
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <Button
               size="sm"
               variant="ghost"
               onClick={() => moverBloque(index, Math.max(0, index - 1))}
               disabled={index === 0}
+              className="h-7 w-7 p-0 text-gray-400 hover:text-white hover:bg-[#3E3E3E]"
             >
-              <Move size={14} />
+              ↑
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => eliminarBloque(index)}>
-              <Trash2 size={14} className="text-red-500" />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => moverBloque(index, Math.min(bloques.length - 1, index + 1))}
+              disabled={index === bloques.length - 1}
+              className="h-7 w-7 p-0 text-gray-400 hover:text-white hover:bg-[#3E3E3E]"
+            >
+              ↓
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => eliminarBloque(index)}
+              className="h-7 w-7 p-0 text-red-400 hover:text-red-300 hover:bg-red-950"
+            >
+              <Trash2 size={14} />
             </Button>
           </div>
-        )}
-
-        <div className="mb-2">
-          <Select
-            value={bloque.tipo}
-            onValueChange={val => actualizarBloque(index, "tipo", val)}
-            disabled={!isCreator}
-          >
-            <SelectTrigger className={commonClasses}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className={isDark ? "bg-[#2E2E2E] text-[#F5F5F5]" : "bg-white"}>
-              <SelectItem value="texto">Texto</SelectItem>
-              <SelectItem value="video">Video</SelectItem>
-              <SelectItem value="imagen">Imagen</SelectItem>
-              <SelectItem value="archivo">Archivo</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
+        {/* Block content */}
         {bloque.tipo === "texto" && (
-          <Textarea
+          <RichTextEditor
             value={bloque.contenido}
-            onChange={e => actualizarBloque(index, "contenido", e.target.value)}
-            placeholder="Escribe tu contenido..."
-            className={commonClasses}
-            rows={6}
-            disabled={!isCreator}
+            onChange={(val) => actualizarBloque(index, "contenido", val)}
+            placeholder="Escribe el contenido de la lección aquí..."
+            rows={8}
           />
         )}
 
         {bloque.tipo === "video" && (
-          <div>
+          <div className="space-y-3">
             <Input
               value={bloque.contenido}
-              onChange={e => actualizarBloque(index, "contenido", e.target.value)}
-              placeholder="Pega la URL del video (YouTube/Vimeo)"
-              className={commonClasses}
-              disabled={!isCreator}
+              onChange={(e) => actualizarBloque(index, "contenido", e.target.value)}
+              placeholder="URL del video (YouTube, Vimeo, etc.)"
+              className="border-[#4E4E4E] bg-[#1A1A1A] text-gray-300 placeholder:text-gray-600 focus:border-blue-600"
             />
             {bloque.contenido && (
-              <div className="mt-2 aspect-video bg-black rounded overflow-hidden">
+              <div className="aspect-video bg-black rounded-lg overflow-hidden">
                 <iframe
                   width="100%"
                   height="100%"
                   src={bloque.contenido}
-                  title="Video"
+                  title="Video preview"
                   allowFullScreen
                   className="border-0"
                 />
@@ -200,43 +226,40 @@ export function CursoContenidoEditorArea({
         )}
 
         {bloque.tipo === "imagen" && (
-          <div>
+          <div className="space-y-3">
             <Input
               value={bloque.contenido}
-              onChange={e => actualizarBloque(index, "contenido", e.target.value)}
+              onChange={(e) => actualizarBloque(index, "contenido", e.target.value)}
               placeholder="URL de la imagen"
-              className={commonClasses}
-              disabled={!isCreator}
+              className="border-[#4E4E4E] bg-[#1A1A1A] text-gray-300 placeholder:text-gray-600 focus:border-blue-600"
             />
             {bloque.contenido && (
               <img
-                src={bloque.contenido}
-                alt="Imagen"
-                className="mt-2 max-w-full h-auto rounded"
+                src={bloque.contenido || "/placeholder.svg"}
+                alt="Preview"
+                className="max-w-full h-auto rounded-lg border border-[#3E3E3E]"
               />
             )}
           </div>
         )}
 
         {bloque.tipo === "archivo" && (
-          <div>
+          <div className="space-y-3">
             <Input
               value={bloque.contenido}
-              onChange={e => actualizarBloque(index, "contenido", e.target.value)}
+              onChange={(e) => actualizarBloque(index, "contenido", e.target.value)}
               placeholder="URL del archivo"
-              className={commonClasses}
-              disabled={!isCreator}
+              className="border-[#4E4E4E] bg-[#1A1A1A] text-gray-300 placeholder:text-gray-600 focus:border-blue-600"
             />
             {bloque.contenido && (
               <a
                 href={bloque.contenido}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`mt-2 inline-block px-3 py-1 rounded ${
-                  isDark ? "bg-blue-700" : "bg-blue-600"
-                } text-white text-sm`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
               >
-                📎 Abrir archivo
+                <FileText size={16} />
+                Ver archivo
               </a>
             )}
           </div>
@@ -245,104 +268,89 @@ export function CursoContenidoEditorArea({
     )
   }
 
-  const renderBloqueLectura = (bloque: BloqueContenido) => {
-    if (bloque.tipo === "texto") {
-      return <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: bloque.contenido }} />
-    }
-    if (bloque.tipo === "video" && bloque.contenido) {
-      return (
-        <div className="aspect-video bg-black rounded overflow-hidden my-4">
-          <iframe
-            width="100%"
-            height="100%"
-            src={bloque.contenido}
-            title="Video"
-            allowFullScreen
-            className="border-0"
-          />
-        </div>
-      )
-    }
-    if (bloque.tipo === "imagen" && bloque.contenido) {
-      return <img src={bloque.contenido} alt="Imagen" className="my-4 max-w-full h-auto rounded" />
-    }
-    if (bloque.tipo === "archivo" && bloque.contenido) {
-      return (
-        <a
-          href={bloque.contenido}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded"
-        >
-          📎 Descargar archivo
-        </a>
-      )
-    }
-    return null
-  }
-
   if (!leccion) {
     return (
-      <div className={`p-8 rounded-lg ${isDark ? "bg-[#2E2E2E]" : "bg-white"} text-center`}>
-        <p className={isDark ? "text-[#A0A0A0]" : "text-gray-500"}>
-          Selecciona una lección para ver su contenido.
-        </p>
+      <div className="bg-[#2E2E2E] rounded-xl shadow-sm p-12 text-center border border-[#3E3E3E]">
+        <FileText size={48} className="mx-auto text-gray-600 mb-4" />
+        <h3 className="text-lg font-semibold text-white mb-2">Selecciona una lección</h3>
+        <p className="text-gray-400 text-sm">Elige una lección del menú lateral para editar su contenido.</p>
       </div>
     )
   }
 
   return (
-    <div className={`p-6 rounded-lg ${isDark ? "bg-[#2E2E2E]" : "bg-white"} h-full flex flex-col`}>
-      <h3 className={`text-xl font-semibold mb-4 ${isDark ? "text-white" : "text-gray-900"}`}>
-        {leccion.titulo}
-      </h3>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-[#2E2E2E] rounded-xl shadow-sm p-6 border border-[#3E3E3E]">
+        <h2 className="text-2xl font-bold text-white mb-2">{leccion.titulo}</h2>
+        <p className="text-sm text-gray-400">Edita el contenido de esta lección</p>
+      </div>
 
       {loading ? (
-        <p className={isDark ? "text-[#A0A0A0]" : "text-gray-500"}>Cargando contenido...</p>
-      ) : (
-        <div className="flex-1 overflow-y-auto">
-          {isCreator ? (
-            <>
-              {/* Lista de bloques editables */}
-              {bloques.map((bloque, index) => renderBloqueEditor(bloque, index))}
-
-              {/* Botones para agregar bloques */}
-              <div className="flex flex-wrap gap-2 mt-4">
-                <Button size="sm" onClick={() => agregarBloque("texto")} variant="outline">
-                  <Plus size={14} className="mr-1" /> Texto
-                </Button>
-                <Button size="sm" onClick={() => agregarBloque("imagen")} variant="outline">
-                  <ImageIcon size={14} className="mr-1" /> Imagen
-                </Button>
-                <Button size="sm" onClick={() => agregarBloque("video")} variant="outline">
-                  <Video size={14} className="mr-1" /> Video
-                </Button>
-                <Button size="sm" onClick={() => agregarBloque("archivo")} variant="outline">
-                  <FileText size={14} className="mr-1" /> Archivo
-                </Button>
-              </div>
-
-              <div className="mt-6">
-                <Button onClick={handleGuardar}>💾 Guardar contenido</Button>
-              </div>
-            </>
-          ) : (
-            // Vista de solo lectura para estudiantes
-            <div className="prose prose-invert max-w-none">
-              {leccion.bloques && leccion.bloques.length > 0 ? (
-                leccion.bloques.map((bloque: BloqueContenido) => (
-                  <div key={bloque.id} className="mb-6">
-                    {renderBloqueLectura(bloque)}
-                  </div>
-                ))
-              ) : (
-                <p className={isDark ? "text-[#A0A0A0]" : "text-gray-500"}>
-                  Esta lección aún no tiene contenido.
-                </p>
-              )}
-            </div>
-          )}
+        <div className="bg-[#2E2E2E] rounded-xl shadow-sm p-12 text-center border border-[#3E3E3E]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-400">Cargando contenido...</p>
         </div>
+      ) : (
+        <>
+          {/* Blocks */}
+          <div className="space-y-4">{bloques.map((bloque, index) => renderBloqueEditor(bloque, index))}</div>
+
+          {/* Add block buttons */}
+          <div className="bg-[#2E2E2E] rounded-xl shadow-sm p-6 border border-[#3E3E3E]">
+            <p className="text-sm font-medium text-gray-300 mb-3">Agregar contenido:</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={() => agregarBloque("texto")}
+                variant="outline"
+                className="gap-2 border-[#4E4E4E] text-gray-300 hover:bg-[#3E3E3E] hover:text-white"
+              >
+                <Type size={16} />
+                Texto
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => agregarBloque("imagen")}
+                variant="outline"
+                className="gap-2 border-[#4E4E4E] text-gray-300 hover:bg-[#3E3E3E] hover:text-white"
+              >
+                <ImageIcon size={16} />
+                Imagen
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => agregarBloque("video")}
+                variant="outline"
+                className="gap-2 border-[#4E4E4E] text-gray-300 hover:bg-[#3E3E3E] hover:text-white"
+              >
+                <Video size={16} />
+                Video
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => agregarBloque("archivo")}
+                variant="outline"
+                className="gap-2 border-[#4E4E4E] text-gray-300 hover:bg-[#3E3E3E] hover:text-white"
+              >
+                <FileText size={16} />
+                Archivo
+              </Button>
+            </div>
+          </div>
+
+          {/* Save button */}
+          <div className="sticky bottom-6 bg-[#2E2E2E] rounded-xl shadow-lg p-4 border border-[#3E3E3E]">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-400">
+                {bloques.length} {bloques.length === 1 ? "bloque" : "bloques"} de contenido
+              </p>
+              <Button onClick={handleGuardar} className="bg-blue-600 hover:bg-blue-700 gap-2 text-white">
+                Guardar contenido
+              </Button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

@@ -363,6 +363,8 @@ export const translations = {
     error_saving_content: "Error al guardar el contenido. Inténtalo de nuevo.",
 
     back_to_dashboard: "Volver al panel de control",
+
+    loading_contacts: "Cargando contactos...",
   },
 
   en: {
