@@ -20,7 +20,7 @@ import {
   Plus,
   Home,
   Settings,
-  Moon, 
+  Moon,
   Sun,
   PlusIcon,
   LogOut,
@@ -29,9 +29,9 @@ import {
   RefreshCw,
   BookOpen,
   Edit,
-  Trash2, 
+  Trash2,
 } from "lucide-react"
-import { Shuffle } from "lucide-react"; 
+import { Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button"
 import CrearTruequeModal, { TruequeFormData } from "@/components/ui/CreateTruequeForm"
 import { TipoHabilidad } from "@/services/intercambio"
@@ -62,7 +62,6 @@ const api = axios.create({
   },
 })
 
-// Añadir token a cada petición (leyendo desde el objeto 'user')
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const userStr = localStorage.getItem("user");
@@ -74,7 +73,7 @@ api.interceptors.request.use((config) => {
           config.headers.Authorization = `Bearer ${user.token}`;
         }
       } catch (e) {
-        console.error("Error parsing user from localStorage", e);
+        // No hacer nada si hay error, solo continuar sin token.
       }
     }
   }
@@ -86,11 +85,9 @@ function SwapkPlatformComponent() {
   const { t } = useTranslation()
   const { agregarNotificacion } = useNotificaciones()
 
-  // Tema oscuro
   const [isDark, setIsDark] = useState(true)
   const toggleTheme = () => setIsDark(prev => !prev)
 
-  // Estados
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [modalidad, setModalidad] = useState("")
@@ -101,29 +98,22 @@ function SwapkPlatformComponent() {
   const [habilidades, setHabilidades] = useState<Habilidad[]>([])
   const [trueques, setTrueques] = useState<IntercambioResponse[]>([])
   const [currentUser, setCurrentUser] = useState(getCurrentUser())
-  const [user, setUser] = useState<any>(null)
-  const [perfil, setPerfil] = useState<any>(null)
   const [showReporteModal, setShowReporteModal] = useState(false);
   const [intercambioAReportar, setIntercambioAReportar] = useState<number | null>(null);
 
-  // Modal de propuestas
   const [propuestas, setPropuestas] = useState<any[]>([])
   const [showPropuestasModal, setShowPropuestasModal] = useState(false)
   const [selectedIntercambioId, setSelectedIntercambioId] = useState<number | null>(null)
   const [propuestasEnviadas, setPropuestasEnviadas] = useState<Set<number>>(new Set())
 
-  // Modal de reseña
   const [showResenaModal, setShowResenaModal] = useState(false)
   const [truequeParaFinalizar, setTruequeParaFinalizar] = useState<IntercambioResponse | null>(null)
   const [calificacion, setCalificacion] = useState(0)
   const [comentario, setComentario] = useState("")
 
-  // Verifica si el usuario actual es participante (creador o proponente aceptado)
   const esParticipante = (trueque: IntercambioResponse): boolean => {
     if (!currentUser) return false;
-    // Es el creador
     if (trueque.id_usuario1 === currentUser.id) return true;
-    // Es el proponente aceptado (solo en estado Confirmado)
     if (trueque.estado === EstadoIntercambio.Confirmado) {
       const propuestaAceptada = trueque.propuestas?.find((p: any) => p.aceptada);
       return propuestaAceptada?.id_usuario_interesado === currentUser.id;
@@ -131,14 +121,12 @@ function SwapkPlatformComponent() {
     return false;
   };
 
-  // Validar usuario logueado
   useEffect(() => {
     const user = getCurrentUser()
     if (user) setCurrentUser(user)
     else router.push("/auth/login")
   }, [router])
 
-  // Cargar intercambios y habilidades
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -237,8 +225,8 @@ function SwapkPlatformComponent() {
         descripcion: formData.descripcion,
         disponibilidad: formData.disponibilidad,
         estado: EstadoIntercambio.Pendiente,
-        habilidades_ofrecidas_ids: formData.habilidades_ofrecidas_ids,  
-        habilidades_buscadas_ids: formData.habilidades_buscadas_ids,  
+        habilidades_ofrecidas_ids: formData.habilidades_ofrecidas_ids,
+        habilidades_buscadas_ids: formData.habilidades_buscadas_ids,
       }
 
       try {
@@ -278,7 +266,6 @@ function SwapkPlatformComponent() {
     setTruequeEditando(null)
   }
 
-  // Cargar propuestas de un intercambio (solo para creador)
   const cargarPropuestas = async (intercambioId: number) => {
     try {
       const res = await api.get(`/intercambios/${intercambioId}/propuestas`)
@@ -291,7 +278,6 @@ function SwapkPlatformComponent() {
     }
   }
 
-  // Enviar reseña y finalizar intercambio
   const enviarResena = async (calificacion: number, comentario: string) => {
     if (!truequeParaFinalizar || !currentUser) return
     try {
@@ -306,7 +292,6 @@ function SwapkPlatformComponent() {
       setTruequeParaFinalizar(null)
       setCalificacion(0)
       setComentario("")
-      // ✅ Recargar intercambios para actualizar el estado y eliminar propuestas
       const [truequesData] = await Promise.all([obtenerIntercambios()])
       setTrueques(truequesData)
     } catch (error: any) {
@@ -345,7 +330,7 @@ function SwapkPlatformComponent() {
   })
 
   return (
-    <div className="flex h-screen bg-[#1A1A1A] text-[#F5F5F5]">
+    <div className="flex h-screen bg-[#121212] text-[#F5F5F5]">
       <div className="absolute top-4 left-4 md:hidden z-50">
         <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-300">
           {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -357,11 +342,10 @@ function SwapkPlatformComponent() {
         toggleTheme={toggleTheme}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
-        user={user}
       />
 
-      <div className="flex-1 transition-all duration-300 ml-2">
-        <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex-1 transition-all duration-300 ml-2 overflow-y-auto">
+        <div className="flex-1 p-6">
           <div className="flex items-center justify-between mb-8 bg-[#1E1E1E] border-[#2E2E2E] p-4 rounded-lg border">
             <h2 className="text-2xl font-bold text-[#F5F5F5]">{t("exchanges_title")}</h2>
             <Button
@@ -435,7 +419,7 @@ function SwapkPlatformComponent() {
               {filteredTrueques.map((trueque) => (
                 <div
                   key={trueque.id}
-                  className="bg-[#121212] rounded-xl p-6 flex flex-col hover:shadow-lg hover:shadow-blue-500/10 transition-shadow border border-[#2D2D2D]"
+                  className="bg-[#1E1E1E] rounded-xl p-6 flex flex-col hover:shadow-lg hover:shadow-blue-500/10 transition-shadow border border-[#2D2D2D] hover:border-blue-500/50"
                 >
                   <div className="flex items-start gap-4 mb-4">
                     <Image
@@ -508,7 +492,7 @@ function SwapkPlatformComponent() {
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-300 mb-3" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  <p className="text-sm text-gray-300 mb-3 line-clamp-3" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {trueque.descripcion}
                   </p>
                   {trueque.disponibilidad && (
@@ -567,7 +551,6 @@ function SwapkPlatformComponent() {
                       </Button>
                     </div>
                   )}
-                  {/* ✅ NUEVO BLOQUE: Finalizar para cualquier participante */}
                   {esParticipante(trueque) && trueque.estado === EstadoIntercambio.Confirmado && (
                     <div className="mt-4">
                       <Button
@@ -591,7 +574,6 @@ function SwapkPlatformComponent() {
                   {currentUser?.id !== trueque.id_usuario1 && trueque.estado === EstadoIntercambio.Pendiente && (
                     <div className="mt-4">
                       {propuestasEnviadas.has(trueque.id) ? (
-                        // Ya enviaste propuesta (pendiente)
                         <Button
                           variant="outline"
                           className="bg-red-600 hover:bg-red-700 text-white w-full"
@@ -615,7 +597,6 @@ function SwapkPlatformComponent() {
                           Cancelar propuesta
                         </Button>
                       ) : trueque.propuestas?.some(p => p.id_usuario_interesado === currentUser?.id) ? (
-                        // ✅ Ya participaste (propuesta aceptada en el pasado)
                         <Button
                           disabled
                           className="opacity-70 w-full bg-gray-700 text-gray-400 cursor-not-allowed"
@@ -623,7 +604,6 @@ function SwapkPlatformComponent() {
                           Ya participaste en este intercambio
                         </Button>
                       ) : (
-                        // Puedes proponer
                         <Button
                           className="bg-blue-600 hover:bg-blue-700 w-full"
                           onClick={async () => {
@@ -666,7 +646,6 @@ function SwapkPlatformComponent() {
         </div>
       </div>
 
-      {/* Modal Crear/Editar Trueque */}
       {isCrearModalOpen && (
         <CrearTruequeModal
           isOpen={isCrearModalOpen}
@@ -678,7 +657,6 @@ function SwapkPlatformComponent() {
         />
       )}
 
-      {/* Modal de Propuestas */}
       {showPropuestasModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-[#1E1E1E] rounded-xl p-6 w-full max-w-md mx-4 text-[#F5F5F5]">
@@ -750,15 +728,14 @@ function SwapkPlatformComponent() {
         </div>
       )}
 
-      {/* Modal de Reseña Modernizada */}
       {showResenaModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 transition-opacity duration-300">
           <div className="bg-[#2E2E2E] rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl transform transition-transform duration-300 ease-out">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-white">Dejanos tu opinión sobre este trueque</h3>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => {
                   setShowResenaModal(false)
                   setTruequeParaFinalizar(null)
@@ -771,11 +748,11 @@ function SwapkPlatformComponent() {
               </Button>
             </div>
 
-            <form 
+            <form
               onSubmit={(e) => {
                 e.preventDefault()
                 enviarResena(calificacion, comentario)
-              }} 
+              }}
               className="space-y-4"
             >
               <div>

@@ -7,9 +7,13 @@ from backend.models.usuarios import Usuario
 from backend.schemas.user_schema import UserResponse, UserUpdate, PasswordUpdate, PasswordConfirm, UserForChatResponse 
 from backend.services.oauth2 import get_current_user
 from backend.models.perfil import Perfil
+from passlib.context import CryptContext
+
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ph = PasswordHasher()
 
@@ -58,19 +62,34 @@ def change_password(
     db.commit()
     db.refresh(current_user)
     return {"msg": "Contraseña actualizada con éxito"}
+    
+#Eliminar cuenta
 
-# Eliminar cuenta
-@router.delete("/me")
-def delete_account(
+@router.delete("/me", status_code=status.HTTP_200_OK)
+def delete_user_account(
+    password_data: dict,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user)
 ):
-    # Eliminar perfiles relacionados primero
-    db.query(Perfil).filter(Perfil.id_usuario == current_user.id).delete()
-    # Luego eliminar usuario
-    db.delete(current_user)
+    password = password_data.get("password")
+    if not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debes ingresar tu contraseña"
+        )
+
+    try:
+        ph.verify(current_user.contrasena_hash, password)
+    except VerifyMismatchError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Contraseña incorrecta"
+        )
+
+    current_user.eliminado = 1
     db.commit()
-    return {"msg": "Cuenta eliminada correctamente"}
+
+    return {"message": "Cuenta deshabilitada exitosamente"}
 
 
 

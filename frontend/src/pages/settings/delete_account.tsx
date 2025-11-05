@@ -91,7 +91,7 @@ function DeleteAccountComponent() {
         throw new Error(data.detail || t("delete_error"))
       }
 
-      // ✅ Éxito
+      // Éxito
       localStorage.removeItem("user")
       localStorage.removeItem("token")
       setMessage(t("delete_success"))
