@@ -3,6 +3,8 @@ import { translations } from "./i18n"  // Importación estática
 
 export type Locale = keyof typeof translations
 
+export type TranslationKey = keyof (typeof translations)["es"]
+
 // Hook para traducciones
 export function useTranslation() {
   //  El hook useLanguage se usa correctamente dentro de otro hook
@@ -13,7 +15,7 @@ export function useTranslation() {
     const translation = translations[lang]?.[key]
     
     if (!translation) {
-      console.warn(`Missing translation for key: ${key}`)
+      console.warn(`No se ha encontrado la traducción de: ${key} in locale "${lang}"`)
       return key // Devuelve la clave como fallback
     }
 

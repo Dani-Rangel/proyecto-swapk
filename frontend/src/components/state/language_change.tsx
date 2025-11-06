@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react"
 
-type Language = "es" | "en"
+type Language = "es" | "en" | "pt"
 
 const LanguageContext = createContext<{
   lang: Language
@@ -18,11 +18,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // Cargar idioma al iniciar
   useEffect(() => {
     const saved = localStorage.getItem("appLanguage") as Language | null
-    if (saved && ["es", "en"].includes(saved)) {
+    if (saved && ["es", "en", "pt"].includes(saved)) {
       setLang(saved)
     } else {
-      const browserLang = navigator.language.startsWith("es") ? "es" : "en"
-      setLang(browserLang)
+      const browserLang = navigator.language.toLowerCase();
+      if (browserLang.startsWith("es")) setLang("es")
+      else if (browserLang.startsWith("pt")) setLang("pt")
+      else setLang("es") // por defecto
     }
   }, [])
 

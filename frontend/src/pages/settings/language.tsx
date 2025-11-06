@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import SettingsLayout from "../../components/settings_layout"
 import ProtectedRoute from "@/components/protected_routes/protected_routes"; 
 
-// ✅ Define los tipos correctamente
+// Define los tipos correctamente
 type LanguageValue = "es" | "en" | "pt"
 
 interface LanguageOption {
@@ -28,10 +28,10 @@ const languages: LanguageOption[] = [
 function LanguageComponent() {
   const [selectedLanguage, setSelectedLanguage] = useState<"es" | "en">("es")
 
-  // ✅ Ahora el hook está dentro del componente
+  //  Ahora el hook está dentro del componente
   const { t } = useTranslation()
 
-  // 🔁 Cargar idioma guardado al iniciar
+  //  Cargar idioma guardado al iniciar
   useEffect(() => {
     const savedLang = localStorage.getItem("appLanguage")
     if (savedLang === "es" || savedLang === "en") {
@@ -42,17 +42,17 @@ function LanguageComponent() {
     }
   }, [])
 
-  // ✅ Tipa `value` como `LanguageValue`
+  //  Tipa `value` como `LanguageValue`
   const handleLanguageChange = (value: LanguageValue) => {
-    if (value === "pt") return // ✅ Evita seleccionar portugués por ahora
+    if (value === "pt") return //  Evita seleccionar portugués por ahora
 
-    const newLang = value as "es" | "en" // Solo permite "es" o "en"
+    const newLang = value as "es" | "en" | "pt" // Solo permite "es" o "en"
     setSelectedLanguage(newLang)
     localStorage.setItem("appLanguage", newLang)
     console.log("Idioma actualizado a:", newLang)
   }
 
-  // 🧪 Verificación para detectar React duplicado
+  // Verificación para detectar React duplicado
   if (typeof window !== "undefined") {
     // @ts-ignore
     window.React2 = require("react");
@@ -114,7 +114,7 @@ function LanguageComponent() {
   )
 }
 
-// ✅ Exportamos el componente protegido
+//  Exportamos el componente protegido
 export default function Language() {
   return (
     <ProtectedRoute>
