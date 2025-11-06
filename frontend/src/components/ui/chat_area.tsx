@@ -1,47 +1,47 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { useState, useEffect, useRef } from "react";
-import dynamic from "next/dynamic";
-import NewMessageModal from "./new_message_modal";
-import { Send, Paperclip, Smile, MessageSquare, Edit2, Trash2, Plus } from "lucide-react";
-import { useTranslation } from "../../lib/useTranslations";
+import type React from "react"
+import { useState, useEffect, useRef } from "react"
+import dynamic from "next/dynamic"
+import NewMessageModal from "./new_message_modal"
+import { Send, Paperclip, Smile, MessageSquare, Edit2, Trash2 } from "lucide-react"
+import { useTranslation } from "@/lib/useTranslations"
 
-const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false });
+const EmojiPicker = dynamic(() => import("emoji-picker-react"), { ssr: false })
 
 interface User {
-  id: string;
-  name: string;
-  username: string;
-  avatar: string;
+  id: string
+  name: string
+  username: string
+  avatar: string
 }
 
 interface Message {
-  id: string;
-  chat_id?: number; // Agregado para validación
-  sender: string;
-  content: string;
-  timestamp: string;
-  isOwn: boolean;
-  type: "text" | "file";
-  fileUrl?: string;
-  fileName?: string;
+  id: string
+  chat_id?: number
+  sender: string
+  content: string
+  timestamp: string
+  isOwn: boolean
+  type: "text" | "file"
+  fileUrl?: string
+  fileName?: string
 }
 
 interface BackendChat {
-  chat_id: number;
-  tipo: string;
-  usuarios: { id: string; nombre: string }[];
-  ultimo_mensaje: string | null;
-  fecha_ultimo_mensaje: string | null;
+  chat_id: number
+  tipo: string
+  usuarios: { id: string; nombre: string }[]
+  ultimo_mensaje: string | null
+  fecha_ultimo_mensaje: string | null
 }
 
 interface ChatAreaProps {
-  currentContact: string | null;
-  onContactSelect?: (contact: string) => void;
-  onViewChange?: (view: "chat" | "video-call" | "screen-share") => void;
-  isModalOpen?: boolean;
-  setIsModalOpen?: (open: boolean) => void;
+  currentContact: string | null
+  onContactSelect?: (contact: string) => void
+  onViewChange?: (view: "chat" | "video-call" | "screen-share") => void
+  isModalOpen?: boolean
+  setIsModalOpen?: (open: boolean) => void
 }
 
 export function ChatArea({
@@ -51,62 +51,61 @@ export function ChatArea({
   isModalOpen,
   setIsModalOpen,
 }: ChatAreaProps) {
-  const { t } = useTranslation();
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [allUsers, setAllUsers] = useState<Map<string, User>>(new Map());
-  const [loading, setLoading] = useState(true);
+  const { t } = useTranslation()
+  const [message, setMessage] = useState("")
+  const [messages, setMessages] = useState<Message[]>([])
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [allUsers, setAllUsers] = useState<Map<string, User>>(new Map())
+  const [loading, setLoading] = useState(true)
 
-  const modalOpen = isModalOpen || false;
-  const setModalOpen = setIsModalOpen || (() => {});
+  const modalOpen = isModalOpen || false
+  const setModalOpen = setIsModalOpen || (() => {})
 
-  const [ws, setWs] = useState<WebSocket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [currentChatId, setCurrentChatId] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [ws, setWs] = useState<WebSocket | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const [currentChatId, setCurrentChatId] = useState<number | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const [userChats, setUserChats] = useState<BackendChat[]>([]);
-  const [loadingChats, setLoadingChats] = useState(true);
+  const [userChats, setUserChats] = useState<BackendChat[]>([])
+  const [loadingChats, setLoadingChats] = useState(true)
 
-  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [editContent, setEditContent] = useState("");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
-  const [contextMenuOpen, setContextMenuOpen] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null)
+  const [editContent, setEditContent] = useState("")
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [contextMenuOpen, setContextMenuOpen] = useState<string | null>(null)
 
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
-  let token: string | null = null;
-  let myUserId: string | null = null;
+  let token: string | null = null
+  let myUserId: string | null = null
 
   if (typeof window !== "undefined") {
-    const userData = localStorage.getItem("user");
+    const userData = localStorage.getItem("user")
     if (userData) {
       try {
-        const parsed = JSON.parse(userData);
-        token = parsed.token;
-        myUserId = String(parsed.id);
+        const parsed = JSON.parse(userData)
+        token = parsed.token
+        myUserId = String(parsed.id)
       } catch (error) {
-        console.error("Error parsing auth data:", error);
+        console.error("Error parsing auth data:", error)
       }
     }
   }
 
-  // --- Cargar usuarios y chats ---
   useEffect(() => {
     const fetchUsers = async () => {
       if (!myUserId) {
-        setLoading(false);
-        return;
+        setLoading(false)
+        return
       }
 
       try {
-        const res = await fetch(`${API_URL}/users/all`);
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        const data = await res.json();
+        const res = await fetch(`${API_URL}/users/all`)
+        if (!res.ok) throw new Error(`Error ${res.status}`)
+        const data = await res.json()
 
         const usersFromApi = data
           .filter((user: any) => String(user.id) !== myUserId)
@@ -115,116 +114,113 @@ export function ChatArea({
             name: user.name,
             username: user.username,
             avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random&size=128`,
-          }));
+          }))
 
-        const combinedUsers = new Map<string, User>();
+        const combinedUsers = new Map<string, User>()
 
-        userChats.forEach(chat => {
-          chat.usuarios.forEach(u => {
+        userChats.forEach((chat) => {
+          chat.usuarios.forEach((u) => {
             if (String(u.id) !== String(myUserId)) {
               combinedUsers.set(u.id, {
                 id: u.id,
                 name: u.nombre,
                 username: u.nombre,
                 avatar: `  https://ui-avatars.com/api/?name=${encodeURIComponent(u.nombre)}&background=random&size=128`,
-              });
+              })
             }
-          });
-        });
+          })
+        })
 
-        usersFromApi.forEach(user => {
-          combinedUsers.set(user.id, user);
-        });
+        usersFromApi.forEach((user) => {
+          combinedUsers.set(user.id, user)
+        })
 
-        setAllUsers(combinedUsers);
+        setAllUsers(combinedUsers)
       } catch (error) {
-        console.error("Error fetching users:", error);
-        setAllUsers(new Map());
+        console.error("Error fetching users:", error)
+        setAllUsers(new Map())
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    fetchUsers();
-  }, [myUserId, userChats]);
+    fetchUsers()
+  }, [myUserId, userChats])
 
-  // --- Cargar chats del usuario ---
   useEffect(() => {
     const fetchUserChats = async () => {
       if (!token || !myUserId) {
-        setLoadingChats(false);
-        return;
+        setLoadingChats(false)
+        return
       }
 
       try {
         const res = await fetch(`${API_URL}/chats`, {
           headers: { Authorization: `Bearer ${token}` },
-        });
+        })
 
-        if (!res.ok) throw new Error(`Error ${res.status}`);
-        const data = await res.json();
-        setUserChats(data.chats || []);
+        if (!res.ok) throw new Error(`Error ${res.status}`)
+        const data = await res.json()
+        setUserChats(data.chats || [])
 
         if (data.chats?.length > 0 && !currentContact && onContactSelect) {
-          const firstChat = data.chats[0];
-          const otherUser = firstChat.usuarios.find((u: any) => String(u.id) !== String(myUserId));
+          const firstChat = data.chats[0]
+          const otherUser = firstChat.usuarios.find((u: any) => String(u.id) !== String(myUserId))
           if (otherUser) {
-            onContactSelect(otherUser.nombre);
+            onContactSelect(otherUser.nombre)
           }
         }
       } catch (err) {
-        console.error("❌ Error al cargar chats:", err);
-        setError("No se pudieron cargar tus chats");
+        console.error("❌ Error al cargar chats:", err)
+        setError("No se pudieron cargar tus chats")
       } finally {
-        setLoadingChats(false);
+        setLoadingChats(false)
       }
-    };
+    }
 
-    fetchUserChats();
-  }, [token, myUserId, onContactSelect]);
+    fetchUserChats()
+  }, [token, myUserId, onContactSelect])
 
-  // --- Conectar WebSocket cuando cambia el contacto ---
   useEffect(() => {
-    let isCurrent = true;
+    let isCurrent = true
 
     if (!currentContact || !token || !myUserId) {
       if (ws) {
-        ws.close();
-        setWs(null);
-        setIsConnected(false);
-        setCurrentChatId(null);
+        ws.close()
+        setWs(null)
+        setIsConnected(false)
+        setCurrentChatId(null)
       }
-      return;
+      return
     }
 
     const findUserInChats = (): User | null => {
       for (const chat of userChats) {
         const otherUser = chat.usuarios.find(
-          (u: any) => String(u.id) !== String(myUserId) && u.nombre === currentContact
-        );
+          (u: any) => String(u.id) !== String(myUserId) && u.nombre === currentContact,
+        )
         if (otherUser) {
           return {
             id: otherUser.id,
             name: otherUser.nombre,
             username: otherUser.nombre,
             avatar: `  https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.nombre)}&background=random&size=128`,
-          };
+          }
         }
       }
-      return null;
-    };
-
-    const otherUser = Array.from(allUsers.values()).find(u => u.name === currentContact) || findUserInChats();
-
-    if (!otherUser || String(otherUser.id) === String(myUserId)) {
-      setError("Usuario no válido");
-      return;
+      return null
     }
 
-    // Limpiar mensajes y cerrar WebSocket anterior
-    setMessages([]);
+    const otherUser = Array.from(allUsers.values()).find((u) => u.name === currentContact) || findUserInChats()
+
+    if (!otherUser || String(otherUser.id) === String(myUserId)) {
+      setError("Usuario no válido")
+      return
+    }
+
+    setMessages([])
     if (ws) {
-      ws.close();
+      ws.close()
     }
 
     const initializeChat = async () => {
@@ -235,37 +231,37 @@ export function ChatArea({
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-        });
+        })
 
         if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.detail || `Error ${res.status}`);
+          const errorData = await res.json().catch(() => ({}))
+          throw new Error(errorData.detail || `Error ${res.status}`)
         }
 
-        const data = await res.json();
-        const chatId = data.chat_id;
+        const data = await res.json()
+        const chatId = data.chat_id
 
-        if (!isCurrent) return;
+        if (!isCurrent) return
 
         const messagesRes = await fetch(`${API_URL}/chats/${chatId}/messages`, {
           headers: { Authorization: `Bearer ${token}` },
-        });
+        })
 
         if (!messagesRes.ok) {
-          const errorData = await messagesRes.json().catch(() => ({}));
-          throw new Error(errorData.detail || `Error ${messagesRes.status}`);
+          const errorData = await messagesRes.json().catch(() => ({}))
+          throw new Error(errorData.detail || `Error ${messagesRes.status}`)
         }
 
-        const messagesData = await messagesRes.json();
-        const validMessages = messagesData.messages.filter((msg: any) => msg.contenido);
+        const messagesData = await messagesRes.json()
+        const validMessages = messagesData.messages.filter((msg: any) => msg.contenido)
 
         const loadedMessages = validMessages.map((msg: any) => {
-          const isOwn = msg.id_usuario.toString() === myUserId;
-          const senderUser = allUsers.get(String(msg.id_usuario));
+          const isOwn = msg.id_usuario.toString() === myUserId
+          const senderUser = allUsers.get(String(msg.id_usuario))
           return {
             id: msg.id.toString(),
             chat_id: msg.chat_id,
-            sender: isOwn ? "Tú" : (senderUser?.name || "Usuario desconocido"),
+            sender: isOwn ? "Tú" : senderUser?.name || "Usuario desconocido",
             content: msg.contenido,
             timestamp: new Date(msg.fecha).toLocaleTimeString("es-ES", {
               hour: "2-digit",
@@ -275,46 +271,45 @@ export function ChatArea({
             type: msg.tipo === "imagen" || msg.tipo === "archivo" ? "file" : "text",
             fileUrl: msg.url_archivo || undefined,
             fileName: msg.url_archivo ? "Archivo" : undefined,
-          };
-        });
+          }
+        })
 
         if (isCurrent) {
-          setMessages(loadedMessages);
-          setCurrentChatId(chatId);
+          setMessages(loadedMessages)
+          setCurrentChatId(chatId)
         }
 
-        const wsUrl = `ws://localhost:8000/chats/ws/${chatId}?token=${token}`;
-        const websocket = new WebSocket(wsUrl);
+        const wsUrl = `ws://localhost:8000/chats/ws/${chatId}?token=${token}`
+        const websocket = new WebSocket(wsUrl)
 
         websocket.onopen = () => {
           if (isCurrent) {
-            setIsConnected(true);
-            setError(null);
-            setWs(websocket);
+            setIsConnected(true)
+            setError(null)
+            setWs(websocket)
           }
-        };
+        }
 
         websocket.onmessage = (event) => {
-          if (!isCurrent) return;
+          if (!isCurrent) return
 
-          const data = JSON.parse(event.data);
+          const data = JSON.parse(event.data)
           if (data.type === "message") {
-            const receivedMsg = data.message;
+            const receivedMsg = data.message
 
-            // Verificación crítica: ¿pertenece al chat actual?
             if (receivedMsg.chat_id !== chatId) {
-              console.warn("Mensaje ignorado: chat_id no coincide", receivedMsg.chat_id, chatId);
-              return;
+              console.warn("Mensaje ignorado: chat_id no coincide", receivedMsg.chat_id, chatId)
+              return
             }
 
-            if (!receivedMsg.contenido) return;
+            if (!receivedMsg.contenido) return
 
-            const isOwnMessage = receivedMsg.id_usuario.toString() === myUserId;
-            const senderUser = allUsers.get(String(receivedMsg.id_usuario));
+            const isOwnMessage = receivedMsg.id_usuario.toString() === myUserId
+            const senderUser = allUsers.get(String(receivedMsg.id_usuario))
             const newMessage: Message = {
               id: receivedMsg.id.toString(),
-              chat_id: receivedMsg.chat_id, // ✅ Ya lo tienes, pero...
-              sender: isOwnMessage ? "Tú" : (senderUser?.name || "Usuario desconocido"),
+              chat_id: receivedMsg.chat_id,
+              sender: isOwnMessage ? "Tú" : senderUser?.name || "Usuario desconocido",
               content: receivedMsg.contenido,
               timestamp: new Date(receivedMsg.fecha).toLocaleTimeString("es-ES", {
                 hour: "2-digit",
@@ -324,58 +319,57 @@ export function ChatArea({
               type: receivedMsg.tipo === "imagen" || receivedMsg.tipo === "archivo" ? "file" : "text",
               fileUrl: receivedMsg.url_archivo || undefined,
               fileName: receivedMsg.url_archivo ? "Archivo" : undefined,
-            };
+            }
 
             setMessages((prev) => {
-              if (prev.some(msg => msg.id === newMessage.id)) return prev;
-              return [...prev, newMessage];
-            });
+              if (prev.some((msg) => msg.id === newMessage.id)) return prev
+              return [...prev, newMessage]
+            })
           }
-        };
+        }
 
         websocket.onclose = () => {
           if (isCurrent) {
-            setIsConnected(false);
-            setWs(null);
+            setIsConnected(false)
+            setWs(null)
           }
-        };
+        }
 
         websocket.onerror = (err) => {
           if (isCurrent) {
-            console.error("❌ WebSocket Error:", err);
-            setError("Error de conexión con el servidor");
-            setIsConnected(false);
-            setWs(null);
+            console.error("❌ WebSocket Error:", err)
+            setError("Error de conexión con el servidor")
+            setIsConnected(false)
+            setWs(null)
           }
-        };
+        }
       } catch (err) {
         if (isCurrent) {
-          console.error("❌ Error al inicializar chat:", err);
-          setError(err instanceof Error ? err.message : "No se pudo iniciar el chat");
+          console.error("❌ Error al inicializar chat:", err)
+          setError(err instanceof Error ? err.message : "No se pudo iniciar el chat")
         }
       }
-    };
+    }
 
-    initializeChat();
+    initializeChat()
 
     return () => {
-      isCurrent = false;
+      isCurrent = false
       if (ws) {
-        ws.close();
-        setWs(null);
+        ws.close()
+        setWs(null)
       }
-    };
-  }, [currentContact, allUsers, userChats, myUserId, token]);
+    }
+  }, [currentContact, allUsers, userChats, myUserId, token])
 
-  // Auto-scroll
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }, [messages])
 
-  const currentUser = "Jefferson Correa";
+  const currentUser = "Jefferson Correa"
 
   const handleSendMessage = () => {
-    if (!message.trim() || !ws || ws.readyState !== WebSocket.OPEN || !currentChatId) return;
+    if (!message.trim() || !ws || ws.readyState !== WebSocket.OPEN || !currentChatId) return
 
     const payload = {
       type: "message",
@@ -383,34 +377,34 @@ export function ChatArea({
       chat_id: currentChatId,
       user_id: myUserId,
       tipo: "texto",
-    };
+    }
 
     try {
-      ws.send(JSON.stringify(payload));
-      setMessage("");
-      setShowEmojiPicker(false);
+      ws.send(JSON.stringify(payload))
+      setMessage("")
+      setShowEmojiPicker(false)
     } catch (err) {
-      console.error("❌ Error al enviar mensaje:", err);
-      setError("Error al enviar mensaje");
+      console.error("❌ Error al enviar mensaje:", err)
+      setError("Error al enviar mensaje")
     }
-  };
+  }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+      e.preventDefault()
+      handleSendMessage()
     }
-  };
+  }
 
   const handleEmojiSelect = (emojiData: any) => {
-    setMessage((prev) => prev + emojiData.emoji);
-  };
+    setMessage((prev) => prev + emojiData.emoji)
+  }
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]
+    if (!file) return
 
-    const fileUrl = URL.createObjectURL(file);
+    const fileUrl = URL.createObjectURL(file)
     const newMessage: Message = {
       id: Date.now().toString(),
       sender: "Tú",
@@ -423,14 +417,14 @@ export function ChatArea({
       type: "file",
       fileUrl,
       fileName: file.name,
-    };
+    }
 
-    setMessages((prev) => [...prev, newMessage]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+    setMessages((prev) => [...prev, newMessage])
+    if (fileInputRef.current) fileInputRef.current.value = ""
+  }
 
   const handleEditMessage = async (messageId: string, newContent: string) => {
-    if (!token || !currentChatId) return;
+    if (!token || !currentChatId) return
 
     try {
       const res = await fetch(`${API_URL}/chats/messages/${messageId}`, {
@@ -440,11 +434,11 @@ export function ChatArea({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ new_content: newContent }),
-      });
+      })
 
-      if (!res.ok) throw new Error(`Error ${res.status}`);
+      if (!res.ok) throw new Error(`Error ${res.status}`)
 
-      const updatedMsg = await res.json();
+      const updatedMsg = await res.json()
 
       setMessages((prev) =>
         prev.map((msg) =>
@@ -457,12 +451,12 @@ export function ChatArea({
                   minute: "2-digit",
                 }),
               }
-            : msg
-        )
-      );
+            : msg,
+        ),
+      )
 
-      setEditingMessageId(null);
-      setEditContent("");
+      setEditingMessageId(null)
+      setEditContent("")
 
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(
@@ -471,49 +465,49 @@ export function ChatArea({
             message_id: messageId,
             new_content: updatedMsg.contenido,
             fecha: updatedMsg.fecha,
-          })
-        );
+          }),
+        )
       }
     } catch (err) {
-      console.error("❌ Error al editar mensaje:", err);
-      setError("No se pudo editar el mensaje");
+      console.error("❌ Error al editar mensaje:", err)
+      setError("No se pudo editar el mensaje")
     }
-  };
+  }
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (!token || !currentChatId) return;
+    if (!token || !currentChatId) return
 
     try {
       const res = await fetch(`${API_URL}/chats/messages/${messageId}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
-      });
+      })
 
-      if (!res.ok) throw new Error(`Error ${res.status}`);
+      if (!res.ok) throw new Error(`Error ${res.status}`)
 
-      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
-      setShowDeleteConfirm(null);
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId))
+      setShowDeleteConfirm(null)
 
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(
           JSON.stringify({
             type: "delete_message",
             message_id: messageId,
-          })
-        );
+          }),
+        )
       }
     } catch (err) {
-      console.error("❌ Error al eliminar mensaje:", err);
-      setError("No se pudo eliminar el mensaje");
+      console.error("❌ Error al eliminar mensaje:", err)
+      setError("No se pudo eliminar el mensaje")
     }
-  };
+  }
 
   if (loading || loadingChats) {
     return (
       <div className="flex-1 flex items-center justify-center bg-[#141414]">
         <div className="text-white">Cargando...</div>
       </div>
-    );
+    )
   }
 
   if (!currentContact) {
@@ -524,8 +518,8 @@ export function ChatArea({
             <h2 className="text-2xl font-bold text-white mb-6 text-center">Tus Chats Recientes</h2>
             <div className="space-y-3">
               {userChats.map((chat) => {
-                const otherUser = chat.usuarios.find((u: any) => String(u.id) !== String(myUserId));
-                if (!otherUser) return null;
+                const otherUser = chat.usuarios.find((u: any) => String(u.id) !== String(myUserId))
+                if (!otherUser) return null
                 return (
                   <div
                     key={chat.chat_id}
@@ -543,11 +537,9 @@ export function ChatArea({
                           : ""}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-400 truncate mt-1">
-                      {chat.ultimo_mensaje || "Sin mensajes"}
-                    </p>
+                    <p className="text-sm text-gray-400 truncate mt-1">{chat.ultimo_mensaje || "Sin mensajes"}</p>
                   </div>
-                );
+                )
               })}
             </div>
           </div>
@@ -570,9 +562,9 @@ export function ChatArea({
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
                 onContactSelect={(contactName) => {
-                  onContactSelect?.(contactName);
-                  onViewChange?.("chat");
-                  setModalOpen(false);
+                  onContactSelect?.(contactName)
+                  onViewChange?.("chat")
+                  setModalOpen(false)
                 }}
                 suggestedUsers={Array.from(allUsers.values()).filter((u) => u.name !== currentUser)}
               />
@@ -580,12 +572,11 @@ export function ChatArea({
           </div>
         )}
       </div>
-    );
+    )
   }
 
   return (
     <div className="flex h-full relative">
-      {/* Estilos personalizados para la barra de scroll */}
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;
@@ -604,25 +595,20 @@ export function ChatArea({
           background: #e0e0e0;
         }
 
-        /* Eliminar las flechas de arriba y abajo */
         .custom-scrollbar::-webkit-scrollbar-button {
           display: none;
         }
       `}</style>
 
       <div className="flex-1 flex flex-col bg-[#141414] h-full">
-        {/* Aquí está el cambio principal: añadimos la clase custom-scrollbar */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(100vh-160px)] custom-scrollbar">
           {messages.length === 0 ? (
             <div className="text-gray-500 text-sm text-center mt-10">{t("no_messages_yet")}</div>
           ) : (
             messages
-              .filter(msg => msg.chat_id === currentChatId) // ✅ Filtrado adicional
+              .filter((msg) => msg.chat_id === currentChatId)
               .map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`flex ${msg.isOwn ? "justify-end" : "justify-start"} group relative`}
-                >
+                <div key={msg.id} className={`flex ${msg.isOwn ? "justify-end" : "justify-start"} group relative`}>
                   <div
                     className={`max-w-xs lg:max-w-md ${msg.isOwn ? "order-2" : "order-1"} ${
                       msg.isOwn ? "mr-12" : "ml-12"
@@ -641,17 +627,13 @@ export function ChatArea({
                       <div className="px-4 py-2 rounded-lg bg-[#1a1a1a] text-white relative">
                         {msg.fileUrl && msg.fileName?.match(/\.(jpg|jpeg|png|gif)$/i) ? (
                           <img
-                            src={msg.fileUrl}
+                            src={msg.fileUrl || "/placeholder.svg"}
                             alt={msg.fileName}
                             className="rounded-lg max-w-full mb-2"
                           />
                         ) : null}
                         <p className="text-sm break-words">
-                          <a
-                            href={msg.fileUrl}
-                            download={msg.fileName}
-                            className="text-blue-400 underline"
-                          >
+                          <a href={msg.fileUrl} download={msg.fileName} className="text-blue-400 underline">
                             {msg.fileName}
                           </a>
                         </p>
@@ -667,12 +649,22 @@ export function ChatArea({
                           <div className="absolute -top-2 -right-9 z-10">
                             <button
                               onClick={(e) => {
-                                e.stopPropagation();
-                                setContextMenuOpen(msg.id);
+                                e.stopPropagation()
+                                setContextMenuOpen(msg.id)
                               }}
                               className="p-1 bg-gray-700 hover:bg-gray-600 rounded-full text-white transition-all duration-200"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
                                 <circle cx="12" cy="12" r="1"></circle>
                                 <circle cx="19" cy="12" r="1"></circle>
                                 <circle cx="5" cy="12" r="1"></circle>
@@ -683,9 +675,9 @@ export function ChatArea({
                               <div className="absolute top-8 right-0 bg-white border border-gray-200 rounded-lg shadow-xl z-50 w-48 message-options-menu overflow-hidden">
                                 <button
                                   onClick={() => {
-                                    setEditingMessageId(msg.id);
-                                    setEditContent(msg.content);
-                                    setContextMenuOpen(null);
+                                    setEditingMessageId(msg.id)
+                                    setEditContent(msg.content)
+                                    setContextMenuOpen(null)
                                   }}
                                   className="flex items-center gap-3 w-full px-4 py-3 text-sm text-gray-800 hover:bg-gray-50 transition-colors"
                                 >
@@ -695,8 +687,8 @@ export function ChatArea({
                                 <div className="border-t border-gray-100"></div>
                                 <button
                                   onClick={() => {
-                                    setShowDeleteConfirm(msg.id);
-                                    setContextMenuOpen(null);
+                                    setShowDeleteConfirm(msg.id)
+                                    setContextMenuOpen(null)
                                   }}
                                   className="flex items-center gap-3 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
                                 >
@@ -708,43 +700,10 @@ export function ChatArea({
                           </div>
                         )}
 
-                        {editingMessageId === msg.id ? (
-                          <div className="flex flex-col gap-1">
-                            <textarea
-                              value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
-                              className="w-full bg-gray-800 text-white text-sm p-2 rounded border border-gray-600 focus:outline-none focus:border-blue-500"
-                              rows={2}
-                              autoFocus
-                            />
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => handleEditMessage(msg.id, editContent)}
-                                className="text-xs bg-green-600 hover:bg-green-700 px-2 py-1 rounded text-white transition-colors"
-                              >
-                                Guardar
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditingMessageId(null);
-                                  setEditContent("");
-                                }}
-                                className="text-xs bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-white transition-colors"
-                              >
-                                Cancelar
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <>
-                            <p className="text-sm break-words">{msg.content}</p>
-                            <p
-                              className={`text-xs mt-1 ${msg.isOwn ? "text-blue-200" : "text-gray-400"}`}
-                            >
-                              {msg.timestamp}
-                            </p>
-                          </>
-                        )}
+                        <p className="text-sm break-words">{msg.content}</p>
+                        <p className={`text-xs mt-1 ${msg.isOwn ? "text-blue-200" : "text-gray-400"}`}>
+                          {msg.timestamp}
+                        </p>
                       </div>
                     )}
                   </div>
@@ -782,12 +741,7 @@ export function ChatArea({
             >
               <Paperclip className="cursor-pointer w-5 h-5 text-gray-400" />
             </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              onChange={handleFileUpload}
-            />
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} />
 
             <div className="flex-1 relative">
               <input
@@ -824,6 +778,51 @@ export function ChatArea({
 
           {error && <div className="mt-2 text-red-500 text-sm text-center">{error}</div>}
         </div>
+
+        {editingMessageId && (
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setEditingMessageId(null)
+              setEditContent("")
+            }}
+          >
+            <div
+              className="bg-[#1a1a1a] border-2 border-blue-600 rounded-xl shadow-2xl p-8 w-full max-w-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-white text-2xl font-bold mb-2">Editar mensaje</h2>
+              <p className="text-gray-400 text-sm mb-6">Modifica el contenido de tu mensaje y guarda los cambios</p>
+
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full bg-[#141414] text-white text-base p-4 rounded-lg border-2 border-gray-600 focus:outline-none focus:border-blue-500 mb-6 resize-none placeholder-gray-500"
+                rows={5}
+                autoFocus
+                placeholder="Escribe tu mensaje aquí..."
+              />
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setEditingMessageId(null)
+                    setEditContent("")
+                  }}
+                  className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white font-semibold rounded-lg transition-colors duration-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => handleEditMessage(editingMessageId, editContent)}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors duration-200"
+                >
+                  Guardar cambios
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {modalOpen && (
@@ -831,13 +830,13 @@ export function ChatArea({
           isOpen={modalOpen}
           onClose={() => setModalOpen(false)}
           onContactSelect={(contactName) => {
-            onContactSelect?.(contactName);
-            onViewChange?.("chat");
-            setModalOpen(false);
+            onContactSelect?.(contactName)
+            onViewChange?.("chat")
+            setModalOpen(false)
           }}
           suggestedUsers={Array.from(allUsers.values()).filter((u) => u.name !== currentUser)}
         />
       )}
     </div>
-  );
+  )
 }

@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { useTranslation } from "@/lib/useTranslations"; // ✅ Importa el hook de traducción
+import { useTranslation } from "@/lib/useTranslations";
 
 interface User {
   id: string;
@@ -20,11 +20,11 @@ interface NewMessageModalProps {
 }
 
 export default function NewMessageModal({ isOpen, onClose, onContactSelect, suggestedUsers }: NewMessageModalProps) {
-  const { t } = useTranslation(); // ✅ Hook de traducción
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   
   const filteredUsers = suggestedUsers.filter((user) => {
-    // ✅ Validar que name y username existan
+  
     if (!user.name || !user.username) return false;
 
     const nameMatch = user.name.toLowerCase().includes(searchQuery.toLowerCase());
