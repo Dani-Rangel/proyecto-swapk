@@ -57,6 +57,62 @@ interface Perfil {
   habilidades: any[];
 }
 
+export interface Usuario {
+  id: number;
+  nombre: string;
+}
+
+export interface HabilidadBase {
+  id: number;
+  nombre: string;
+}
+
+export interface PropuestaAceptada {
+  id: number;
+  id_usuario_interesado: number;
+  aceptada: boolean;
+  usuario_interesado: Usuario;
+}
+
+export interface Resena {
+  id: number;
+  autor: Usuario;
+  destinatario: Usuario;
+  calificacion: number;
+  comentario: string;
+  fecha: string;
+}
+
+export interface IntercambioConResena {
+  id: number;
+  id_usuario1: number;
+  id_perfil: number;
+  nivel: string | null;
+  modo: string | null;
+  disponibilidad: string | null;
+  idioma: string | null;
+  descripcion: string | null;
+  valoracion: number;
+  estado: string;
+  fecha_creacion: string;
+  usuario1: Usuario;
+  perfil: any;
+  habilidades_ofrece: HabilidadBase[];
+  habilidades_busca: HabilidadBase[];
+  propuestas: PropuestaAceptada[];
+  resenas: Resena[];
+  ya_participaste?: boolean;
+}
+
+export const publicProfileService = {
+  getIntercambiosByUserId: async (userId: number): Promise<IntercambioConResena[]> => {
+    const response = await axios.get<IntercambioConResena[]>(
+      `http://localhost:8000/perfil/intercambios/${userId}`
+    );
+    return response.data;
+  }
+};
+
 function ProfilePageComponent() {
   const [isDark, setIsDark] = useState(true);
   const { t } = useTranslation();
@@ -71,6 +127,10 @@ function ProfilePageComponent() {
   const skillContainerRef = useRef<HTMLDivElement>(null);
   const [user, setUser] = useState<any>(null); 
   const router = useRouter(); // <-- Este es el único router que necesitas
+  const [intercambiosConResenas, setIntercambiosConResenas] = useState<IntercambioConResena[]>([]);
+  const [loadingIntercambios, setLoadingIntercambios] = useState(true);
+  const [selectedIntercambio, setSelectedIntercambio] = useState<IntercambioConResena | null>(null);
+  const [targetUserId, setTargetUserId] = useState<number | null>(null); 
 
   const [habilidadesDisponibles, setHabilidadesDisponibles] = useState<Skill[]>([]);
   const [habilidadesPerfil, setHabilidadesPerfil] = useState<SkillAssociationResponse[]>([]);
@@ -106,49 +166,47 @@ function ProfilePageComponent() {
 
   // Cargar perfil del usuario (propio o de otro)
   useEffect(() => {
-    const loadProfile = async () => {
-      const currentUser = getCurrentUser();
-      if (!currentUser || !currentUser.token) {
-        console.warn("❌ No hay usuario autenticado");
-        router.push("/auth/login");
-        return;
-      }
-
-      setUser(currentUser);
-      
-      // Determina qué ID de usuario cargar
-      // Obtenemos el 'id' directamente de router.query
-      const { id } = router.query;
-      const targetUserId = id ? Number(id) : currentUser.id;
-      const isOwnProfile = targetUserId === currentUser.id;
-
-      try {
-        setLoading(true);
-        // Asumiendo que tu backend tiene un endpoint para obtener cualquier perfil por ID de usuario
-        const response = await axios.get(`http://localhost:8000/perfil/usuario/${targetUserId}`, {
-          headers: {
-            Authorization: `Bearer ${currentUser.token}`
-          }
-        });
-        setPerfil(response.data);
-      } catch (error) {
-        console.error("Error al obtener el perfil:", error);
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
-          clearCurrentUser();
-          router.push("/auth/login");
-        } else {
-          setError("No se pudo cargar el perfil.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    // Solo ejecuta la carga si la ruta ya está lista (router.isReady)
-    if (router.isReady) {
-      loadProfile();
+  const loadProfile = async () => {
+    const currentUser = getCurrentUser();
+    if (!currentUser || !currentUser.token) {
+      router.push("/auth/login");
+      return;
     }
-  }, [router.isReady, router.query]); // <-- Dependencias correctas para pages
+
+    setUser(currentUser);
+    
+    if (!router.isReady) return;
+
+    const { id } = router.query;
+    const userId = id ? Number(id) : currentUser.id;
+    setTargetUserId(userId); // ← Guardamos el ID objetivo
+
+    try {
+      setLoading(true);
+      const response = await axios.get(`http://localhost:8000/perfil/usuario/${userId}`, {
+        headers: { Authorization: `Bearer ${currentUser.token}` }
+      });
+      setPerfil(response.data);
+
+      // ✅ Cargar intercambios del usuario objetivo
+      const intercambiosData = await publicProfileService.getIntercambiosByUserId(userId);
+      setIntercambiosConResenas(intercambiosData);
+    } catch (error) {
+      console.error("Error al cargar perfil o intercambios:", error);
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        clearCurrentUser();
+        router.push("/auth/login");
+      } else {
+        setError("No se pudo cargar el perfil.");
+      }
+    } finally {
+      setLoading(false);
+      setLoadingIntercambios(false);
+    }
+  };
+
+  loadProfile();
+}, [router.isReady, router.query]);// <-- Dependencias correctas para pages
 
   // ✅ Cargar habilidades disponibles
   useEffect(() => {
@@ -557,35 +615,227 @@ function ProfilePageComponent() {
                 />
               )}
 
-              {/* Exchange History */}
+              {/* Historial de intercambios */}
               <div className="border-t border-gray-700 pt-10">
                 <h4 className="text-white text-lg font-bold mb-4">Historial de intercambios</h4>
-                <div className="bg-gray-900/50 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex-shrink-0 flex items-center justify-center">
-                      <span className="text-white text-xs font-bold">U</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-white font-medium">Usuario</span>
-                        <span className="text-gray-400 text-sm">Clases de cocina por lecciones de fotografía</span>
-                      </div>
-                      <div className="flex gap-1 mb-4">
-                        {[...Array(4)].map((_, i) => (
-                          <Star key={i} className="w-3 h-3 text-yellow-400 fill-current" />
-                        ))}
-                      </div>
-                      <p className="text-gray-400 text-sm italic mb-3">
-                        "Me encantó el intercambio, aprendí mucho y la experiencia fue genial."
-                      </p>
-                    </div>
+
+                {loadingIntercambios ? (
+                  <div className="text-center py-4 text-gray-400">Cargando intercambios...</div>
+                ) : intercambiosConResenas.length === 0 ? (
+                  <div className="bg-gray-900/50 rounded-lg p-6 text-center">
+                    <BookOpen className="w-12 h-12 mx-auto text-gray-500 mb-3" />
+                    <p className="text-gray-400 text-sm">No hay intercambios públicos aún.</p>
                   </div>
-                </div>
+                ) : (
+                  <div className="max-h-60 overflow-y-auto scrollbar-hide p-2 space-y-4">
+                    {intercambiosConResenas.map((intercambio) => {
+                      const otroUsuario = intercambio.id_usuario1 === targetUserId
+                        ? intercambio.propuestas?.find(p => p.aceptada)?.usuario_interesado
+                        : intercambio.usuario1;
+
+                      const habilidadesOfrece = intercambio.habilidades_ofrece.map(h => h.nombre).join(", ");
+                      const habilidadesBusca = intercambio.habilidades_busca.map(h => h.nombre).join(", ");
+
+                      const getEstadoColor = (estado: string) => {
+                        switch (estado) {
+                          case "Finalizado": return "bg-red-600";
+                          case "Confirmado": return "bg-green-600";
+                          default: return "bg-yellow-600";
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={intercambio.id}
+                          className="bg-gray-900/50 rounded-lg p-4 border border-gray-800 hover:border-gray-700 transition-colors cursor-pointer"
+                          onClick={() => setSelectedIntercambio(intercambio)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-sm font-bold bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0">
+                              {otroUsuario?.nombre?.charAt(0).toUpperCase() || '?'}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-white font-medium text-sm">
+                                  {habilidadesOfrece} ↔ {habilidadesBusca}
+                                </span>
+                                
+                              </div>
+                              
+                              <div className="flex items-center gap-1 mb-2">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star key={i} className={`w-4 h-4 ${i < 4 ? 'text-yellow-400 fill-current' : 'text-gray-500'}`} />
+                                ))}
+                              </div>
+
+                              {(intercambio.resenas || []).length > 0 ? (
+                                <p className="text-gray-300 text-sm italic mb-2 line-clamp-2">
+                                  "{(intercambio.resenas || [])[0]?.comentario || 'Sin comentario'}"
+                                </p>
+                              ) : (
+                                <p className="text-gray-500 text-sm italic mb-2">Sin reseña aún.</p>
+                              )}
+
+                              <div className="flex items-center justify-between mt-2">
+                                <span className="text-xs text-gray-500">
+                                  {new Date(intercambio.fecha_creacion).toLocaleDateString("es-ES")}
+                                </span>
+                                <button className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
+                                  Ver detalles
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </div>
+      {/* Modal de detalle de intercambio */}
+      {selectedIntercambio && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1E1E1E] rounded-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto border border-[#2E2E2E]">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <h3 className="text-white text-xl font-bold">Detalle del intercambio</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedIntercambio(null)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Información básica */}
+              <div className="mb-6 p-4 bg-gray-900/30 rounded-lg">
+                <div className="flex items-center gap-4 mb-3">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center text-white text-lg font-bold bg-gradient-to-br from-blue-500 to-purple-600">
+                    {selectedIntercambio.id_usuario1 === targetUserId
+                      ? selectedIntercambio.propuestas?.find(p => p.aceptada)?.usuario_interesado?.nombre?.charAt(0).toUpperCase() || '?'
+                      : selectedIntercambio.usuario1.nombre?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                  <div>
+                    <h4 className="text-white text-lg font-semibold">
+                      {selectedIntercambio.id_usuario1 === targetUserId
+                        ? selectedIntercambio.propuestas?.find(p => p.aceptada)?.usuario_interesado?.nombre || "Usuario"
+                        : selectedIntercambio.usuario1.nombre}
+                    </h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        selectedIntercambio.estado === "Finalizado" ? "bg-red-600" :
+                        selectedIntercambio.estado === "Confirmado" ? "bg-green-600" : "bg-yellow-600"
+                      } text-white`}>
+                        {selectedIntercambio.estado}
+                      </span>
+                      <span className="text-gray-400 text-sm">
+                        {new Date(selectedIntercambio.fecha_creacion).toLocaleDateString("es-ES")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-sm mt-4">
+                  <div><span className="text-gray-400">Modo:</span> <span className="text-white">{selectedIntercambio.modo}</span></div>
+                  <div><span className="text-gray-400">Nivel:</span> <span className="text-white">{selectedIntercambio.nivel}</span></div>
+                  <div><span className="text-gray-400">Idioma:</span> <span className="text-white">{selectedIntercambio.idioma}</span></div>
+                  <div><span className="text-gray-400">Valoración:</span> <span className="text-white">{selectedIntercambio.valoracion || 0}</span></div>
+                </div>
+              </div>
+
+              {/* Habilidades */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-900/50 p-4 rounded-lg">
+                  <h5 className="text-white font-medium mb-2">Ofrece:</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedIntercambio.habilidades_ofrece.map((h, i) => (
+                      <span key={i} className="px-2 py-1 bg-blue-600 text-white text-xs rounded">
+                        {h.nombre}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-gray-900/50 p-4 rounded-lg">
+                  <h5 className="text-white font-medium mb-2">Busca:</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedIntercambio.habilidades_busca.map((h, i) => (
+                      <span key={i} className="px-2 py-1 bg-red-600 text-white text-xs rounded">
+                        {h.nombre}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Descripción */}
+              {selectedIntercambio.descripcion && (
+                <div className="mb-6">
+                  <h5 className="text-white font-medium mb-2">Descripción:</h5>
+                  <p className="text-gray-300 text-sm bg-gray-900/30 p-3 rounded">
+                    {selectedIntercambio.descripcion}
+                  </p>
+                </div>
+              )}
+
+              {/* Reseñas */}
+              <div className="mb-6">
+                <h5 className="text-white font-medium mb-3">Reseñas del intercambio</h5>
+                {(selectedIntercambio.resenas || []).length === 0 ? (
+                  <p className="text-gray-500 italic">No hay reseñas aún.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {(selectedIntercambio.resenas || []).map((r) => (
+                      <div key={r.id} className="bg-gray-900/40 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-white text-xs font-bold">
+                            {r.autor.nombre.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-white font-medium text-sm">{r.autor.nombre}</span>
+                          <span className="text-gray-500">→</span>
+                          <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                            {r.destinatario.nombre.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-white font-medium text-sm">{r.destinatario.nombre}</span>
+                        </div>
+                        <p className="text-gray-300 italic text-sm mb-2">"{r.comentario}"</p>
+                        <div className="flex items-center justify-between">
+                          <div className="flex">
+                            {[...Array(5)].map((_, i) => (
+                              <Star key={i} className={`w-4 h-4 ${i < Math.floor(r.calificacion) ? 'text-yellow-400 fill-current' : 'text-gray-500'}`} />
+                            ))}
+                            <span className="text-gray-400 text-sm ml-1">{r.calificacion.toFixed(1)}</span>
+                          </div>
+                          <small className="text-gray-500 text-xs">
+                            {new Date(r.fecha).toLocaleDateString("es-ES")}
+                          </small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Acciones */}
+              <div className="flex gap-3 pt-4 border-t border-gray-800">
+                <Button variant="outline" className="text-blue-400 border-blue-500 flex-1" 
+                onClick={() => router.push("/message/messages")}>
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Mensaje
+                </Button>
+                <Button className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 flex-1">
+                  ¡Swapk!
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <Toaster position="top-right" />
     </div>
   );

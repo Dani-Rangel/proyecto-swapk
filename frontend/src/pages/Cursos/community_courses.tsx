@@ -44,14 +44,13 @@ import { cursoHabilidadAPI } from '@/services/api_cursoHabilidad'
 import { Notificaciones } from "@/components/ui/notificaciones/notifications"
 import { useNotificaciones } from "../../context/notificacionesContext"
 import { useTranslation } from "@/lib/useTranslations"
-import { useRouter } from "next/navigation"; // ✅ Corregido: next/router → next/navigation
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import ProtectedRoute from "@/components/protected_routes/protected_routes"; // ✅ Importamos el componente de protección
+import ProtectedRoute from "@/components/protected_routes/protected_routes";
 import { MainSidebar } from "@/components/MainSidebar"
 import { inscripcionCursoAPI } from "@/services/inscripcionCursoApi"
 import ManageEnrollmentsModal from "@/components/ui/ManageEnrollmentsModal"
-import { CursoContenidoEditor } from "@/components/ui/contenido_curso/CursoContenidoEditor"
-import { CursoContenidoViewer } from "@/components/ui/contenido_curso/CursoContenidoViewer"
+
 
 interface NewCourseData {
   title: string
@@ -596,14 +595,14 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
            {isCreator || (inscrito && estadoInscripcion === "Confirmado") ? (
               <div className="p-6">
                 <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>Contenido del curso</h3>
-                <Button
-                  asChild
-                  className={`w-full ${isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"} text-white`}
+                <Link
+                  href={`/Cursos/${course.id}`}
+                  className={`w-full inline-flex items-center justify-center px-4 py-2 text-white font-medium rounded-md transition-colors ${
+                    isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"
+                  }`}
                 >
-                  <Link href={`/Cursos/${course.id}`}>
-                    Ver curso en modo completo →
-                  </Link>
-                </Button>
+                  Ver curso en modo completo →
+                </Link>
               </div>
             ) : (
               <div className="h-40 w-full p-6 border border-red-400 bg-red-400/20 flex items-center justify-center rounded text-white">
@@ -1256,7 +1255,6 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
   )
 }
 
-// ✅ Exportamos el componente protegido
 export default function CursosComunidad() {
   return (
     <ProtectedRoute>

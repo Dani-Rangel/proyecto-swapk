@@ -1,8 +1,8 @@
 """Swapkbd
 
-Revision ID: 230e17873eac
+Revision ID: afbd1fe5bbdb
 Revises: 
-Create Date: 2025-10-28 13:02:28.766621
+Create Date: 2025-11-04 22:26:41.911063
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '230e17873eac'
+revision: str = 'afbd1fe5bbdb'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -42,6 +42,7 @@ def upgrade() -> None:
     sa.Column('contrasena_hash', sa.String(length=255), nullable=False),
     sa.Column('rol', sa.Enum('Administrador', 'Moderador', 'Usuario', name='rolusuario'), nullable=True),
     sa.Column('fecha_creacion', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.Column('eliminado', sa.Boolean(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('correo')
     )
@@ -136,6 +137,16 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['id_usuario'], ['usuarios.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('resena_general',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('autor_id', sa.Integer(), nullable=False),
+    sa.Column('calificacion', sa.Float(), nullable=False),
+    sa.Column('comentario', sa.Text(), nullable=False),
+    sa.Column('fecha', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+    sa.ForeignKeyConstraint(['autor_id'], ['usuarios.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_resena_general_id'), 'resena_general', ['id'], unique=False)
     op.create_table('sugerencias',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('id_usuario', sa.Integer(), nullable=True),
@@ -344,6 +355,8 @@ def downgrade() -> None:
     op.drop_table('archivo')
     op.drop_table('Perfil_Habilidad')
     op.drop_table('sugerencias')
+    op.drop_index(op.f('ix_resena_general_id'), table_name='resena_general')
+    op.drop_table('resena_general')
     op.drop_table('reportes')
     op.drop_table('perfiles')
     op.drop_table('notificaciones')

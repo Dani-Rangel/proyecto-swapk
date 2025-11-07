@@ -12,7 +12,7 @@ function MessagesPageComponent() {
   )
 }
 
-// ✅ Exportamos el componente protegido
+//  Exportamos el componente protegido
 export default function MessagesPage() {
   return (
     

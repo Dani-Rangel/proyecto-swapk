@@ -23,5 +23,6 @@ from .archivo_Expediente import Archivo_Expediente
 from .attachments import Attachment
 from .Expediente import Expediente
 from .resena import Resena
+from .resena_general import ResenaGeneral
 from .contenido_curso import ContenidoCurso
 from .bloque_contenido import BloqueContenido

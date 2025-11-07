@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from backend.models.Propuesta_Intercambio import PropuestaIntercambio
 from backend.models import Intercambio, Usuario, Resena, Habilidad, IntercambioHabilidad
@@ -15,7 +15,8 @@ from backend.schemas.intercambio_schema import (
     ResenaResponse,
     TipoHabilidadEnum,
     HabilidadBase,
-    PropuestaAceptada
+    PropuestaAceptada,
+    UsuarioBase
 )
 from typing import List, Optional
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig
@@ -68,49 +69,52 @@ def obtener_intercambios_con_resenas_por_usuario(
     usuario_id: int,
     db: Session = Depends(get_db)
 ):
-    # Buscar intercambios donde el usuario es creador (cualquier estado)
-    intercambios_creados = db.query(Intercambio).filter(
-        Intercambio.id_usuario1 == usuario_id
-    ).all()
-
-    # Buscar intercambios donde el usuario es proponente con propuesta aceptada
-    propuestas_aceptadas = db.query(PropuestaIntercambio).filter(
+    # Obtener IDs de intercambios donde el usuario participó
+    ids_creados = db.query(Intercambio.id).filter(Intercambio.id_usuario1 == usuario_id)
+    ids_propuestos = db.query(PropuestaIntercambio.id_intercambio).filter(
         PropuestaIntercambio.id_usuario_interesado == usuario_id,
         PropuestaIntercambio.aceptada == True
-    ).all()
+    )
+    todos_ids = {row[0] for row in ids_creados.union(ids_propuestos).all()}
+    
+    if not todos_ids:
+        return []
 
-    ids_intercambios_propuestos = [p.id_intercambio for p in propuestas_aceptadas]
-    intercambios_propuestos = db.query(Intercambio).filter(
-        Intercambio.id.in_(ids_intercambios_propuestos)
-    ).all()
-
-    # Unir y eliminar duplicados
-    todos_intercambios = list({i.id: i for i in intercambios_creados + intercambios_propuestos}.values())
+    # Cargar con todas las relaciones
+    intercambios = db.query(Intercambio).options(
+        joinedload(Intercambio.usuario1),
+        joinedload(Intercambio.perfil),
+        joinedload(Intercambio.habilidades).joinedload(IntercambioHabilidad.habilidad),
+        joinedload(Intercambio.propuestas).joinedload(PropuestaIntercambio.usuario_interesado),
+        # ✅ Cargar reseñas Y sus relaciones autor/destinatario
+        joinedload(Intercambio.reseñas).joinedload(Resena.autor),
+        joinedload(Intercambio.reseñas).joinedload(Resena.destinatario),
+    ).filter(Intercambio.id.in_(todos_ids)).all()
 
     resultado = []
-    for inter in todos_intercambios:
-        # Cargar habilidades
-        ofrece = db.query(Habilidad).join(IntercambioHabilidad).filter(
-            IntercambioHabilidad.intercambio_id == inter.id,
-            IntercambioHabilidad.tipo == TipoHabilidadEnum.ofrece
-        ).all()
-        busca = db.query(Habilidad).join(IntercambioHabilidad).filter(
-            IntercambioHabilidad.intercambio_id == inter.id,
-            IntercambioHabilidad.tipo == TipoHabilidadEnum.busca
-        ).all()
+    for inter in intercambios:
+        # Habilidades
+        habilidades_ofrece = [h.habilidad for h in inter.habilidades if h.tipo == TipoHabilidadEnum.ofrece]
+        habilidades_busca = [h.habilidad for h in inter.habilidades if h.tipo == TipoHabilidadEnum.busca]
+        
+        # Propuestas aceptadas
+        propuestas_aceptadas = [p for p in inter.propuestas if p.aceptada]
+        
+        # ✅ RESEÑAS: Construcción segura manual
+        reseñas_lista = []
+        for r in inter.reseñas:
+            if r.autor and r.destinatario:
+                reseñas_lista.append(
+                    ResenaResponse(
+                        id=r.id,
+                        autor=UsuarioBase(id=r.autor.id, nombre=r.autor.nombre),
+                        destinatario=UsuarioBase(id=r.destinatario.id, nombre=r.destinatario.nombre),
+                        calificacion=r.calificacion,
+                        comentario=r.comentario,
+                        fecha=r.fecha
+                    )
+                )
 
-        # Cargar propuestas aceptadas
-        propuestas = db.query(PropuestaIntercambio).filter(
-            PropuestaIntercambio.id_intercambio == inter.id,
-            PropuestaIntercambio.aceptada == True
-        ).all()
-
-        # Cargar reseñas del intercambio
-        reseñas_db = db.query(Resena).filter(
-            Resena.intercambio_id == inter.id
-        ).all()
-
-        # Construir el objeto de respuesta
         intercambio_respuesta = IntercambioConHabilidadesSeparadas(
             id=inter.id,
             id_usuario1=inter.id_usuario1,
@@ -126,8 +130,8 @@ def obtener_intercambios_con_resenas_por_usuario(
             fecha_creacion=inter.fecha_creacion,
             usuario1=inter.usuario1,
             perfil=inter.perfil,
-            habilidades_ofrece=[HabilidadBase(id=h.id, nombre=h.nombre) for h in ofrece],
-            habilidades_busca=[HabilidadBase(id=h.id, nombre=h.nombre) for h in busca],
+            habilidades_ofrece=[HabilidadBase(id=h.id, nombre=h.nombre) for h in habilidades_ofrece],
+            habilidades_busca=[HabilidadBase(id=h.id, nombre=h.nombre) for h in habilidades_busca],
             propuestas=[
                 PropuestaAceptada(
                     id=p.id,
@@ -135,19 +139,10 @@ def obtener_intercambios_con_resenas_por_usuario(
                     aceptada=p.aceptada,
                     usuario_interesado=p.usuario_interesado
                 )
-                for p in propuestas
+                for p in propuestas_aceptadas
             ],
-            reseñas=[
-                ResenaResponse(
-                    id=r.id,
-                    autor=r.autor,
-                    destinatario=r.destinatario,
-                    calificacion=r.calificacion,
-                    comentario=r.comentario,
-                    fecha=r.fecha
-                )
-                for r in reseñas_db  # ✅ Aquí r es un objeto Resena
-            ]
+            reseñas=reseñas_lista,  # ✅ Usar la lista construida manualmente
+            ya_participaste=True
         )
         resultado.append(intercambio_respuesta)
 

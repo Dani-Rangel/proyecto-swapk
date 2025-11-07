@@ -1,14 +1,17 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles  # <-- Importa StaticFiles
-from backend.db.database import Base, engine
+from fastapi.staticfiles import StaticFiles
+from backend.db.database import Base, engine, get_db 
+from sqlalchemy.orm import Session
+
+# Controladores
+
 from backend.controllers.auth_controller import router as auth_router
 from backend.controllers.habilidad_controller import router as habilidad_router
 from backend.controllers.forgot_password_controller import router as forgot_password_router
 from backend.controllers import google_auth_controller 
 from backend.controllers.user_controller import router as user_router
-from backend.services.oauth2 import get_current_user
 from backend.controllers.profile_controller import router as perfil_router
 from backend.controllers.perfil_habilidad_controller import router as perfil_habilidad_router
 from backend.controllers import curso_controller
@@ -29,10 +32,20 @@ from backend.controllers import notificacion_controller
 from backend.controllers import help_controller
 from backend.controllers import inscripcion_curso_controller
 from backend.controllers import reporte_controller as reportes_api
+from backend.controllers.resena_general_controller import router as resena_general_router
 from backend.controllers.contenido_curso_controller import router as contenido_router
 from backend.controllers.bloque_contenido_controller import router as bloque_contenido_router
 
+# Servicios
 
+from backend.services.oauth2 import get_current_user
+
+# Modelos
+
+from backend.models.perfil import Perfil
+from backend.models.usuarios import Usuario
+
+from math import ceil
 
 app = FastAPI()
 
@@ -51,8 +64,8 @@ app.add_middleware(
 )
 
 # Ruta absoluta a la carpeta 'uploads' dentro de backend
-BASE_DIR = Path(__file__).resolve().parent  # backend/
-UPLOADS_DIR = BASE_DIR / "uploads"          # backend/uploads/
+BASE_DIR = Path(__file__).resolve().parent
+UPLOADS_DIR = BASE_DIR / "uploads"
 
 # Base de datos
 Base.metadata.create_all(bind=engine)
@@ -84,9 +97,57 @@ app.include_router(publicaciones_admin_controller.router)
 app.include_router(help_controller.router)
 app.include_router(inscripcion_curso_controller.router)
 app.include_router(reportes_api.router)
+app.include_router(resena_general_router)
 app.include_router(contenido_router)
 app.include_router(bloque_contenido_router)
 
+# Creamos un "ENDPOINT" aca para traer los usuarios, este sera cambiado de lugar en unas proximas versiones
+
+@app.get("/public/perfiles")
+def get_all_public_profiles(
+    page: int = 1,
+    limit: int = 12,
+    db: Session = Depends(get_db)
+):
+    if page < 1:
+        page = 1
+    if limit < 1:
+        limit = 12
+    if limit > 100:
+        limit = 100
+
+    offset = (page - 1) * limit
+    total = db.query(Perfil).join(Usuario).count()
+
+    perfiles = (
+        db.query(Perfil)
+        .join(Usuario)
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    resultado = []
+    for p in perfiles:
+        resultado.append({
+            "id": p.id,
+            "id_usuario": p.id_usuario,
+            "nombre": p.usuario.nombre,
+            "descripcion": p.descripcion or "",
+            "ubicacion": p.ubicacion or "",
+            "Tel": p.Tel,
+            "foto_perfil": p.foto_perfil or "/img/user.png"
+        })
+
+    total_pages = ceil(total / limit)
+
+    return {
+        "items": resultado,
+        "total": total,
+        "page": page,
+        "pages": total_pages,
+        "limit": limit
+    }
 
 
 # Servir archivos estáticos

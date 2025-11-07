@@ -66,7 +66,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
             "id": new_user.id,
             "nombre": new_user.nombre,
             "correo": new_user.correo,
-            "rol": new_user.rol.value   # ✅ aquí estaba el error
+            "rol": new_user.rol.value   
         },
         "perfil": {
             "id": new_profile.id,
@@ -81,11 +81,17 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
 def login(data: LoginRequest, db: Session = Depends(get_db)):
     # Buscar por correo o nombre de usuario
     user = db.query(Usuario).filter(
-    or_(Usuario.correo == data.emailOrUsername, Usuario.nombre == data.emailOrUsername)
+        or_(Usuario.correo == data.emailOrUsername, Usuario.nombre == data.emailOrUsername)
     ).first()
 
     if not user or not verify_password(data.password, user.contrasena_hash):
         raise HTTPException(status_code=400, detail="Credenciales incorrectas")
+
+    if user.eliminado == 1:
+        raise HTTPException(
+            status_code=403,
+            detail="Esta cuenta ha sido deshabilitada. Contacta con soporte si crees que es un error. swapk.soporte@gmail.com"
+        )
 
     # Crear token JWT
     expire = datetime.utcnow() + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
@@ -96,12 +102,12 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
 
     return {
-    "message": "Login exitoso",
-    "token": token,
-    "user": {
-        "id": user.id,
-        "nombre": user.nombre, 
-        "correo": user.correo,
-        "rol": user.rol.value 
+        "message": "Login exitoso",
+        "token": token,
+        "user": {
+            "id": user.id,
+            "nombre": user.nombre,
+            "correo": user.correo,
+            "rol": user.rol.value 
+        }
     }
-}

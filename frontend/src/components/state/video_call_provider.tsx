@@ -72,18 +72,128 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  /** Obtener media stream SIN pedir audio por defecto */
+  /** Obtener media stream */
   const getMediaStream = async (forceVideo = false) => {
     try {
       const constraints: MediaStreamConstraints = {
-        video: forceVideo ? { width: { ideal: 640 }, height: { ideal: 480 } } : false,
-        audio: false,
+        video: forceVideo 
+          ? { width: { ideal: 640 }, height: { ideal: 480 } } 
+          : false,
+        audio: true,
       };
 
       return await navigator.mediaDevices.getUserMedia(constraints);
     } catch (err) {
-      console.warn("⚠️ No se pudo acceder a la cámara/micrófono, continuando sin ellos:", err);
-      return new MediaStream();
+      try {
+        return await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      } catch {
+        return new MediaStream();
+      }
+    }
+  };
+  
+  // Compartir pantalla - versión corregida
+  const toggleScreenShare = async () => {
+    if (callState.isScreenSharing) {
+      if (pcRef.current) {
+        const screenSender = pcRef.current.getSenders().find(
+          sender => (sender.track as any)?.customLabel === "screen"
+        );
+        if (screenSender) {
+          screenSender.track?.stop();
+          pcRef.current.removeTrack(screenSender);
+        }
+      }
+      if (localStreamRef.current) {
+        const screenTrack = localStreamRef.current.getTracks().find(
+          track => (track as any)?.customLabel === "screen"
+        );
+        if (screenTrack) {
+          localStreamRef.current.removeTrack(screenTrack);
+        }
+      }
+      setCallState(prev => ({ ...prev, isScreenSharing: false }));
+      return;
+    }
+
+    try {
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+      });
+
+      const screenTrack = screenStream.getVideoTracks()[0];
+      (screenTrack as any).customLabel = "screen";
+
+      if (pcRef.current && localStreamRef.current) {
+        localStreamRef.current.addTrack(screenTrack);
+        pcRef.current.addTrack(screenTrack, localStreamRef.current);
+
+        const offer = await pcRef.current.createOffer();
+        await pcRef.current.setLocalDescription(offer);
+        wsRef.current?.send(
+          JSON.stringify({
+            type: "offer",
+            target: callState.targetId,
+            sdp: offer.sdp,
+          })
+        );
+      }
+
+      screenTrack.onended = () => {
+        if (localStreamRef.current) {
+          localStreamRef.current.removeTrack(screenTrack);
+        }
+        if (pcRef.current) {
+          const sender = pcRef.current.getSenders().find(s => s.track === screenTrack);
+          sender?.track?.stop();
+          pcRef.current.removeTrack(sender!);
+        }
+        setCallState(prev => ({ ...prev, isScreenSharing: false }));
+      };
+
+      setCallState(prev => ({ ...prev, isScreenSharing: true }));
+    } catch (err) {
+      // Fallback sin audio
+      try {
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false,
+        });
+        const screenTrack = screenStream.getVideoTracks()[0];
+        (screenTrack as any).customLabel = "screen";
+
+        if (pcRef.current && localStreamRef.current) {
+          localStreamRef.current.addTrack(screenTrack);
+          pcRef.current.addTrack(screenTrack, localStreamRef.current);
+
+          const offer = await pcRef.current.createOffer();
+          await pcRef.current.setLocalDescription(offer);
+          wsRef.current?.send(
+            JSON.stringify({
+              type: "offer",
+              target: callState.targetId,
+              sdp: offer.sdp,
+            })
+          );
+        }
+
+        screenTrack.onended = () => {
+          if (localStreamRef.current) {
+            localStreamRef.current.removeTrack(screenTrack);
+          }
+          if (pcRef.current) {
+            const sender = pcRef.current.getSenders().find(s => s.track === screenTrack);
+            sender?.track?.stop();
+            pcRef.current.removeTrack(sender!);
+          }
+          setCallState(prev => ({ ...prev, isScreenSharing: false }));
+        };
+
+        setCallState(prev => ({ ...prev, isScreenSharing: true }));
+      } catch (fallbackError) {
+        console.error("No se pudo compartir pantalla:", fallbackError);
+      }
     }
   };
 
@@ -100,36 +210,25 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
-        console.log("✅ Conectado al servidor de señalización");
         wsRef.current = ws;
         resolve(ws);
       };
 
       ws.onerror = (err) => {
-        console.error("WebSocket error", err);
         reject(err);
       };
 
       ws.onclose = () => {
-        console.log("🔌 Desconectado del servidor de señalización");
         wsRef.current = null;
       };
 
       ws.onmessage = async (event) => {
-        console.log("📩 Mensaje WebSocket recibido:", event.data);
-
         try {
           const msg = JSON.parse(event.data);
 
           switch (msg.type) {
             case "incoming_call":
-              console.log("📩 incoming_call recibido:", msg);
-              console.log("🔍 SDP recibido:", msg.sdp);
-
-              if (!msg.sdp) {
-                console.error("❌ ¡ALERTA! No se recibió SDP en incoming_call");
-                return;
-              }
+              if (!msg.sdp) return;
 
               offerRef.current = {
                 sender: msg.caller_id,
@@ -155,9 +254,31 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
               if (pcRef.current && msg.sdp) {
                 try {
                   await pcRef.current.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-                  console.log("✅ Answer aplicada correctamente. Estado:", pcRef.current.signalingState);
                 } catch (e) {
-                  console.error("❌ Error aplicando answer:", e);
+                  console.error("Error aplicando answer:", e);
+                }
+              }
+              break;
+
+            case "offer":
+              if (msg.sdp && pcRef.current) {
+                try {
+                  await pcRef.current.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+                  const answer = await pcRef.current.createAnswer();
+                  await pcRef.current.setLocalDescription(answer);
+                  
+                  wsRef.current?.send(
+                    JSON.stringify({
+                      type: "answer",
+                      target: msg.caller_id || callState.callerId,
+                      sdp: {
+                        type: answer.type,
+                        sdp: answer.sdp,
+                      },
+                    })
+                  );
+                } catch (e) {
+                  console.error("Error procesando oferta:", e);
                 }
               }
               break;
@@ -166,7 +287,6 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
               if (msg.candidate && pcRef.current) {
                 try {
                   await pcRef.current.addIceCandidate(new RTCIceCandidate(msg.candidate));
-                  console.log("🧊 ICE candidate añadido");
                 } catch (e) {
                   console.error("Error añadiendo ICE candidate:", e);
                 }
@@ -174,17 +294,15 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
               break;
 
             case "hang-up":
-              console.log("📴 Llamada finalizada por el otro usuario");
               endCall();
               break;
 
             case "decline":
-              console.log("🚫 Llamada rechazada por el destinatario");
               endCall();
               break;
           }
         } catch (err) {
-          console.error("❌ Error parseando mensaje:", err);
+          console.error("Error parseando mensaje:", err);
         }
       };
     });
@@ -209,19 +327,13 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     };
 
     pc.ontrack = (event) => {
-      console.log("📦 Recibiendo stream remoto:", event.streams[0]);
       const stream = event.streams[0];
-      const tracks = stream.getTracks();
-      console.log("🎥 Tracks recibidos:", tracks.length);
-
-      if (tracks.length > 0) {
+      if (stream && stream.getTracks().length > 0) {
         remoteStreamRef.current = stream;
         setCallState((prev) => ({
           ...prev,
           remoteStream: stream,
         }));
-      } else {
-        console.warn("⚠️ Stream recibido sin tracks válidos");
       }
     };
 
@@ -248,18 +360,15 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     if (!token || !userId) return;
 
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.log("Esperando conexión WebSocket...");
       await connectSignaling();
     }
 
     try {
       const stream = await getMediaStream(isVideo);
-      console.log("🎬 Local stream tracks (startCall):", stream.getTracks());
       localStreamRef.current = stream;
 
       const pc = createPeerConnection(targetId);
       stream.getTracks().forEach((track) => {
-        console.log(`📤 Agregando track local: ${track.kind}`);
         pc.addTrack(track, stream);
       });
 
@@ -294,39 +403,33 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
       startLocalTimer();
     } catch (err) {
-      console.error("❌ Error al iniciar la llamada:", err);
+      console.error("Error al iniciar la llamada:", err);
     }
   };
 
   /** Responder llamada entrante */
   const answerCall = async () => {
-    if (!offerRef.current) {
-      console.error("❌ No hay offer disponible");
-      return;
-    }
-
-    if (!offerRef.current.sdp || !offerRef.current.sdp.sdp) {
-      console.error("❌ Offer inválida: falta SDP");
-      return;
-    }
+    if (!offerRef.current) return;
+    if (!offerRef.current.sdp || !offerRef.current.sdp.sdp) return;
 
     try {
-      const stream = await getMediaStream(false);
-      console.log("🎬 Local stream tracks (answerCall):", stream.getTracks());
+      const hasVideo = offerRef.current.sdp.sdp.includes("m=video");
+      const stream = await getMediaStream(hasVideo);
       localStreamRef.current = stream;
 
       const callerId = offerRef.current.sender;
       const callerName = offerRef.current.senderName;
 
-      const pc = createPeerConnection(callerId);
+      let pc = pcRef.current;
+      if (!pc) {
+        pc = createPeerConnection(callerId);
+      }
+
       stream.getTracks().forEach((track) => {
-        console.log(`📤 Agregando track local al responder: ${track.kind}`);
         pc.addTrack(track, stream);
       });
 
       await pc.setRemoteDescription(new RTCSessionDescription(offerRef.current.sdp));
-      console.log("✅ Remote description aplicada. Estado:", pc.signalingState);
-
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
@@ -341,11 +444,10 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         })
       );
 
-      console.log(`✅ Answer enviada a ${callerId}`);
-
       setCallState((prev) => ({
         ...prev,
         isInCall: true,
+        isCameraOff: !hasVideo,
         incomingCall: null,
         connection: pc,
         localStream: stream,
@@ -356,7 +458,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       offerRef.current = null;
       startLocalTimer();
     } catch (err) {
-      console.error("❌ Error al contestar la llamada:", err);
+      console.error("Error al contestar la llamada:", err);
     }
   };
 
@@ -432,6 +534,10 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
       case "answer":
         answerCall();
+        break;
+        
+      case "screen-share":
+        toggleScreenShare();
         break;
 
       case "decline":

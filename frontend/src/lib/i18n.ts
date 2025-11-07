@@ -31,6 +31,9 @@ export const translations = {
     myCourses: "Cursos",
     logout: "Cerrar Sesión",
     sessionClosed: "Sesión cerrada correctamente",
+    welcome: "Bienvenido",            
+    admin: "Administrador",           
+    moderator: "Moderador",           
     mustLogin: "Debes iniciar sesión para dar like",
     likeError: "No se pudo procesar el like",
     postsUpdated: "Publicaciones actualizadas",
@@ -363,6 +366,17 @@ report_context_info_suffix: "en tu reporte.",
 content_saved_success: "¡Contenido guardado correctamente!",
 error_saving_content: "Error al guardar el contenido. Inténtalo de nuevo.",
 
+profile_edit: "editar perfil",
+
+  posts: "Publicaciones",
+  profiles: "Perfiles",
+  noDescription: "Sin descripción",
+  viewProfile: "Ver perfil",
+  previous: "Anterior",
+  next: "Siguiente",
+  noProfiles: "No hay perfiles disponibles.",
+  review: "Reseñas",
+
   },
 
   en: {
@@ -395,6 +409,9 @@ error_saving_content: "Error al guardar el contenido. Inténtalo de nuevo.",
     myCourses: "My Courses",
     logout: "Logout",
     sessionClosed: "Session closed successfully",
+    welcome: "Welcome",              
+    admin: "Admin",                   
+    moderator: "Moderator",           
     mustLogin: "You must be logged in to like",
     likeError: "Could not process like",
     postsUpdated: "Posts updated",
@@ -732,6 +749,17 @@ report_context_info_suffix: "will be automatically included in your report.",
 // ===== Course Content =====
 content_saved_success: "Content saved successfully!",
 error_saving_content: "Error saving content. Please try again.",
+
+profile_edit: "profile edit",
+
+  posts: "Posts",
+  profiles: "Profiles",
+  noDescription: "No description",
+  viewProfile: "View profile",
+  previous: "Previous",
+  next: "Next",
+  noProfiles: "No profiles available.",
+  review: "Reviews",
   },
 } as const;
 

@@ -1,10 +1,10 @@
-// src/components/ui/contenido-curso/CursoContenidoEditorNav.tsx
+"use client"
+
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react"
-import { contenidoCursoAPI, ContenidoItem } from "@/services/contenidoCursoApi"
+import { Plus, Trash2, FolderOpen, FileText } from "lucide-react"
+import { contenidoCursoAPI, type ContenidoItem } from "@/services/contenidoCursoApi"
 
 interface ModuloConLecciones {
   modulo: ContenidoItem
@@ -13,14 +13,13 @@ interface ModuloConLecciones {
 
 interface CursoContenidoEditorNavProps {
   cursoId: number
-  isDark: boolean
   onLeccionSeleccionada: (leccion: ContenidoItem | null) => void
 }
 
-export function CursoContenidoEditorNav({ cursoId, isDark, onLeccionSeleccionada }: CursoContenidoEditorNavProps) {
+export function CursoContenidoEditorNav({ cursoId, onLeccionSeleccionada }: CursoContenidoEditorNavProps) {
   const [estructura, setEstructura] = useState<ModuloConLecciones[]>([])
   const [loading, setLoading] = useState(true)
-  const [moduloSeleccionado, setModuloSeleccionado] = useState<number | null>(null)
+  const [moduloExpandido, setModuloExpandido] = useState<number | null>(null)
   const [leccionSeleccionada, setLeccionSeleccionada] = useState<number | null>(null)
 
   useEffect(() => {
@@ -39,6 +38,10 @@ export function CursoContenidoEditorNav({ cursoId, isDark, onLeccionSeleccionada
       }))
 
       setEstructura(estructuraConLecciones)
+
+      if (estructuraConLecciones.length > 0 && !moduloExpandido) {
+        setModuloExpandido(estructuraConLecciones[0].modulo.id || null)
+      }
     } catch (err) {
       console.error("Error al cargar contenido:", err)
     } finally {
@@ -51,7 +54,7 @@ export function CursoContenidoEditorNav({ cursoId, isDark, onLeccionSeleccionada
       ...prev,
       {
         modulo: {
-          titulo: "",
+          titulo: `Módulo ${prev.length + 1}`,
           tipo: "texto",
           contenido: "",
           orden: prev.length,
@@ -63,20 +66,19 @@ export function CursoContenidoEditorNav({ cursoId, isDark, onLeccionSeleccionada
     ])
   }
 
-  const agregarLeccion = () => {
-    if (moduloSeleccionado === null) return
-
+  const agregarLeccion = (moduloId: number) => {
     setEstructura((prev) => {
       const nuevas = [...prev]
-      const indiceModulo = nuevas.findIndex(m => m.modulo.id === moduloSeleccionado)
+      const indiceModulo = nuevas.findIndex((m) => m.modulo.id === moduloId)
       if (indiceModulo !== -1) {
+        const numLecciones = nuevas[indiceModulo].lecciones.length
         nuevas[indiceModulo].lecciones.push({
-          titulo: "",
+          titulo: `Lección ${numLecciones + 1}`,
           tipo: "texto",
           contenido: "",
-          orden: nuevas[indiceModulo].lecciones.length,
+          orden: numLecciones,
           nivel: 2,
-          parent_id: moduloSeleccionado,
+          parent_id: moduloId,
         })
       }
       return nuevas
@@ -91,7 +93,12 @@ export function CursoContenidoEditorNav({ cursoId, isDark, onLeccionSeleccionada
     })
   }
 
-  const actualizarLeccion = (moduloIndex: number, leccionIndex: number, campo: keyof ContenidoItem, valor: string | number | null) => {
+  const actualizarLeccion = (
+    moduloIndex: number,
+    leccionIndex: number,
+    campo: keyof ContenidoItem,
+    valor: string | number | null,
+  ) => {
     setEstructura((prev) => {
       const nuevas = [...prev]
       nuevas[moduloIndex].lecciones[leccionIndex] = {
@@ -103,19 +110,19 @@ export function CursoContenidoEditorNav({ cursoId, isDark, onLeccionSeleccionada
   }
 
   const eliminarModulo = (moduloIndex: number) => {
-    setEstructura((prev) => {
-      const nuevas = [...prev]
-      nuevas.splice(moduloIndex, 1)
-      return nuevas
-    })
+    if (confirm("¿Estás seguro de eliminar este módulo y todas sus lecciones?")) {
+      setEstructura((prev) => prev.filter((_, i) => i !== moduloIndex))
+    }
   }
 
   const eliminarLeccion = (moduloIndex: number, leccionIndex: number) => {
-    setEstructura((prev) => {
-      const nuevas = [...prev]
-      nuevas[moduloIndex].lecciones.splice(leccionIndex, 1)
-      return nuevas
-    })
+    if (confirm("¿Estás seguro de eliminar esta lección?")) {
+      setEstructura((prev) => {
+        const nuevas = [...prev]
+        nuevas[moduloIndex].lecciones.splice(leccionIndex, 1)
+        return nuevas
+      })
+    }
   }
 
   const guardarTodo = async () => {
@@ -158,122 +165,135 @@ export function CursoContenidoEditorNav({ cursoId, isDark, onLeccionSeleccionada
     }
   }
 
-  // Actualizar la lección seleccionada cuando cambia
-  useEffect(() => {
-    if (leccionSeleccionada !== null) {
-      const leccion = estructura
-        .flatMap(m => m.lecciones)
-        .find(l => l.id === leccionSeleccionada)
-      onLeccionSeleccionada(leccion || null)
-    } else {
-      onLeccionSeleccionada(null)
-    }
-  }, [leccionSeleccionada, estructura])
+  const handleSeleccionarLeccion = (leccion: ContenidoItem) => {
+    setLeccionSeleccionada(leccion.id || null)
+    onLeccionSeleccionada(leccion)
+  }
 
-  if (loading) return <div>Cargando...</div>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
 
   return (
-    <div className={`p-4 rounded-lg ${isDark ? "bg-[#2E2E2E]" : "bg-gray-50"} h-full flex flex-col`}>
-      <h3 className="text-lg font-semibold mb-4">Estructura del curso</h3>
-
-      {/* Select de módulos */}
-      <div className="mb-4">
-        <Select value={moduloSeleccionado?.toString() || ""} onValueChange={(val) => setModuloSeleccionado(val ? parseInt(val) : null)}>
-          <SelectTrigger className={isDark ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E]" : "border"}>
-            <SelectValue placeholder="Selecciona un módulo" />
-          </SelectTrigger>
-          <SelectContent className={isDark ? "bg-[#2E2E2E] text-[#F5F5F5] border-[#4E4E4E]" : "bg-white"}>
-            {estructura.map((item, i) => (
-              <SelectItem key={i} value={item.modulo.id?.toString() || `temp-${i}`}>
-                {item.modulo.titulo || `Módulo ${i + 1}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Botón para agregar módulo */}
-      <Button onClick={agregarModulo} variant="outline" size="sm" className="mb-4">
-        <Plus size={16} className="mr-1" /> Agregar módulo
+    <div className="space-y-4">
+      <Button
+        onClick={agregarModulo}
+        variant="outline"
+        size="sm"
+        className="w-full justify-start gap-2 border-dashed border-2 border-[#4E4E4E] hover:border-blue-600 hover:text-blue-400 bg-transparent text-gray-300"
+      >
+        <Plus size={16} />
+        Agregar módulo
       </Button>
 
-      {/* Select de lecciones (solo si hay módulo seleccionado) */}
-      {moduloSeleccionado !== null && (
-        <div className="mb-4">
-          <Select value={leccionSeleccionada?.toString() || ""} onValueChange={(val) => setLeccionSeleccionada(val ? parseInt(val) : null)}>
-            <SelectTrigger className={isDark ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E]" : "border"}>
-              <SelectValue placeholder="Selecciona una lección" />
-            </SelectTrigger>
-            <SelectContent className={isDark ? "bg-[#2E2E2E] text-[#F5F5F5] border-[#4E4E4E]" : "bg-white"}>
-              {estructura
-                .find(m => m.modulo.id === moduloSeleccionado)
-                ?.lecciones.map((lec, j) => (
-                  <SelectItem key={j} value={lec.id?.toString() || `temp-${j}`}>
-                    {lec.titulo || `Lección ${j + 1}`}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      {/* Modules list */}
+      <div className="space-y-3">
+        {estructura.map((item, i) => {
+          const isExpanded = moduloExpandido === item.modulo.id
 
-      {/* Botón para agregar lección (solo si hay módulo seleccionado) */}
-      {moduloSeleccionado !== null && (
-        <Button onClick={agregarLeccion} variant="outline" size="sm" className="mb-4">
-          <Plus size={16} className="mr-1" /> Agregar lección
-        </Button>
-      )}
-
-      {/* Lista de módulos y lecciones (para edición rápida) */}
-      <div className="flex-1 overflow-y-auto space-y-2">
-        {estructura.map((item, i) => (
-          <div key={i} className={`p-3 rounded ${isDark ? "bg-[#3E3E3E]" : "bg-white"} border`}>
-            <div className="flex items-center justify-between mb-2">
-              <Input
-                placeholder="Nombre del módulo"
-                value={item.modulo.titulo}
-                onChange={(e) => actualizarModulo(i, "titulo", e.target.value)}
-                className={isDark ? "bg-[#2E2E2E] border-[#4E4E4E] text-[#F5F5F5]" : ""}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => eliminarModulo(i)}
-                className="text-red-500 hover:text-red-700"
-              >
-                <Trash2 size={16} />
-              </Button>
-            </div>
-
-            {/* Lecciones */}
-            {item.lecciones.map((leccion, j) => (
-              <div key={j} className={`ml-4 p-2 rounded ${isDark ? "bg-[#2A2A2A]" : "bg-gray-100"} mt-2`}>
-                <div className="flex items-center justify-between">
+          return (
+            <div key={i} className="border border-[#3E3E3E] rounded-lg overflow-hidden bg-[#2E2E2E]">
+              {/* Module header */}
+              <div className="bg-[#2A2A2A] border-b border-[#3E3E3E]">
+                <div className="flex items-center gap-2 p-3">
+                  <button
+                    onClick={() => setModuloExpandido(isExpanded ? null : item.modulo.id || null)}
+                    className="flex-shrink-0 text-gray-400 hover:text-gray-200"
+                  >
+                    <FolderOpen size={18} />
+                  </button>
                   <Input
-                    placeholder="Nombre de la lección"
-                    value={leccion.titulo}
-                    onChange={(e) => actualizarLeccion(i, j, "titulo", e.target.value)}
-                    className={isDark ? "bg-[#2E2E2E] border-[#4E4E4E] text-[#F5F5F5]" : ""}
+                    placeholder="Nombre del módulo"
+                    value={item.modulo.titulo}
+                    onChange={(e) => actualizarModulo(i, "titulo", e.target.value)}
+                    className="flex-1 h-8 text-sm font-medium border-0 bg-transparent focus-visible:ring-1 text-white placeholder:text-gray-500"
                   />
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => eliminarLeccion(i, j)}
-                    className="text-red-500 hover:text-red-700"
+                    onClick={() => eliminarModulo(i)}
+                    className="text-red-400 hover:text-red-300 hover:bg-red-950 h-8 w-8 p-0"
                   >
                     <Trash2 size={14} />
                   </Button>
                 </div>
               </div>
-            ))}
-          </div>
-        ))}
+
+              {/* Lessons */}
+              {isExpanded && (
+                <div className="p-2 space-y-1">
+                  {item.lecciones.map((leccion, j) => {
+                    const isSelected = leccionSeleccionada === leccion.id
+
+                    return (
+                      <div
+                        key={j}
+                        className={`flex items-center gap-2 p-2 rounded-md transition-colors ${
+                          isSelected ? "bg-blue-950 border border-blue-800" : "hover:bg-[#3E3E3E]"
+                        }`}
+                      >
+                        <button
+                          onClick={() => handleSeleccionarLeccion(leccion)}
+                          className="flex-shrink-0 text-gray-400 hover:text-gray-200"
+                        >
+                          <FileText size={16} />
+                        </button>
+                        <Input
+                          placeholder="Nombre de la lección"
+                          value={leccion.titulo}
+                          onChange={(e) => actualizarLeccion(i, j, "titulo", e.target.value)}
+                          onClick={() => handleSeleccionarLeccion(leccion)}
+                          className={`flex-1 h-7 text-sm border-0 bg-transparent focus-visible:ring-1 text-gray-300 placeholder:text-gray-600 ${
+                            isSelected ? "font-medium text-blue-400" : ""
+                          }`}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => eliminarLeccion(i, j)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-950 h-7 w-7 p-0"
+                        >
+                          <Trash2 size={12} />
+                        </Button>
+                      </div>
+                    )
+                  })}
+
+                  {/* Add lesson button */}
+                  <Button
+                    onClick={() => agregarLeccion(item.modulo.id!)}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start gap-2 text-gray-400 hover:text-blue-400 hover:bg-[#3E3E3E] h-8 mt-1"
+                  >
+                    <Plus size={14} />
+                    <span className="text-xs">Agregar lección</span>
+                  </Button>
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
 
-      {/* Botón de guardar */}
-      <div className="mt-4">
-        <Button onClick={guardarTodo}>💾 Guardar estructura</Button>
-      </div>
+      {!estructura.length && (
+        <div className="text-center py-8 text-gray-400 text-sm">
+          <FolderOpen size={48} className="mx-auto text-gray-600 mb-3" />
+          <p>No hay módulos aún.</p>
+          <p className="text-xs mt-1">Haz clic en "Agregar módulo" para comenzar.</p>
+        </div>
+      )}
+
+      {/* Save button */}
+      {estructura.length > 0 && (
+        <Button onClick={guardarTodo} className="w-full bg-blue-600 hover:bg-blue-700 gap-2 text-white">
+          Guardar estructura
+        </Button>
+      )}
     </div>
   )
 }
