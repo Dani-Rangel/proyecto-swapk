@@ -1,5 +1,4 @@
 "use client"
-
 import type React from "react"
 import toast, { Toaster } from 'react-hot-toast'
 import { useState, useRef, useEffect } from "react"
@@ -30,11 +29,19 @@ import {
   Share,
   Bookmark,
   Flag,
+  Users,       // ✅ Agregado
+  Clock,       // ✅ Agregado
+  Star,        // ✅ Agregado
+  Eye,         // ✅ Agregado
+  Download,    // ✅ Agregado
+  Sparkles,    // ✅ Agregado
+  Target,      // ✅ Agregado
+  GraduationCap // ✅ Agregado
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { type Curso, getCursos, createCurso, updateCurso, deleteCurso, getInscritosCount } from "@/services/cursosApi"
-import { getCurrentUser } from "@/lib/auth"
+import { getCurrentUser, UserData } from "@/lib/auth"
 import { Card, CardContent } from "@/components/ui/card"
 import { uploadAttachments } from "@/services/attachments"
 import CreatableSelect from "react-select/creatable"
@@ -51,7 +58,6 @@ import { MainSidebar } from "@/components/MainSidebar"
 import { inscripcionCursoAPI } from "@/services/inscripcionCursoApi"
 import ManageEnrollmentsModal from "@/components/ui/ManageEnrollmentsModal"
 
-
 interface NewCourseData {
   title: string
   description: string
@@ -60,25 +66,17 @@ interface NewCourseData {
   attachments: File[]
   courseImage: File | null
 }
-
 type HabilidadOption = {
   id: number
   value: string
   label: string
 }
-
 interface CourseDetailViewProps {
   course: CursoConContador
   onBack: () => void
   onEdit: (course: CursoConContador) => void
   onDelete: (courseId: number) => void
 }
-
-interface UserData {
-  id: number
-  nombre: string
-}
-
 interface CursoConContador extends Curso {
   inscritosCount?: number
 }
@@ -110,33 +108,31 @@ function CursosComunidadComponent() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
   const { agregarNotificacion } = useNotificaciones();
-  const [user, setUser] = useState<any>(null)
   const router = useRouter()
   const [perfil, setPerfil] = useState<any>(null)
   const [inscrito, setInscrito] = useState<boolean>(false)
   const [estadoInscripcion, setEstadoInscripcion] = useState<string | null>(null)
   const [inscripcionId, setInscripcionId] = useState<number | null>(null);
   const [showManageModal, setShowManageModal] = useState(false)
-  
 
   const loadCursos = async () => {
-  try {
-    setLoading(true);
-    const cursosData = await getCursos();
-    // Cargar contador para cada curso
-    const cursosConContador = await Promise.all(
-      cursosData.map(async (curso) => {
-        const count = await getInscritosCount(curso.id);
-        return { ...curso, inscritosCount: count };
-      })
-    );
-    setCursos(cursosConContador);
-  } catch (error) {
-    console.error("Error loading cursos:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+      const cursosData = await getCursos();
+      // Cargar contador para cada curso
+      const cursosConContador = await Promise.all(
+        cursosData.map(async (curso) => {
+          const count = await getInscritosCount(curso.id);
+          return { ...curso, inscritosCount: count };
+        })
+      );
+      setCursos(cursosConContador);
+    } catch (error) {
+      console.error("Error loading cursos:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchHabilidades = async () => {
     try {
@@ -173,83 +169,90 @@ function CursosComunidadComponent() {
     loadCursoHabilidades();
   }, [selectedCourse]);
 
+  useEffect(() => {
+  const user = getCurrentUser();
+  setCurrentUser(user);     // ← clave
+  loadCursos();
+  fetchHabilidades();
+  }, []);
+
   // 🔹 Crear curso
- // 🔹 Crear curso
-const handleSubmitCourse = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setFormSubmitting(true);
-  const currentUserId = getCurrentUser()?.id;
-  if (!currentUserId) {
-    alert(t("must_login_to_create_course"));
-    setFormSubmitting(false);
-    return;
-  }
-  try {
-    // 1. Preparo los datos comunes
-    const cursoPayload = {
-      titulo: newCourse.title,
-      descripcion: newCourse.description,
-      objetivo: newCourse.objective,
-      img_Cursos: newCourse.courseImage
-        ? await convertImageToBase64(newCourse.courseImage)
-        : editingCourse?.img_Cursos || "",
-      user_id: currentUserId,
-      habilidades_ids: newCourse.skills.map((h) => h.id),
-    };
-    let cursoId: number;
-    // 2. Crear o editar
-    if (editingCourse) {
-      // 🟢 EDITAR
-      const updatedCurso = await updateCurso(editingCourse.id, cursoPayload);
-      cursoId = updatedCurso.id;
-      // 🧹 Eliminar habilidades anteriores
-      await cursoHabilidadAPI.deleteAllForCurso(cursoId);
-      // Actualizar lista
-      setCursos((prev) =>
-        prev.map((c) => (c.id === cursoId ? updatedCurso : c))
-      );
-    } else {
-      // 🟢 CREAR
-      const createdCurso = await createCurso(cursoPayload);
-      cursoId = createdCurso.id;
-      // Agregar a la lista
-      setCursos((prev) => [createdCurso, ...prev]);
-
-      // 🚨 Obtener el nombre directamente de localStorage (no del estado)
-      const userFromStorage = getCurrentUser();
-      const nombreUsuario = userFromStorage?.nombre || "Un usuario";
-
-      // 🚨 Depuración
-      console.log("🚀 Usuario desde storage:", userFromStorage);
-      console.log("🚀 Nombre del usuario:", nombreUsuario);
-
-      // ✅ Notificación con el nombre correcto
-      agregarNotificacion({
-        tipo: "Curso",
-        contenido: `El usuario ${nombreUsuario} ha creado el curso "${newCourse.title}".`,
-        id_usuario: currentUserId,
-      });
+  const handleSubmitCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormSubmitting(true);
+    const currentUserId = getCurrentUser()?.id;
+    if (!currentUserId) {
+      alert(t("must_login_to_create_course"));
+      setFormSubmitting(false);
+      return;
     }
-    // 3. Asociar habilidades seleccionadas
-    for (const habilidad of newCourse.skills) {
-      await cursoHabilidadAPI.associateHabilidad({
-        curso_id: cursoId,
-        habilidad_id: habilidad.id,
-      });
+    try {
+      // 1. Preparo los datos comunes
+      const cursoPayload = {
+        titulo: newCourse.title,
+        descripcion: newCourse.description,
+        objetivo: newCourse.objective,
+        img_Cursos: newCourse.courseImage
+          ? await convertImageToBase64(newCourse.courseImage)
+          : editingCourse?.img_Cursos || "",
+        user_id: currentUserId,
+        habilidades_ids: newCourse.skills.map((h) => h.id),
+      };
+
+      let cursoId: number;
+
+      // 2. Crear o editar
+      if (editingCourse) {
+        // 🟢 EDITAR
+        const updatedCurso = await updateCurso(editingCourse.id, cursoPayload);
+        cursoId = updatedCurso.id;
+        // 🧹 Eliminar habilidades anteriores
+        await cursoHabilidadAPI.deleteAllForCurso(cursoId);
+        // Actualizar lista
+        setCursos((prev) =>
+          prev.map((c) => (c.id === cursoId ? updatedCurso : c))
+        );
+      } else {
+        // 🟢 CREAR
+        const createdCurso = await createCurso(cursoPayload);
+        cursoId = createdCurso.id;
+        // Agregar a la lista
+        setCursos((prev) => [createdCurso, ...prev]);
+
+        // 🚨 Obtener el nombre directamente de localStorage (no del estado)
+        const userFromStorage = getCurrentUser();
+        const nombreUsuario = userFromStorage?.nombre || "Un usuario";
+
+        // ✅ Notificación con el nombre correcto
+        agregarNotificacion({
+          tipo: "Curso",
+          contenido: `El usuario ${nombreUsuario} ha creado el curso "${newCourse.title}".`,
+          id_usuario: currentUserId,
+        });
+      }
+
+      // 3. Asociar habilidades seleccionadas
+      for (const habilidad of newCourse.skills) {
+        await cursoHabilidadAPI.associateHabilidad({
+          curso_id: cursoId,
+          habilidad_id: habilidad.id,
+        });
+      }
+
+      // 4. Subir archivos si hay
+      if (newCourse.attachments.length > 0) {
+        await uploadAttachments(cursoId, newCourse.attachments);
+      }
+
+      // 5. Resetear formulario
+      handleCloseForm();
+    } catch (error) {
+      console.error("❌ Error al procesar el curso:", error);
+      alert(t("error_occurred_try_again"));
+    } finally {
+      setFormSubmitting(false);
     }
-    // 4. Subir archivos si hay
-    if (newCourse.attachments.length > 0) {
-      await uploadAttachments(cursoId, newCourse.attachments);
-    }
-    // 5. Resetear formulario
-    handleCloseForm();
-  } catch (error) {
-    console.error("❌ Error al procesar el curso:", error);
-    alert(t("error_occurred_try_again"));
-  } finally {
-    setFormSubmitting(false);
-  }
-};
+  };
 
   // 🔹 Convertir imagen a base64 para enviar a la API
   const convertImageToBase64 = (file: File): Promise<string> => {
@@ -269,6 +272,7 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
     try {
       const currentUserId = getCurrentUser()?.id
       if (!currentUserId) throw new Error("Usuario no autenticado")
+
       const updatedData = {
         titulo: newCourse.title,
         descripcion: newCourse.description,
@@ -279,8 +283,10 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
         User_Id: currentUserId,
         habilidades_ids: newCourse.skills.map((h) => h.id),
       }
+
       // 🟢 Actualizar curso principal
       const updatedCurso = await updateCurso(editingCourse.id, updatedData)
+
       // 🟡 Eliminar habilidades anteriores y asociar nuevas
       await cursoHabilidadAPI.deleteAllForCurso(editingCourse.id)
       for (const habilidad of newCourse.skills) {
@@ -289,10 +295,12 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
           habilidad_id: habilidad.id,
         })
       }
+
       // 🔵 Subir archivos si hay
       if (newCourse.attachments.length > 0) {
         await uploadAttachments(editingCourse.id, newCourse.attachments)
       }
+
       // 🧹 Actualizar en estado
       setCursos(cursos.map((course) => (course.id === editingCourse.id ? updatedCurso : course)))
       setShowCourseForm(false)
@@ -344,10 +352,10 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
 
   // 🔹 Ver más
   const handleViewMore = (course: CursoConContador) => {
-  setSelectedCourse(course)
-  setShowCourseForm(false)
-  setEditingCourse(null)
-}
+    setSelectedCourse(course)
+    setShowCourseForm(false)
+    setEditingCourse(null)
+  }
 
   // 🔹 Crear curso (abrir form)
   const handleCreateCourse = () => {
@@ -357,25 +365,25 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
   }
 
   // 🔹 Editar curso
- const handleEdit = (course: CursoConContador) => {
-  setEditingCourse(course)
-  setSelectedCourse(null)
-  setNewCourse({
-    title: course.titulo,
-    description: course.descripcion || "",
-    objective: course.objetivo || "",
-    skills: course.habilidades
-      ? course.habilidades.map((h) => ({
-          id: h.id,
-          value: h.habilidad_nombre,
-          label: h.habilidad_nombre,
-        }))
-      : [],
-    attachments: [],
-    courseImage: null,
-  })
-  setShowCourseForm(true)
-}
+  const handleEdit = (course: CursoConContador) => {
+    setEditingCourse(course)
+    setSelectedCourse(null)
+    setNewCourse({
+      title: course.titulo,
+      description: course.descripcion || "",
+      objective: course.objetivo || "",
+      skills: course.habilidades
+        ? course.habilidades.map((h) => ({
+            id: h.id,
+            value: h.habilidad_nombre,
+            label: h.habilidad_nombre,
+          }))
+        : [],
+      attachments: [],
+      courseImage: null,
+    })
+    setShowCourseForm(true)
+  }
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -425,314 +433,388 @@ const handleSubmitCourse = async (e: React.FormEvent) => {
     console.log("Searching:", searchQuery)
   }
 
-  // Componente para mostrar detalles del curso
- // Componente para mostrar detalles del curso
-const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailViewProps) => {
-  const [isCreator, setIsCreator] = useState<boolean>(false)
-  const [inscrito, setInscrito] = useState<boolean>(false)
-  const [estadoInscripcion, setEstadoInscripcion] = useState<string | null>(null)
+  // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+  // ✅ NUEVO: CourseDetailView con estilos mejorados (del archivo grande), sin exceso de efectos
+  // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+  const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailViewProps) => {
+    const [isCreator, setIsCreator] = useState<boolean>(false)
+    const [inscrito, setInscrito] = useState<boolean>(false)
+    const [estadoInscripcion, setEstadoInscripcion] = useState<string | null>(null)
 
-  useEffect(() => {
-  const user = getCurrentUser()
-  console.log("[v0] Current user loaded:", user)
-  console.log("[v0] Course User_Id:", course.user_id)
-  console.log("[v0] Course object:", course)
-  if (user && course.user_id !== undefined && course.user_id !== null) {
-    const userIdNum = Number(user.id)
-    const courseUserIdNum = Number(course.user_id)
-    const creatorCheck = userIdNum === courseUserIdNum
-    console.log("[v0] Creator verification:", {
-      userId: userIdNum,
-      courseUserId: courseUserIdNum,
-      isCreator: creatorCheck,
-    })
-    setIsCreator(creatorCheck)
-  } else {
-    console.log("[v0] Cannot verify creator - missing data:", {
-      hasUser: !!user,
-      courseUserId: course.user_id,
-      userType: typeof course.user_id,
-    })
-    setIsCreator(false)
-  }
-
-  // Verificar si el usuario está inscrito
- const verificarInscripcion = async () => {
+    useEffect(() => {
       const user = getCurrentUser()
-      if (!user) return
-      try {
-        const inscripciones = await inscripcionCursoAPI.getByUser(user.id)
-        const inscripcion = inscripciones.find(i => i.curso_id === course.id)
-        if (inscripcion) {
-          setInscrito(true)
-          setEstadoInscripcion(inscripcion.estado)
-          setInscripcionId(inscripcion.id)
-        } else {
-          setInscrito(false)
-          setEstadoInscripcion(null)
-          setInscripcionId(null)
-        }
-      } catch (error) {
-        console.error("Error al verificar inscripción:", error)
+      if (user && course.user_id !== undefined && course.user_id !== null) {
+        const userIdNum = Number(user.id)
+        const courseUserIdNum = Number(course.user_id)
+        setIsCreator(userIdNum === courseUserIdNum)
+      } else {
+        setIsCreator(false)
       }
-    }
 
-    verificarInscripcion()
-  }, [course])
+      // Verificar si el usuario está inscrito
+      const verificarInscripcion = async () => {
+        const user = getCurrentUser()
+        if (!user) return
+        try {
+          const inscripciones = await inscripcionCursoAPI.getByUser(user.id)
+          const inscripcion = inscripciones.find(i => i.curso_id === course.id)
+          if (inscripcion) {
+            setInscrito(true)
+            setEstadoInscripcion(inscripcion.estado)
+            setInscripcionId(inscripcion.id)
+          } else {
+            setInscrito(false)
+            setEstadoInscripcion(null)
+            setInscripcionId(null)
+          }
+        } catch (error) {
+          console.error("Error al verificar inscripción:", error)
+        }
+      }
+      verificarInscripcion()
+    }, [course])
 
-  return (
-    <div className="max-w-4xl mx-auto p-6">
-      <Button onClick={onBack} variant="outline" className={`mb-6 flex items-center gap-2 ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E] hover:bg-[#4E4E4E]" : "bg-white text-gray-900 border-gray-300 hover:bg-gray-50"}`}>
-        <ArrowLeft className="w-4 h-4" />
-        {t("volver")}
-      </Button>
-      <div className={`rounded-lg shadow-lg overflow-hidden ${isDark ? "bg-[#2E2E2E] border-[#3E3E3E]" : "bg-white border-gray-200"} border`}>
-        {/* Mostrar la imagen del curso si existe */}
-         {course.img_Cursos && (
-          <div className="w-full h-64 bg-muted flex items-center justify-center">
-            <img
-              className="w-full h-full object-cover"
-              src={`http://localhost:8000${course.img_Cursos}`}
-              alt={course.titulo}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.src = "/img/image.png";
-              }}
-            />
-          </div>
-        )}
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 className={`text-3xl font-bold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{course.titulo}</h1>
-              <p className={`${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
-                {t("by_author")}{" "}
-                {course.usuario?.nombre ? (
-                  <Link
-                    href={`/profile/${course.user_id}`}
-                    className="text-gray-400 hover:underline hover:text-gray-300 transition-colors"
-                    onClick={(e) => {
-                      const user = getCurrentUser();
-                      if (user?.id === course.user_id) {
-                        e.preventDefault(); // Evita redirigir a tu propio perfil
-                      }
-                    }}
-                  >
-                    {course.usuario.nombre}
-                  </Link>
-                ) : (
-                  "Usuario desconocido"
-                )}
-              </p>
-              {/* Dentro del div principal de CourseDetailView */}
-              <p className={`${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
-                👥 {course.inscritosCount || 0} inscritos
-              </p>
+    return (
+      <div className="max-w-6xl mx-auto p-6">
+        <Button 
+          onClick={onBack} 
+          variant="outline" 
+          className={`mb-6 flex items-center gap-2 rounded-lg px-4 py-2 font-medium ${
+            isDark 
+              ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E] hover:bg-[#4A4A4A]" 
+              : "bg-white text-gray-900 border-gray-300 hover:bg-gray-50"
+          }`}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t("volver")}
+        </Button>
+
+        <div className={`rounded-xl shadow-lg overflow-hidden ${
+          isDark ? "bg-[#2E2E2E] border-[#3E3E3E]" : "bg-white border-gray-200"
+        } border`}>
+          {/* Imagen del curso */}
+          {course.img_Cursos && (
+            <div className="w-full h-60 bg-muted relative overflow-hidden">
+              <img
+                className="w-full h-full object-cover"
+                src={`http://localhost:8000${course.img_Cursos}`}
+                alt={course.titulo}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = "/img/image.png";
+                }}
+              />
             </div>
-          </div>
-          {course.descripcion && (
-            <section>
-              <h2 className={`text-xl font-semibold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("description")}</h2>
-              <p className={`text-sm mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"} w-full break-words line-clamp-2`}>{course.descripcion}</p>
-            </section>
           )}
-          {course.objetivo && (
-            <section>
-              <h2 className={`text-xl font-semibold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("objective")}</h2>
-              <p className={`text-sm mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>{course.objetivo}</p>
-            </section>
-          )}
-          {course.habilidades && course.habilidades.length > 0 && (
-            <section>
-              <h2 className={`text-xl font-semibold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("required_skills")}</h2>
-              <div className="flex flex-wrap gap-1 mb-4">
-                {course.habilidades.slice(0, 3).map((h, index) => (
-                  <span
-                    key={index}
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5]" : "bg-blue-100 text-blue-800"}`}
-                  >
-                    {h.habilidad_nombre}
-                  </span>
-                ))}
-                {course.habilidades.length > 3 && (
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5]" : "bg-gray-200 text-gray-600"}`}>
-                    +{course.habilidades.length - 3}
-                  </span>
-                )}
+
+          <div className="p-6">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h1 className={`text-3xl font-bold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
+                  {course.titulo}
+                </h1>
+                <div className="flex flex-wrap items-center gap-4 text-sm mb-2">
+                  <p className={`flex items-center gap-1 ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
+                    <User className="w-3.5 h-3.5" />
+                    {t("by_author")}{" "}
+                    {course.usuario?.nombre ? (
+                      <Link
+                        href={`/profile/${course.user_id}`}
+                        className={`font-medium hover:underline ${
+                          isDark ? "text-blue-400" : "text-blue-600"
+                        }`}
+                        onClick={(e) => {
+                          const user = getCurrentUser();
+                          if (user?.id === course.user_id) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        {course.usuario.nombre}
+                      </Link>
+                    ) : (
+                      "Usuario desconocido"
+                    )}
+                  </p>
+                  <p className={`flex items-center gap-1 ${isDark ? "text-[#A0A0A0]" : "text-gray-600"}`}>
+                    <Users className="w-3.5 h-3.5" />
+                     {course.inscritosCount || 0} inscritos
+                  </p>
+                </div>
               </div>
-            </section>
-          )}
-          <section>
-            <h2 className={`text-xl font-semibold mb-4 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("attachments")}</h2>
-            <div className="space-y-3">
-              {course.attachments && course.attachments.length > 0 ? (
-                course.attachments.map((file, index) => (
-                  <div key={index} className={`flex items-center justify-between p-4 rounded-lg ${isDark ? "bg-[#3E3E3E] border-[#4E4E4E]" : "bg-gray-50 border"} border`}>
-                    <div className="flex items-center">
-                      <Paperclip size={18} className={`mr-3 ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`} />
-                      <div>
-                        <span className={`text-sm font-medium ${isDark ? "text-[#F5F5F5]" : "text-gray-700"}`}>{file.file_name}</span>
-                        <p className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`}>
-                          {Math.round(file.file_size / 1024)} KB • {new Date(file.fecha_subida).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                    <a
-                      href={file.url}
-                      download
-                      className={`text-sm px-4 py-2 rounded-md ${isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"} text-white transition-colors`}
-                    >
-                      {t("download")}
-                    </a>
-                  </div>
-                ))
-              ) : (
-                <p className={`text-sm ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`}>{t("no_attachments")}</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              {course.descripcion && (
+                <section>
+                  <h2 className={`text-xl font-semibold mb-3 flex items-center gap-1.5 ${
+                    isDark ? "text-[#F5F5F5]" : "text-gray-900"
+                  }`}>
+                    <BookOpen className="w-4 h-4" />
+                    {t("description")}
+                  </h2>
+                  <p className={`text-sm p-4 rounded-lg border whitespace-pre-line ${
+                    isDark ? "text-[#D1D1D1] bg-[#363636] border-[#404040]" : "text-gray-700 bg-gray-50 border-gray-200"
+                  } max-h-60 overflow-hidden break-words hyphens-auto`}>
+                    {course.descripcion}
+                  </p>
+                </section>
+              )}
+
+              {course.objetivo && (
+                <section>
+                  <h2 className={`text-xl font-semibold mb-3 flex items-center gap-1.5 ${
+                    isDark ? "text-[#F5F5F5]" : "text-gray-900"
+                  }`}>
+                    <Target className="w-4 h-4" />
+                    {t("objective")}
+                  </h2>
+                  <p className={`text-sm p-4 rounded-lg border whitespace-pre-line ${
+                    isDark ? "text-[#D1D1D1] bg-[#363636] border-[#404040]" : "text-gray-700 bg-gray-50 border-gray-200"
+                  } max-h-48 overflow-hidden break-words hyphens-auto`}>
+                    {course.objetivo}
+                  </p>
+                </section>
               )}
             </div>
-          </section>
-          <section>
-           {isCreator || (inscrito && estadoInscripcion === "Confirmado") ? (
-              <div className="p-6">
-                <h3 className={`text-lg font-semibold mb-4 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>Contenido del curso</h3>
-                <Link
-                  href={`/Cursos/${course.id}`}
-                  className={`w-full inline-flex items-center justify-center px-4 py-2 text-white font-medium rounded-md transition-colors ${
-                    isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"
-                  }`}
-                >
-                  Ver curso en modo completo →
-                </Link>
-              </div>
-            ) : (
-              <div className="h-40 w-full p-6 border border-red-400 bg-red-400/20 flex items-center justify-center rounded text-white">
-                {inscrito && estadoInscripcion === "Pendiente"
-                  ? "Esperando aprobación del creador"
-                  : inscrito && estadoInscripcion === "Finalizado"
-                    ? "Acceso finalizado por el creador"
-                    : "Acceso restringido"}
-              </div>
+
+            {course.habilidades && course.habilidades.length > 0 && (
+              <section className="mb-6">
+                <h2 className={`text-xl font-semibold mb-3 flex items-center gap-1.5 ${
+                  isDark ? "text-[#F5F5F5]" : "text-gray-900"
+                }`}>
+                  <Star className="w-4 h-4" />
+                  {t("required_skills")}
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {course.habilidades.map((h, index) => (
+                    <span
+                      key={index}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
+                        isDark 
+                          ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E]" 
+                          : "bg-blue-100 text-blue-800"
+                      } border`}
+                    >
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      {h.habilidad_nombre}
+                    </span>
+                  ))}
+                </div>
+              </section>
             )}
-          </section>
-          <section>
-            <h2 className={`text-xl font-semibold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>{t("actions")}</h2>
-            <div className="flex flex-wrap gap-4">
-              {!isCreator && (
-                <div className="mt-4 flex gap-6">
-                  <Button
-                    className={`px-4 py-2 rounded text-white ${
-                      inscrito ? (isDark ? "bg-red-700 hover:bg-red-600" : "bg-red-600 hover:bg-red-700") : (isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700")
-                    }`}
-                    onClick={async () => {
-                      const user = getCurrentUser()
-                      if (!user) {
-                        toast.error(t("mustLogin"))
-                        return
-                      }
-                      try {
-                        if (inscrito) {
-                          // Obtener el ID de la inscripción
-                          const inscripciones = await inscripcionCursoAPI.getByUser(user.id)
-                          const inscripcion = inscripciones.find(i => i.curso_id === course.id)
-                          if (inscripcion) {
-                            await inscripcionCursoAPI.eliminar(inscripcion.id)
-                            setInscrito(false)
-                            setEstadoInscripcion(null)
-                            toast.success(t("cancel_enrollment_success"))
-                          }
-                        } else {
-                          const inscrito = await inscripcionCursoAPI.checkInscripcion(course.id, user.id)
+
+            <section className="mb-6">
+              <h2 className={`text-xl font-semibold mb-3 flex items-center gap-1.5 ${
+                isDark ? "text-[#F5F5F5]" : "text-gray-900"
+              }`}>
+                <Download className="w-4 h-4" />
+                {t("attachments")}
+              </h2>
+              <div className="space-y-3">
+                {course.attachments && course.attachments.length > 0 ? (
+                  course.attachments.map((file, index) => (
+                    <div key={index} className={`flex items-center justify-between p-3 rounded-lg border ${
+                      isDark ? "bg-[#363636] border-[#404040]" : "bg-gray-50 border-gray-200"
+                    }`}>
+                      <div className="flex items-center">
+                        <Paperclip size={16} className={`mr-2 ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`} />
+                        <div>
+                          <span className={`text-sm font-medium ${isDark ? "text-[#F5F5F5]" : "text-gray-700"}`}>
+                            {file.file_name}
+                          </span>
+                          <p className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`}>
+                            {Math.round(file.file_size / 1024)} KB • {new Date(file.fecha_subida).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href={file.url}
+                        download
+                        className={`text-sm px-3 py-1.5 rounded-md font-medium ${
+                          isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"
+                        } text-white`}
+                      >
+                        {t("download")}
+                      </a>
+                    </div>
+                  ))
+                ) : (
+                  <p className={`text-sm py-3 text-center rounded-lg border ${
+                    isDark ? "text-[#A0A0A0] bg-[#363636] border-[#404040]" : "text-gray-500 bg-gray-50 border-gray-200"
+                  }`}>
+                    {t("no_attachments")}
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="mb-6">
+              {isCreator || (inscrito && estadoInscripcion === "Confirmado") ? (
+                <div className={`p-4 rounded-lg ${
+                  isDark ? "bg-green-900/20 border-green-500/30" : "bg-green-50 border-green-200"
+                } border`}>
+                  <h3 className={`text-lg font-semibold mb-3 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
+                    Contenido del curso
+                  </h3>
+                  <Link
+                    href={`/Cursos/${course.id}`}
+                    className={`inline-flex items-center px-4 py-2 font-medium rounded-md ${
+                      isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"
+                    } text-white`}
+                  >
+                    <Eye className="w-4 h-4 mr-1.5" />
+                    Ver curso en modo completo
+                  </Link>
+                </div>
+              ) : (
+                <div className={`h-24 w-full p-4 border flex items-center justify-center rounded-lg ${
+                  isDark ? "bg-red-900/20 border-red-500/30" : "bg-red-50 border-red-200"
+                }`}>
+                  <span className="text-red-500 font-medium text-center">
+                    {inscrito && estadoInscripcion === "Pendiente"
+                      ? "⏳ Esperando aprobación del creador"
+                      : inscrito && estadoInscripcion === "Finalizado"
+                        ? "✅ Acceso finalizado por el creador"
+                        : "🔒 Acceso restringido"}
+                  </span>
+                </div>
+              )}
+            </section>
+
+            <section>
+              <h2 className={`text-xl font-semibold mb-3 flex items-center gap-1.5 ${
+                isDark ? "text-[#F5F5F5]" : "text-gray-900"
+              }`}>
+                <Settings className="w-4 h-4" />
+                {t("actions")}
+              </h2>
+              <div className="flex flex-wrap gap-3">
+                {!isCreator && (
+                  <div className="flex gap-3">
+                    <Button
+                      className={`px-4 py-2 rounded-md font-medium ${
+                        inscrito 
+                          ? (isDark ? "bg-red-700 hover:bg-red-600" : "bg-red-600 hover:bg-red-700")
+                          : (isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700")
+                      } text-white`}
+                      onClick={async () => {
+                        const user = getCurrentUser()
+                        if (!user) {
+                          toast.error(t("mustLogin"))
+                          return
+                        }
+                        try {
                           if (inscrito) {
                             const inscripciones = await inscripcionCursoAPI.getByUser(user.id)
                             const inscripcion = inscripciones.find(i => i.curso_id === course.id)
-                            toast.success(`Ya estás inscrito. Estado: ${inscripcion?.estado}`)
-                            setEstadoInscripcion(inscripcion?.estado || null)
-                            return
+                            if (inscripcion) {
+                              await inscripcionCursoAPI.eliminar(inscripcion.id)
+                              setInscrito(false)
+                              setEstadoInscripcion(null)
+                              toast.success(t("cancel_enrollment_success"))
+                            }
+                          } else {
+                            const inscritoCheck = await inscripcionCursoAPI.checkInscripcion(course.id, user.id)
+                            if (inscritoCheck) {
+                              const inscripciones = await inscripcionCursoAPI.getByUser(user.id)
+                              const inscripcion = inscripciones.find(i => i.curso_id === course.id)
+                              toast.success(`Ya estás inscrito. Estado: ${inscripcion?.estado}`)
+                              setEstadoInscripcion(inscripcion?.estado || null)
+                              return
+                            }
+                            await inscripcionCursoAPI.create({
+                              curso_id: course.id,
+                              usuario_id: user.id
+                            })
+                            setInscrito(true)
+                            setEstadoInscripcion("Pendiente")
+                            toast.success(t("enroll_success"))
                           }
-                          await inscripcionCursoAPI.create({
-                            curso_id: course.id,
-                            usuario_id: user.id
-                          })
-                          setInscrito(true)
-                          setEstadoInscripcion("Pendiente")
-                          toast.success(t("enroll_success"))
+                        } catch (error) {
+                          console.error("Error al inscribirse:", error)
+                          toast.error("Error al inscribirse en el curso")
                         }
-                      } catch (error) {
-                        console.error("Error al inscribirse:", error)
-                        toast.error("Error al inscribirse en el curso")
-                      }
-                    }}
-                  >
-                    {inscrito ? t("cancel_enrollment") : t("enroll")}
-                  </Button>
-                  <Button className={`px-4 py-2 rounded ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E] hover:bg-[#4E4E4E]" : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"}`}>
-                    {t("send_message")}
-                  </Button>
-                </div>
-              )}
-              {isCreator && (
+                      }}
+                    >
+                      {inscrito ? t("cancel_enrollment") : t("enroll")}
+                    </Button>
+                    <Button className={`px-4 py-2 rounded-md font-medium ${
+                      isDark ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E] hover:bg-[#4A4A4A]" : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
+                    }`}>
+                      <MessageSquare className="w-4 h-4 mr-1.5" />
+                      {t("send_message")}
+                    </Button>
+                  </div>
+                )}
+
+                {isCreator && (
                   <div className="flex gap-2">
                     <Button
                       onClick={() => onEdit(course)}
                       variant="outline"
                       size="sm"
-                      className={`flex items-center gap-2 ${isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium ${
+                        isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
                     >
-                      <Edit className="w-4 h-4" />
+                      <Edit className="w-3.5 h-3.5" />
                       {t("edit_course")}
                     </Button>
                     <Button
                       onClick={() => onDelete(course.id)}
                       variant="destructive"
                       size="sm"
-                      className={`flex items-center gap-2 ${isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium ${
+                        isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                       {t("delete")}
                     </Button>
-                    {/* Botón para gestionar inscripciones */}
                     <Button
                       onClick={() => setShowManageModal(true)}
                       variant="outline"
                       size="sm"
-                      className={`flex items-center gap-2 ${isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"}`}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium ${
+                        isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                      }`}
                     >
-                      <BookOpen className="w-4 h-4" />
-                      Gestionar Inscripciones
+                      <Users className="w-3.5 h-3.5" />
+                      Solicitudes Inscripciones
                     </Button>
                   </div>
                 )}
-
-            </div>
-          </section>
+              </div>
+            </section>
+          </div>
         </div>
+
+        <ManageEnrollmentsModal
+          isOpen={showManageModal}
+          onClose={() => setShowManageModal(false)}
+          cursoId={course.id}
+          onEstadoActualizado={() => {
+            const user = getCurrentUser()
+            if (user) {
+              inscripcionCursoAPI.getByUser(user.id).then(inscripciones => {
+                const inscripcion = inscripciones.find(i => i.curso_id === course.id)
+                if (inscripcion) {
+                  setInscrito(true)
+                  setEstadoInscripcion(inscripcion.estado)
+                  setInscripcionId(inscripcion.id)
+                } else {
+                  setInscrito(false)
+                  setEstadoInscripcion(null)
+                  setInscripcionId(null)
+                }
+              })
+            }
+          }}
+        />
       </div>
-      <ManageEnrollmentsModal
-        isOpen={showManageModal}
-        onClose={() => setShowManageModal(false)}
-        cursoId={course.id}
-        onEstadoActualizado={() => {
-          // Refresca la información de inscripción actual
-          const user = getCurrentUser()
-          if (user) {
-            inscripcionCursoAPI.getByUser(user.id).then(inscripciones => {
-              const inscripcion = inscripciones.find(i => i.curso_id === course.id)
-              if (inscripcion) {
-                setInscrito(true)
-                setEstadoInscripcion(inscripcion.estado)
-                setInscripcionId(inscripcion.id)
-              } else {
-                setInscrito(false)
-                setEstadoInscripcion(null)
-                setInscripcionId(null)
-              }
-            })
-          }
-        }}
-      />
-    </div>
-  )
-}
+    )
+  }
 
   return (
     <div className={`min-h-screen bg-background flex ${isDark ? "bg-[#1A1A1A]" : "bg-gray-50"}`}>
@@ -767,14 +849,16 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
               {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>
           </div>
+
           {/* Sidebar Izquierdo */}
           <MainSidebar
-                  isDark={isDark}
-                  toggleTheme={toggleTheme}
-                  isSidebarOpen={isSidebarOpen}
-                  setIsSidebarOpen={setIsSidebarOpen}
-                  user={user}
-                />
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+            user={currentUser}
+          />
+
           {/* Main Content */}
           <div className="flex-1 overflow-auto">
             {selectedCourse ? (
@@ -787,154 +871,178 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                 />
               </div>
             ) : showCourseForm ? (
+              // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+              // ✅ NUEVO: Formulario de creación/editar con estilos mejorados (grid, iconos, padding)
+              // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
               <div className="p-6">
-                <div className={`max-w-2xl mx-auto p-6 rounded-lg shadow-md ${isDark ? "bg-[#2E2E2E]" : "bg-white"}`}>
-                  <div className="relative mb-6">
-                    <h2 className={`text-2xl font-bold ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
-                      {editingCourse ? t("edit_course") : t("great_lets_do_it")}
-                    </h2>
-                    <h3 className={isDark ? "text-[#D1D1D1]" : "text-gray-600"}>
-                      {editingCourse ? t("modify_course_details") : t("tell_us_about_your_course")}
-                    </h3>
+                <div className={`max-w-4xl mx-auto p-6 rounded-xl shadow-lg ${
+                  isDark ? "bg-[#2E2E2E]" : "bg-white"
+                }`}>
+                  <div className="relative mb-6 flex items-center justify-between">
+                    <div>
+                      <h2 className={`text-2xl font-bold ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
+                        {editingCourse ? t("edit_course") : t("great_lets_do_it")}
+                      </h2>
+                      <h3 className={`text-gray-500 ${isDark ? "text-[#A0A0A0]" : ""}`}>
+                        {editingCourse ? t("modify_course_details") : t("tell_us_about_your_course")}
+                      </h3>
+                    </div>
                     <button
-                      className={`absolute top-0 right-0 ${isDark ? "text-[#A0A0A0] hover:text-[#F5F5F5]" : "text-gray-500 hover:text-gray-700"} disabled:opacity-50`}
+                      className={`text-gray-500 hover:text-gray-700 dark:text-[#A0A0A0] dark:hover:text-[#F5F5F5] disabled:opacity-50`}
                       onClick={handleCloseForm}
                       disabled={formSubmitting}
                     >
-                      ×
+                      <X className="w-6 h-6" />
                     </button>
                   </div>
+
                   <form onSubmit={editingCourse ? handleUpdateCourse : handleSubmitCourse} className="space-y-6">
-                    {/* Campo para la imagen del curso */}
-                    <div>
-                      <label
-                        className={`block text-sm font-medium mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}
-                      >
-                        {t("course_image")}
-                      </label>
-                      <div className="space-y-3">
-                        <button
-                          type="button"
-                          onClick={() => imageInputRef.current?.click()}
-                          className={`flex items-center px-4 py-2 rounded-md ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5] hover:bg-[#4E4E4E]" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
-                        >
-                          <Paperclip size={16} className="mr-2" />
-                          {newCourse.courseImage ? t("change_image") : t("select_image")}
-                        </button>
-                        <input
-                          type="file"
-                          ref={imageInputRef}
-                          onChange={handleImageChange}
-                          className="hidden"
-                          accept="image/*"
-                        />
-                        {newCourse.courseImage && (
-                          <div className="mt-2">
-                            <div className="flex justify-between items-center mb-2">
-                              <p className={`text-sm ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>{t("preview")}</p>
-                              <button
-                                type="button"
-                                onClick={handleRemoveImage}
-                                className={`text-sm ${isDark ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-500"}`}
-                              >
-                                {t("delete")}
-                              </button>
-                            </div>
-                            <div className="relative h-40 rounded-md overflow-hidden border">
-                              <img
-                                src={URL.createObjectURL(newCourse.courseImage) || "/img/image.png"}
-                                alt="Vista previa del curso"
-                                className="absolute inset-0 w-full h-full object-cover"
-                              />
-                            </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Columna izquierda: imagen, título y objetivo */}
+                      <div className="space-y-5">
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>
+                            {t("course_image")}
+                          </label>
+                          <div className="space-y-3">
+                            <button
+                              type="button"
+                              onClick={() => imageInputRef.current?.click()}
+                              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border ${
+                                isDark 
+                                  ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" 
+                                  : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                              }`}
+                            >
+                              <Paperclip size={16} />
+                              {newCourse.courseImage ? t("change_image") : t("select_image")}
+                            </button>
+                            <input
+                              type="file"
+                              ref={imageInputRef}
+                              onChange={handleImageChange}
+                              className="hidden"
+                              accept="image/*"
+                            />
+                            {newCourse.courseImage && (
+                              <div className="mt-3">
+                                <div className="flex justify-between items-center mb-2">
+                                  <p className={`text-sm ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>{t("preview")}</p>
+                                  <button
+                                    type="button"
+                                    onClick={handleRemoveImage}
+                                    className={`text-sm ${isDark ? "text-red-400 hover:text-red-300" : "text-red-600 hover:text-red-500"}`}
+                                  >
+                                    {t("delete")}
+                                  </button>
+                                </div>
+                                <div className="relative h-36 rounded-md overflow-hidden border">
+                                  <img
+                                    src={URL.createObjectURL(newCourse.courseImage) || "/img/image.png"}
+                                    alt="Vista previa"
+                                    className="absolute inset-0 w-full h-full object-cover"
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
+
+                        <div>
+                          <label htmlFor="title" className={`block text-sm font-medium mb-2 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>
+                            {t("course_title")}
+                          </label>
+                          <input
+                            type="text"
+                            id="title"
+                            name="title"
+                            value={newCourse.title}
+                            onChange={handleFormChange}
+                            className={`w-full px-3 py-2.5 border rounded-lg ${
+                              isDark ? "bg-[#3E3E3E] border-[#4E4E4E] text-[#F5F5F5]" : "bg-white border-gray-300 text-gray-900"
+                            }`}
+                            required
+                            placeholder="Ej. Introducción a React"
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="objective" className={`block text-sm font-medium mb-2 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>
+                            {t("main_objective")}
+                          </label>
+                          <input
+                            type="text"
+                            id="objective"
+                            name="objective"
+                            value={newCourse.objective}
+                            onChange={handleFormChange}
+                            className={`w-full px-3 py-2.5 border rounded-lg ${
+                              isDark ? "bg-[#3E3E3E] border-[#4E4E4E] text-[#F5F5F5]" : "bg-white border-gray-300 text-gray-900"
+                            }`}
+                            required
+                            placeholder="Ej. Aprender los fundamentos de..."
+                          />
+                        </div>
+                      </div>
+
+                      {/* Columna derecha: descripción y habilidades */}
+                      <div className="space-y-5">
+                        <div>
+                          <label htmlFor="description" className={`block text-sm font-medium mb-2 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>
+                            {t("description")}
+                          </label>
+                          <textarea
+                            id="description"
+                            name="description"
+                            value={newCourse.description}
+                            onChange={handleFormChange}
+                            className={`w-full px-3 py-2.5 border rounded-lg ${
+                              isDark ? "bg-[#3E3E3E] border-[#4E4E4E] text-[#F5F5F5]" : "bg-white border-gray-300 text-gray-900"
+                            }`}
+                            required
+                            rows={6}
+                            placeholder="Describe el curso para atraer a los estudiantes..."
+                          />
+                        </div>
+
+                        <div>
+                          <label htmlFor="skills" className={`block text-sm font-medium mb-2 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>
+                            {t("skills_select_or_type")}
+                          </label>
+                          <CreatableSelect
+                            isMulti
+                            options={habilidadesDisponibles}
+                            value={newCourse.skills}
+                            onChange={(selected: MultiValue<HabilidadOption>) => {
+                              setNewCourse((prev) => ({
+                                ...prev,
+                                skills: selected as HabilidadOption[],
+                              }));
+                            }}
+                            placeholder={t("select_skills")}
+                            className="react-select-container"
+                            classNamePrefix="react-select"
+                          />
+                        </div>
                       </div>
                     </div>
+
+                    {/* Archivos adjuntos (fuera del grid) */}
                     <div>
-                      <label
-                        htmlFor="title"
-                        className={`block text-sm font-medium mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}
-                      >
-                        {t("course_title")}
-                      </label>
-                      <input
-                        type="text"
-                        id="title"
-                        name="title"
-                        value={newCourse.title}
-                        onChange={handleFormChange}
-                        className={`w-full px-3 py-2 border rounded-md ${isDark ? "bg-[#3E3E3E] border-[#4E4E4E] text-[#F5F5F5]" : "bg-white border-gray-300 text-gray-900"}`}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="description"
-                        className={`block text-sm font-medium mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}
-                      >
-                        {t("description")}
-                      </label>
-                      <textarea
-                        id="description"
-                        name="description"
-                        value={newCourse.description}
-                        onChange={handleFormChange}
-                        className={`w-full px-3 py-2 border rounded-md ${isDark ? "bg-[#3E3E3E] border-[#4E4E4E] text-[#F5F5F5]" : "bg-white border-gray-300 text-gray-900"}`}
-                        required
-                        rows={4}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="objective"
-                        className={`block text-sm font-medium mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}
-                      >
-                        {t("main_objective")}
-                      </label>
-                      <input
-                        type="text"
-                        id="objective"
-                        name="objective"
-                        value={newCourse.objective}
-                        onChange={handleFormChange}
-                        className={`w-full px-3 py-2 border rounded-md ${isDark ? "bg-[#3E3E3E] border-[#4E4E4E] text-[#F5F5F5]" : "bg-white border-gray-300 text-gray-900"}`}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="skills"
-                        className={`block text-sm font-medium mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}
-                      >
-                        {t("skills_select_or_type")}
-                      </label>
-                      <CreatableSelect
-                        isMulti
-                        options={habilidadesDisponibles}
-                        value={newCourse.skills}
-                        onChange={(selected: MultiValue<HabilidadOption>) => {
-                          setNewCourse((prev) => ({
-                            ...prev,
-                            skills: selected as HabilidadOption[],
-                          }));
-                        }}
-                        placeholder={t("select_skills")}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        className={`block text-sm font-medium mb-1 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}
-                      >
+                      <label className={`block text-sm font-medium mb-2 ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>
                         {t("attachments")}
                       </label>
                       <div className="space-y-3">
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className={`flex items-center px-4 py-2 rounded-md ${isDark ? "bg-[#3E3E3E] text-[#F5F5F5] hover:bg-[#4E4E4E]" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border ${
+                            isDark 
+                              ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" 
+                              : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                          }`}
                         >
-                          <Paperclip size={16} className="mr-2" />
+                          <Paperclip size={16} />
                           {t("attach_files")}
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" multiple />
@@ -943,7 +1051,9 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                             {newCourse.attachments.map((file, index) => (
                               <div
                                 key={index}
-                                className={`flex items-center justify-between p-2 rounded ${isDark ? "bg-[#3E3E3E]" : "bg-gray-50"}`}
+                                className={`flex items-center justify-between p-2.5 rounded-lg ${
+                                  isDark ? "bg-[#3E3E3E]" : "bg-gray-50"
+                                }`}
                               >
                                 <span className={`text-sm ${isDark ? "text-[#D1D1D1]" : "text-gray-700"}`}>
                                   {file.name} ({Math.round(file.size / 1024)} KB)
@@ -951,9 +1061,7 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveFile(index)}
-                                  className={
-                                    isDark ? "text-[#A0A0A0] hover:text-[#F5F5F5]" : "text-gray-500 hover:text-red-500"
-                                  }
+                                  className={isDark ? "text-[#A0A0A0] hover:text-[#F5F5F5]" : "text-gray-500 hover:text-red-500"}
                                 >
                                   <X size={14} />
                                 </button>
@@ -963,7 +1071,9 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                         )}
                       </div>
                     </div>
-                    <div className="flex justify-end space-x-3 pt-4">
+
+                    {/* Botones de acción */}
+                    <div className="flex justify-end gap-3 pt-4">
                       {editingCourse && (
                         <button
                           type="button"
@@ -973,7 +1083,9 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                             }
                           }}
                           disabled={formSubmitting || isDeleting}
-                          className={`px-4 py-2 rounded-md text-white ${isDark ? "bg-red-700 hover:bg-red-600" : "bg-red-600 hover:bg-red-700"} disabled:opacity-50`}
+                          className={`px-4 py-2.5 rounded-md font-medium text-white ${
+                            isDark ? "bg-red-700 hover:bg-red-600" : "bg-red-600 hover:bg-red-700"
+                          } disabled:opacity-50`}
                         >
                           {isDeleting ? t("deleting") : t("delete_course")}
                         </button>
@@ -982,14 +1094,20 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                         type="button"
                         onClick={handleCloseForm}
                         disabled={formSubmitting || isDeleting}
-                        className={`px-4 py-2 border rounded-md ${isDark ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" : "border-gray-300 text-gray-700 hover:bg-gray-50"} disabled:opacity-50`}
+                        className={`px-4 py-2.5 rounded-md font-medium ${
+                          isDark 
+                            ? "border-[#4E4E4E] text-[#F5F5F5] hover:bg-[#3E3E3E]" 
+                            : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                        } disabled:opacity-50`}
                       >
                         {t("cancel")}
                       </button>
                       <button
                         type="submit"
                         disabled={formSubmitting || isDeleting}
-                        className={`px-4 py-2 rounded-md text-white ${isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"} disabled:opacity-50`}
+                        className={`px-5 py-2.5 rounded-md font-medium text-white ${
+                          isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"
+                        } disabled:opacity-50`}
                       >
                         {formSubmitting
                           ? editingCourse
@@ -1010,162 +1128,140 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                     {t("community_courses")}
                   </h1>
                   <button
-                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"} focus:outline-none focus:ring-2 focus:ring-offset-2 ${isDark ? "focus:ring-blue-500" : "focus:ring-blue-500"}`}
+                    className={`inline-flex items-center gap-1.5 px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                      isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"
+                    }`}
                     onClick={handleCreateCourse}
                   >
-                    <Plus size={16} className="mr-2" />
+                    <Plus size={16} />
                     {t("create_course")}
                   </button>
                 </div>
-                {/* Courses Grid */}
+
+                {/* ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼ */}
+                {/* ✅ NUEVO: Grid de tarjetas con estilos mejorados (iconos, gradientes suaves, sombras) */}
+                {/* ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {cursos && cursos.length > 0 ? (
                     cursos.map((curso) => {
-                      console.log("[v0] Processing curso:", {
-                        id: curso.id,
-                        titulo: curso.titulo,
-                        User_Id: curso.user_id,
-                        User_Id_type: typeof curso.user_id,
-                      })
                       const isCreator =
                         currentUser &&
                         curso.user_id !== undefined &&
                         curso.user_id !== null &&
                         Number(currentUser.id) === Number(curso.user_id)
-                      console.log("[v0] Grid item creator check:", {
-                        cursoId: curso.id,
-                        currentUserId: currentUser?.id,
-                        cursoUserId: curso.user_id,
-                        isCreator,
-                      })
+
                       return (
-                        <Card key={curso.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                          <div className="relative pb-48 overflow-hidden rounded-t-lg">
+                        <Card 
+                          key={curso.id} 
+                          className={`overflow-hidden rounded-xl shadow-md hover:shadow-lg transition-shadow ${
+                            isDark ? "bg-[#2E2E2E] border-[#3E3E3E]" : "bg-white border-gray-200"
+                          }`}
+                          onClick={() => handleViewMore(curso)}
+                        >
+                          <div className="relative pb-40 overflow-hidden rounded-t-lg">
                             <img
                               className="absolute inset-0 h-full w-full object-cover"
                               src={`http://localhost:8000${curso.img_Cursos}` || "/img/image.png"}
                               alt={curso.titulo}
                               onError={(e) => {
-                                const target = e.target as HTMLImageElement
+                                const target = e.target as HTMLImageElement;
                                 target.src = "/img/image.png";
                               }}
                             />
-                            <div className="absolute bottom-4 left-4">
-                              <div className="relative">
+                            <div className="absolute top-3 left-3">
+                              <span className={`flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
+                                isDark ? "bg-black/40 text-white" : "bg-white/80 text-gray-800"
+                              }`}>
+                                👥 {curso.inscritosCount || 0}
+                              </span>
+                            </div>
+                            <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-white border-2 overflow-hidden">
                                 <img
-                                  className="h-10 w-10 rounded-full border-2 border-white"
                                   src="/img/user.png"
                                   alt={curso.usuario?.nombre || "Usuario"}
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement
-                                    // target.src = "/default-avatar.png";
-                                  }}
+                                  className="w-full h-full object-cover"
                                 />
                               </div>
+                              <span className={`text-sm font-medium ${
+                                isDark ? "text-white drop-shadow" : "text-gray-800"
+                              }`}>
+                                {curso.usuario?.nombre || "Desconocido"}
+                              </span>
                             </div>
-                          </div>
-                          <CardContent className="p-4">
-                            <div className="flex items-center mb-2">
-                              <span className={`text-sm ${isDark ? "text-[#D1D1D1]" : "text-gray-600"}`}>
-                                <Link
-                                  href={`/profile/${curso.user_id}`}
-                                  className={`text-sm text-gray-400 hover:underline hover:text-gray-300 transition-colors ${isDark ? "" : ""}`}
+                            {isCreator && (
+                              <div className="absolute top-3 right-3 flex gap-1">
+                                <Button
                                   onClick={(e) => {
-                                    if (curso.user_id === currentUser?.id) {
-                                      e.preventDefault();
+                                    e.stopPropagation()
+                                    handleEdit(curso)
+                                  }}
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`w-8 h-8 p-0 rounded ${
+                                    isDark ? "bg-white/20 hover:bg-white/30 text-white" : "bg-black/20 hover:bg-black/30 text-white"
+                                  }`}
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </Button>
+                                <Button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (window.confirm(t("delete_confirm_alert"))) {
+                                      handleDeleteCourse(curso.id)
                                     }
                                   }}
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`w-8 h-8 p-0 rounded ${
+                                    isDark ? "bg-red-500/30 hover:bg-red-500/40 text-white" : "bg-red-500/30 hover:bg-red-500/40 text-white"
+                                  }`}
                                 >
-                                  {curso.usuario?.nombre || "Desconocido"}
-                                </Link>
-                              </span>
-                              {isCreator && (
-                                <div className="ml-auto flex space-x-1 " >
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleEdit(curso)
-                                    }}
-                                    variant="ghost"
-                                    size="sm"
-                                    className={`w-full inline-flex justify-center items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md ${
-                                isDark
-                                  ? "border-[#4E4E4E] text-[#F5F5F5] bg-[#3E3E3E] hover:bg-[#4E4E4E]"
-                                  : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
-                              } focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                                isDark ? "focus:ring-blue-500" : "focus:ring-blue-500"
-                              }`}
-                                  >
-                                    <Edit className="w-4 h-4 "  />
-                                  </Button>
-                                  <Button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      if (window.confirm(t("delete_confirm_alert"))) {
-                                        handleDeleteCourse(curso.id)
-                                      }
-                                    }}
-                                    variant="ghost"
-                                    size="sm"
-                                  className={`w-full inline-flex justify-center items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md ${
-                                isDark
-                                  ? "border-[#4E4E4E] text-[#F5F5F5] bg-[#3E3E3E] hover:bg-[#4E4E4E]"
-                                  : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
-                              } focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                                isDark ? "focus:ring-blue-500" : "focus:ring-blue-500"
-                              }`}
-                                  >
-                                    <Trash2 className="w-4 h-4 " />
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
-                            <div >
-                                <span className={`text-xs ${isDark ? "text-[#A0A0A0]" : "text-gray-500"}`}>
-                                  👥 {curso.inscritosCount || 0} inscritos
-                                </span>
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </Button>
                               </div>
-                            <h3 className={`text-lg font-medium mb-1 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
+                            )}
+                          </div>
+
+                          <CardContent className="p-4">
+                            <h3 className={`text-lg font-semibold mb-1 line-clamp-2 ${
+                              isDark ? "text-[#F5F5F5]" : "text-gray-900"
+                            }`}>
                               {curso.titulo}
                             </h3>
+
                             {curso.objetivo && (
-                              <p
-                                className={`text-sm mb-1 ${
-                                  isDark
-                                    ? "text-[#A0A0A0] w-full break-words line-clamp-2"
-                                    : "text-gray-500 w-full break-words line-clamp-2"
-                                }`}
-                              >
+                              <p className={`text-sm mb-1 flex items-start gap-1.5 text-gray-600 dark:text-[#A0A0A0] line-clamp-2`}>
+                                <Target className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
                                 🎯 {curso.objetivo}
                               </p>
                             )}
+
                             {curso.descripcion && (
-                              <p
-                                className={`text-sm mb-1 ${
-                                  isDark
-                                    ? "text-[#A0A0A0] w-full break-words line-clamp-2"
-                                    : "text-gray-500 w-full break-words line-clamp-2"
-                                }`}
-                              >
+                              <p className={`text-sm mb-3 line-clamp-3 ${
+                                isDark ? "text-[#A0A0A0]" : "text-gray-500"
+                              }`}>
                                 {curso.descripcion}
                               </p>
                             )}
-                            <div className="flex flex-wrap gap-1 mb-4">
+
+                            <div className="flex flex-wrap gap-1.5 mb-4">
                               {curso.habilidades && curso.habilidades.length > 0 ? (
                                 curso.habilidades.slice(0, 3).map((h, index) => (
                                   <span
                                     key={index}
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium ${
                                       isDark ? "bg-[#3E3E3E] text-[#F5F5F5]" : "bg-blue-100 text-blue-800"
                                     }`}
                                   >
+                                    <Sparkles className="w-2.5 h-2.5" />
                                     {h.habilidad_nombre}
                                   </span>
                                 ))
                               ) : (
                                 <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    isDark ? "bg-[#3E3E3E] text-[#F5F5F5]" : "bg-gray-200 text-gray-600"
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    isDark ? "bg-[#3E3E3E] text-[#A0A0A0]" : "bg-gray-200 text-gray-600"
                                   }`}
                                 >
                                   {t("no_skills")}
@@ -1173,24 +1269,24 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                               )}
                               {curso.habilidades && curso.habilidades.length > 3 && (
                                 <span
-                                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    isDark ? "bg-[#3E3E3E] text-[#F5F5F5]" : "bg-gray-200 text-gray-600"
+                                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    isDark ? "bg-[#3E3E3E] text-[#A0A0A0]" : "bg-gray-200 text-gray-600"
                                   }`}
                                 >
                                   +{curso.habilidades.length - 3}
                                 </span>
                               )}
                             </div>
+
                             <button
                               onClick={() => handleViewMore(curso)}
-                              className={`w-full inline-flex justify-center items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md ${
-                                isDark
-                                  ? "border-[#4E4E4E] text-[#F5F5F5] bg-[#3E3E3E] hover:bg-[#4E4E4E]"
-                                  : "border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
-                              } focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                                isDark ? "focus:ring-blue-500" : "focus:ring-blue-500"
-                              }`}
+                              className={`w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-md font-medium ${
+                                isDark 
+                                  ? "bg-[#3E3E3E] text-[#F5F5F5] border-[#4E4E4E] hover:bg-[#4A4A4A]" 
+                                  : "bg-white text-gray-800 border-gray-300 hover:bg-gray-50"
+                              } border`}
                             >
+                              <Eye className="w-3.5 h-3.5" />
                               {t("view_more")}
                             </button>
                           </CardContent>
@@ -1199,7 +1295,7 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                     })
                   ) : (
                     <div
-                      className={`text-center py-16 px-6 shadow rounded-lg col-span-full ${
+                      className={`text-center py-12 px-6 shadow rounded-lg col-span-full ${
                         isDark ? "bg-[#2E2E2E]" : "bg-white"
                       }`}
                     >
@@ -1207,25 +1303,26 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                         {t("no_courses_available")}
                       </p>
                       <button
-                        className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${
+                        className={`inline-flex items-center gap-1.5 px-5 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
                           isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"
-                        } focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                          isDark ? "focus:ring-blue-500" : "focus:ring-blue-500"
                         }`}
                         onClick={handleCreateCourse}
                       >
-                        <Plus size={16} className="mr-2" />
+                        <Plus size={16} />
                         {t("be_first_to_create_course")}
                       </button>
                     </div>
                   )}
                 </div>
+
                 {/* Call to Action Section */}
                 {cursos.length > 0 && (
-                  <div className={`mt-12 shadow rounded-lg overflow-hidden ${isDark ? "bg-[#2E2E2E]" : "bg-white"}`}>
-                    <div className="px-6 py-12 sm:px-12 flex flex-col sm:flex-row justify-between items-center">
-                      <div className="mb-6 sm:mb-0">
-                        <h2 className={`text-2xl font-bold mb-2 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
+                  <div className={`mt-10 shadow rounded-xl overflow-hidden ${
+                    isDark ? "bg-[#2E2E2E]" : "bg-white"
+                  }`}>
+                    <div className="px-6 py-8 sm:px-8 flex flex-col sm:flex-row justify-between items-center">
+                      <div className="mb-4 sm:mb-0">
+                        <h2 className={`text-xl font-bold mb-1 ${isDark ? "text-[#F5F5F5]" : "text-gray-900"}`}>
                           {t("interesting_right")}
                         </h2>
                         <p className={isDark ? "text-[#D1D1D1]" : "text-gray-600"}>
@@ -1233,14 +1330,12 @@ const CourseDetailView = ({ course, onBack, onEdit, onDelete }: CourseDetailView
                         </p>
                       </div>
                       <button
-                        className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${
+                        className={`inline-flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium rounded-md shadow-sm text-white ${
                           isDark ? "bg-blue-700 hover:bg-blue-600" : "bg-blue-600 hover:bg-blue-700"
-                        } focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                          isDark ? "focus:ring-blue-500" : "focus:ring-blue-500"
                         }`}
                         onClick={handleCreateCourse}
                       >
-                        <Plus size={16} className="mr-2" />
+                        <Plus size={16} />
                         {t("create_course")}
                       </button>
                     </div>

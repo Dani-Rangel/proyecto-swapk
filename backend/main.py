@@ -64,8 +64,16 @@ app.add_middleware(
 )
 
 # Ruta absoluta a la carpeta 'uploads' dentro de backend
-BASE_DIR = Path(__file__).resolve().parent
-UPLOADS_DIR = BASE_DIR / "uploads"
+BASE_DIR = Path(__file__).resolve().parent  # → swapk/backend/
+UPLOADS_DIR = BASE_DIR.parent / "uploads"   # → swapk/uploads/
+
+print(f"📁 Uploads directory: {UPLOADS_DIR}")
+if UPLOADS_DIR.exists():
+    files = list(UPLOADS_DIR.glob("*.pdf"))[:3]
+    print(f"   ✅ Encontrados {len(files)} PDFs (ej: {[f.name for f in files]})")
+else:
+    print("   ❌ ¡Carpeta 'uploads' NO EXISTE! Se creará al subir primer archivo.")
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 # Base de datos
 Base.metadata.create_all(bind=engine)

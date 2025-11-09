@@ -49,7 +49,7 @@ import {
 } from "@/services/intercambio"
 import { actualizarIntercambio } from "@/services/intercambio"
 import { useNotificaciones } from "@/context/notificacionesContext"
-import { getCurrentUser } from "@/lib/auth"
+import { getCurrentUser, UserData } from "@/lib/auth"
 import ProtectedRoute from "@/components/protected_routes/protected_routes"
 import { MainSidebar } from "@/components/MainSidebar"
 import ReporteDialog from "@/components/ui/ReporteDialog";
@@ -100,7 +100,7 @@ function SwapkPlatformComponent() {
   const [truequeEditando, setTruequeEditando] = useState<IntercambioResponse | null>(null)
   const [habilidades, setHabilidades] = useState<Habilidad[]>([])
   const [trueques, setTrueques] = useState<IntercambioResponse[]>([])
-  const [currentUser, setCurrentUser] = useState(getCurrentUser())
+  const [currentUser, setCurrentUser] = useState<UserData | null>(getCurrentUser())
   const [user, setUser] = useState<any>(null)
   const [perfil, setPerfil] = useState<any>(null)
   const [showReporteModal, setShowReporteModal] = useState(false);
@@ -118,6 +118,7 @@ function SwapkPlatformComponent() {
   const [calificacion, setCalificacion] = useState(0)
   const [comentario, setComentario] = useState("")
 
+
   // Verifica si el usuario actual es participante (creador o proponente aceptado)
   const esParticipante = (trueque: IntercambioResponse): boolean => {
     if (!currentUser) return false;
@@ -133,9 +134,9 @@ function SwapkPlatformComponent() {
 
   // Validar usuario logueado
   useEffect(() => {
-    const user = getCurrentUser()
-    if (user) setCurrentUser(user)
-    else router.push("/auth/login")
+  const user = getCurrentUser()
+  if (user) setCurrentUser(user)    // ← esto sí actualiza currentUser
+  else router.push("/auth/login")
   }, [router])
 
   // Cargar intercambios y habilidades
@@ -357,7 +358,7 @@ function SwapkPlatformComponent() {
         toggleTheme={toggleTheme}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
-        user={user}
+        user={currentUser}
       />
 
       <div className="flex-1 transition-all duration-300 ml-2">
