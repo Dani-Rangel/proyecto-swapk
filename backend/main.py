@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from .db.database import Base, engine, get_db
+from backend.db.database import Base, engine, get_db
 from sqlalchemy.orm import Session
 
 # Controladores
