@@ -1,10 +1,13 @@
-[build]
-builder = "NIXPACKS"
+# railway.toml
 
-[deploy]
-# Para frontend
+# Frontend (Next.js)
 [[services]]
-name = "victorious-empathy"
-build = { root = "frontend", command = "npm run build" }
+name = "frontend"
+build = { root = "frontend", command = "npm install && npm run build" }
 start = "npm start"
-env = { NODE_ENV = "production" }
+
+# Backend (FastAPI/Python)
+[[services]]
+name = "backend"
+build = { root = "backend", command = "pip install -r requirements.txt" }
+start = "uvicorn main:app --host 0.0.0.0 --port $PORT"
