@@ -1,39 +1,46 @@
 from logging.config import fileConfig
-import sys
 import os
-from sqlalchemy import create_engine
-from sqlalchemy import pool
+import sys
+from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-# Agrega el directorio raíz del proyecto al sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+# Agregar la raíz del proyecto al path
+sys.path.append(
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+)
 
-# Importa configuración y modelos
-from backend.db.database import MARIADB_URL
-from backend.db.base import Base
-from backend.models import * 
-
-print("Modelos cargados:", [mapper.class_.__name__ for mapper in Base.registry.mappers])
-print("Tablas detectadas:", list(Base.metadata.tables.keys()))
+# Importar Base y modelos
+from backend.db.database import Base
+from backend.models import *
 
 # Configuración de Alembic
 config = context.config
 
-# Habilita el logging
+# Logging
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Target metadata de todos los modelos
+# Obtener DATABASE_URL desde variables de entorno
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise RuntimeError("❌ DATABASE_URL no está definida en las variables de entorno")
+
+# Inyectar la URL en Alembic
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
+
+# Metadata de los modelos
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    """Ejecución en modo 'offline'."""
+    """Migraciones en modo offline."""
     context.configure(
-        url=MARIADB_URL,
+        url=DATABASE_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True
     )
 
     with context.begin_transaction():
@@ -41,13 +48,18 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Ejecución en modo 'online'."""
-    connectable = create_engine(MARIADB_URL, poolclass=pool.NullPool)
+    """Migraciones en modo online."""
+    connectable = engine_from_config(
+        config.get_section(config.config_ini_section),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
 
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
-            target_metadata=target_metadata
+            target_metadata=target_metadata,
+            compare_type=True
         )
 
         with context.begin_transaction():
