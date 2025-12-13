@@ -14,9 +14,9 @@ interface CallState {
   currentContact: string
 }
 
-export function useVideoCall() {
+export function useVideoCall(prueba: CallState) {
   // ✅ Usamos el tipo explícito
-  const [callState, setCallState] = useState<CallState>({
+  const [callState, setCallState] = useState<prueba>({
     isInCall: false,
     isCalling: false,
     incomingCall: null,
