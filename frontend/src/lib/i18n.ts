@@ -762,6 +762,7 @@ profile_edit: "profile edit",
   noProfiles: "No profiles available.",
   review: "Reviews",
   back_to_dashboard: "Back to dashboard",
+  loading_contacts: "Loading contacts...",
   },
 } as const;
 
