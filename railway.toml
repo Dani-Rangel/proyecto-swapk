@@ -1,11 +1,10 @@
-# railway.toml
 [build]
 builder = "NIXPACKS"
 
 [[services]]
 name = "swapk-frontend"
 build = { root = "frontend", command = "npm install && npm run build" }
-start = "npm run preview"
+start = "npm start"
 env = { NODE_ENV = "production", PORT = "3000" }
 
 [[services]]
