@@ -1,16 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Phone, MessageCircle, Video, MoreVertical, Search, MessageSquare, ArrowLeft } from "lucide-react";
+import Image from "next/image";
+import { Phone, MessageCircle, Video, MoreVertical, Search, ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/lib/useTranslations";
 import { useRouter } from "next/navigation";
 import { useVideoCall } from "@/components/state/video_call_provider";
+
+// Interfaz para los usuarios dentro de un chat
+interface Usuario {
+  id: string;
+  nombre: string;
+}
 
 // Interfaz para los chats que vienen del backend
 interface BackendChat {
   chat_id: number;
   tipo: string;
-  usuarios: { id: string; nombre: string }[];
+  usuarios: Usuario[];
   ultimo_mensaje: string | null;
   fecha_ultimo_mensaje: string | null;
 }
@@ -108,7 +115,7 @@ export function ContactsSidebar({
 
       data.chats.forEach((chat: BackendChat) => {
         // Buscar al otro usuario (que no soy yo)
-        const otherUser = chat.usuarios.find((u: any) => String(u.id) !== String(myUserId));
+        const otherUser = chat.usuarios.find((u: Usuario) => String(u.id) !== String(myUserId));
         if (!otherUser) return;
 
         const key = otherUser.id
@@ -390,11 +397,13 @@ export function ContactsSidebar({
 
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-medium text-white text-lg">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center font-medium text-white text-lg overflow-hidden">
                       {contact.avatar ? (
-                        <img
+                        <Image
                           src={contact.avatar}
                           alt={contact.name}
+                          width={48}
+                          height={48}
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
