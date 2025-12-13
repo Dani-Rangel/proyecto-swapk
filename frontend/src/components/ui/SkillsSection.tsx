@@ -8,27 +8,42 @@ export default function SkillsSection() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
 
-  const handleAddSkill = async (skill: { id_habilidad: number; type: string; level: string }) => {
+  const handleAddSkill = async (
+  data: { id_habilidad: number; type: string; level: string }
+): Promise<void> => {
   try {
-    // ✅ MAPEO CORRECTO AL TIPO SkillAssociation
+    // ✅ Tipado seguro con casting explícito (pero seguro)
+    const tipo = data.type === "Ofrece" || data.type === "Busca" 
+      ? (data.type as "Ofrece" | "Busca")
+      : "Ofrece";
+
+    const nivel = data.level === "Principiante" || data.level === "Intermedio" || data.level === "Experto"
+      ? (data.level as "Principiante" | "Intermedio" | "Experto")
+      : "Principiante";
+
     const association: SkillAssociation = {
-      Perfil_id: 1, // ⚠️ Reemplaza con el perfil real del usuario
-      habilidad_id: skill.id_habilidad,
-      tipo: skill.type === "Ofrece" || skill.type === "Busca" 
-        ? (skill.type as "Ofrece" | "Busca") 
-        : "Ofrece", // fallback seguro
-      nivel: skill.level === "Principiante" || skill.level === "Intermedio" || skill.level === "Experto"
-        ? (skill.level as "Principiante" | "Intermedio" | "Experto")
-        : "Principiante",
+      Perfil_id: 1, // ⚠️ Reemplaza con perfil real
+      habilidad_id: data.id_habilidad,
+      tipo,
+      nivel,
     };
 
     const saved = await skillsAPI.associateSkill(association);
-    setSkills((prev) => [...prev, { ...saved, type: skill.type, level: skill.level }]);
+    setSkills((prev) => [
+      ...prev,
+      { 
+        ...saved, 
+        type: tipo, 
+        level: nivel 
+      }
+    ]);
     setShowAddForm(false);
   } catch (error) {
     console.error("Error al asociar habilidad:", error);
-    // Opcional: usar toast para notificar error
+
   }
+  return Promise.resolve();
+};
 
   return (
     <div className="p-6">
