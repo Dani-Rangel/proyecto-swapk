@@ -50,13 +50,6 @@ export default function SkillsSection() {
         />
       )}
 
-      {/* Modal de Crear Habilidad */}
-      {showCreateForm && (
-        <CreateSkillForm
-          onClose={() => setShowCreateForm(false)}
-          onSave={handleAddSkill}
-        />
-      )}
     </div>
   )
 }
