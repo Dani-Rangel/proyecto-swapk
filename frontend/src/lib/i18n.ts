@@ -612,7 +612,6 @@ export const translations = {
     user_manual: "User Manual",
     user_manual_description:
       "Explore and learn how to use our app like a pro!",
-    download: "Download",
     contact_support: "Contact Support",
     subject: "Subject",
     subject_placeholder: "Briefly describe your inquiry",
