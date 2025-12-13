@@ -3,16 +3,22 @@ builder = "NIXPACKS"
 
 [[services]]
 name = "swapk-frontend"
-build = { root = "frontend", command = "npm install && npm run build" }
+build = { root = "frontend", command = "npm install && npm run build --no-lint" }
 start = "npm start"
-env = { NODE_ENV = "production", PORT = "3000" }
+working_directory = "frontend"
+env = { 
+  NODE_ENV = "production",
+  PORT = "3000"
+}
+resources = { cpu = "500m", memory = "1024Mi" }  # ✅ 1GB RAM evita "Killed"
 
 [[services]]
 name = "swapk-backend"
 build = { root = "backend", command = "pip install -r requirements.txt" }
-start = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+start = "python -m main"  # ✅ usa python -m para evitar ModuleNotFoundError
 working_directory = "backend"
 env = { 
   PYTHONUNBUFFERED = "1",
-  RAILWAY_ENVIRONMENT = "production"  # ✅ clave para disparar migraciones
+  RAILWAY_ENVIRONMENT = "production"
 }
+resources = { cpu = "500m", memory = "1024Mi" }
