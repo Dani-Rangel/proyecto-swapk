@@ -376,6 +376,7 @@ profile_edit: "editar perfil",
   next: "Siguiente",
   noProfiles: "No hay perfiles disponibles.",
   review: "Reseñas",
+  back_to_dashboard: "Volver al dashboard",
 
   },
 
@@ -760,6 +761,7 @@ profile_edit: "profile edit",
   next: "Next",
   noProfiles: "No profiles available.",
   review: "Reviews",
+  back_to_dashboard: "Back to dashboard",
   },
 } as const;
 
