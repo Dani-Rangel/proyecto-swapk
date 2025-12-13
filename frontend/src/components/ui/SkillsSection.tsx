@@ -9,21 +9,25 @@ export default function SkillsSection() {
   const [showCreateForm, setShowCreateForm] = useState(false)
 
   const handleAddSkill = async (skill: { id_habilidad: number; type: string; level: string }) => {
-    try {
-      // ✅ Usa skillsAPI.associateSkill en lugar de addUserSkill
-      const association: SkillAssociation = {
-        Perfil_id: 1, // ⚠️ ¡Reemplaza con el perfil real!
-        habilidad_id: skill.id_habilidad,
-        tipo: skill.type as any,
-        nivel: skill.level as any,
-      };
+  try {
+    // ✅ MAPEO CORRECTO AL TIPO SkillAssociation
+    const association: SkillAssociation = {
+      Perfil_id: 1, // ⚠️ Reemplaza con el perfil real del usuario
+      habilidad_id: skill.id_habilidad,
+      tipo: skill.type === "Ofrece" || skill.type === "Busca" 
+        ? (skill.type as "Ofrece" | "Busca") 
+        : "Ofrece", // fallback seguro
+      nivel: skill.level === "Principiante" || skill.level === "Intermedio" || skill.level === "Experto"
+        ? (skill.level as "Principiante" | "Intermedio" | "Experto")
+        : "Principiante",
+    };
 
-      const saved = await skillsAPI.associateSkill(association);
-      setSkills((prev) => [...prev, { ...saved, type: skill.type, level: skill.level }]);
-      setShowAddForm(false);
-    } catch (error) {
-      console.error("Error al asociar habilidad:", error);
-    }
+    const saved = await skillsAPI.associateSkill(association);
+    setSkills((prev) => [...prev, { ...saved, type: skill.type, level: skill.level }]);
+    setShowAddForm(false);
+  } catch (error) {
+    console.error("Error al asociar habilidad:", error);
+    // Opcional: usar toast para notificar error
   }
 
   return (
