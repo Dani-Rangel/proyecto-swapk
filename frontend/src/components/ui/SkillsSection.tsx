@@ -1,49 +1,43 @@
 "use client"
 import { useState, useEffect } from "react"
 import { AddSkillForm } from "./AddSkillForm"
-import { skillsAPI, SkillAssociation } from "@/services/api_Skills" // ✅ IMPORTA skillsAPI y el tipo
+import { skillsAPI, Skill, SkillAssociation } from "@/services/api_Skills"
 
 export default function SkillsSection() {
-  const [skills, setSkills] = useState<any[]>([])
+  const [skills, setSkills] = useState<SkillAssociation[]>([])
+  const [habilidades, setHabilidades] = useState<Skill[]>([])
+  const [perfilId, setPerfilId] = useState<number>(1) // ⚠️ Usa perfil real
   const [showAddForm, setShowAddForm] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
 
+  useEffect(() => {
+    skillsAPI.getSkills().then(setHabilidades).catch(console.error)
+    // TODO: Obtener perfilId real desde auth
+  }, [])
+
   const handleAddSkill = async (
-  data: { id_habilidad: number; type: string; level: string }
-): Promise<void> => {
-  try {
-    // ✅ Tipado seguro con casting explícito (pero seguro)
-    const tipo = data.type === "Ofrece" || data.type === "Busca" 
-      ? (data.type as "Ofrece" | "Busca")
-      : "Ofrece";
+    data: { id_habilidad: number; type: string; level: string }
+  ): Promise<void> => {
+    try {
+      const tipo = data.type === "Ofrece" || data.type === "Busca" 
+        ? (data.type as "Ofrece" | "Busca") : "Ofrece";
+      const nivel = data.level === "Principiante" || data.level === "Intermedio" || data.level === "Experto"
+        ? (data.level as "Principiante" | "Intermedio" | "Experto") : "Principiante";
 
-    const nivel = data.level === "Principiante" || data.level === "Intermedio" || data.level === "Experto"
-      ? (data.level as "Principiante" | "Intermedio" | "Experto")
-      : "Principiante";
+      const association: SkillAssociation = {
+        Perfil_id: perfilId,
+        habilidad_id: data.id_habilidad,
+        tipo,
+        nivel,
+      };
 
-    const association: SkillAssociation = {
-      Perfil_id: 1, // ⚠️ Reemplaza con perfil real
-      habilidad_id: data.id_habilidad,
-      tipo,
-      nivel,
-    };
-
-    const saved = await skillsAPI.associateSkill(association);
-    setSkills((prev) => [
-      ...prev,
-      { 
-        ...saved, 
-        type: tipo, 
-        level: nivel 
-      }
-    ]);
-    setShowAddForm(false);
-  } catch (error) {
-    console.error("Error al asociar habilidad:", error);
-
+      const saved = await skillsAPI.associateSkill(association);
+      setSkills(prev => [...prev, { ...saved, type: tipo, level: nivel }]);
+      setShowAddForm(false);
+    } catch (err) {
+      console.error("Error:", err);
+    }
   }
-  return Promise.resolve();
-};
 
   return (
     <div className="p-6">
@@ -51,7 +45,7 @@ export default function SkillsSection() {
       <ul className="mb-4">
         {skills.map((s, idx) => (
           <li key={idx} className="text-gray-300">
-            {s.habilidad_nombre || s.nombre} - {s.type} - {s.level}
+            {s.habilidad_nombre} - {s.tipo} - {s.nivel}
           </li>
         ))}
       </ul>
@@ -64,6 +58,8 @@ export default function SkillsSection() {
 
       {showAddForm && (
         <AddSkillForm
+          perfilId={perfilId}
+          habilidades={habilidades}
           onClose={() => setShowAddForm(false)}
           onSave={handleAddSkill}
           onCreateNew={() => {
@@ -72,9 +68,6 @@ export default function SkillsSection() {
           }}
         />
       )}
-
-      {/* Nota: CreateSkillForm no estaba definido — asegúrate de tenerlo */}
-
     </div>
   );
 }
