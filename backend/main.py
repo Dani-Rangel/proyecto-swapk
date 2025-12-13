@@ -161,25 +161,21 @@ def get_all_public_profiles(
 # Servir archivos estáticos
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
+# backend/main.py — al final del archivo
 if __name__ == "__main__":
-    # Ejecuta las migraciones al iniciar
-    from alembic.config import Config
-    from alembic import command
     import os
-    import sys
-
-    def run_migrations():
+    if os.getenv("RAILWAY_ENVIRONMENT") == "production":
+        from alembic.config import Config
+        from alembic import command
+        import sys
         try:
             base_dir = Path(__file__).resolve().parent
             alembic_cfg = Config(str(base_dir / "alembic.ini"))
             command.upgrade(alembic_cfg, "head")
             print("✅ Migraciones aplicadas.")
         except Exception as e:
-            print(f"❌ Error al ejecutar migraciones: {e}", file=sys.stderr)
+            print(f"❌ Error en migraciones: {e}", file=sys.stderr)
             sys.exit(1)
 
-    if os.getenv("RAILWAY_ENVIRONMENT") == "production":
-        run_migrations()
-
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
