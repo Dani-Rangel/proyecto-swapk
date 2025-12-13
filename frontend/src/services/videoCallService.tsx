@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 
 // ✅ Definimos la interfaz del estado
-interface CallState {
+export interface CallState {
   isInCall: boolean
   isCalling: boolean
   incomingCall: { callerId: string; callerName: string; sdp: RTCSessionDescriptionInit } | null
@@ -14,9 +14,9 @@ interface CallState {
   currentContact: string
 }
 
-export function useVideoCall(prueba: CallState) {
+export function useVideoCall() {
   // ✅ Usamos el tipo explícito
-  const [callState, setCallState] = useState<prueba>({
+  const [callState, setCallState] = useState<CallState>({
     isInCall: false,
     isCalling: false,
     incomingCall: null,
