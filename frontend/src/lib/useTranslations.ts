@@ -33,4 +33,4 @@ export function useTranslation() {
   }
 
   return { t, lang }
-}}
+}
