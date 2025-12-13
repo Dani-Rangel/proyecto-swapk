@@ -6,7 +6,7 @@ import { useTranslation } from "@/lib/useTranslations";
 import { useRouter } from "next/navigation";
 import { useVideoCall } from "@/components/state/video_call_provider";
 
-// ✅ Interfaz para los chats que vienen del backend
+// Interfaz para los chats que vienen del backend
 interface BackendChat {
   chat_id: number;
   tipo: string;
@@ -15,7 +15,7 @@ interface BackendChat {
   fecha_ultimo_mensaje: string | null;
 }
 
-// ✅ Interfaz de Contacto para mostrar en el UI
+// Interfaz de Contacto para mostrar en el UI
 interface Contact {
   id: string;
   name: string;
@@ -103,15 +103,15 @@ export function ContactsSidebar({
         return;
       }
 
-      // ✅ Convertir chats en contactos únicos — USAR ID COMO CLAVE (¡CORREGIDO!)
+      // Convertir chats en contactos únicos — USAR ID COMO CLAVE (¡CORREGIDO!)
       const contactMap = new Map<string, Contact>();
 
       data.chats.forEach((chat: BackendChat) => {
-        // ✅ Buscar al otro usuario (que no soy yo)
+        // Buscar al otro usuario (que no soy yo)
         const otherUser = chat.usuarios.find((u: any) => String(u.id) !== String(myUserId));
         if (!otherUser) return;
 
-        const key = otherUser.id; // ✅ ¡USAR ID, NO NOMBRE!
+        const key = otherUser.id
 
         if (!contactMap.has(key)) {
           contactMap.set(key, {
@@ -126,7 +126,7 @@ export function ContactsSidebar({
             hasNewMessage: !!chat.ultimo_mensaje,
           });
         } else {
-          // ✅ Actualizar si ya existe (por ejemplo, nuevo mensaje)
+          // Actualizar si ya existe (por ejemplo, nuevo mensaje)
           const existing = contactMap.get(key)!;
           existing.lastMessage = chat.ultimo_mensaje || existing.lastMessage;
           existing.hasNewMessage = !!chat.ultimo_mensaje;
@@ -170,7 +170,6 @@ export function ContactsSidebar({
       }
 
       if (!token || !myUserId) {
-        console.log("⏳ Token no disponible, reintentando en 2s...");
         retryTimeout = setTimeout(connectWebSocket, 2000);
         return;
       }
@@ -179,7 +178,6 @@ export function ContactsSidebar({
       websocket = new WebSocket(wsUrl);
 
       websocket.onopen = () => {
-        console.log("✅ WebSocket GLOBAL conectado para actualizaciones de chats");
         if (retryTimeout) {
           clearTimeout(retryTimeout);
           retryTimeout = null;
@@ -190,8 +188,7 @@ export function ContactsSidebar({
         try {
           const data = JSON.parse(event.data);
           if (data.type === "chat_update" || data.type === "new_message") {
-            console.log("🌍 Recibida actualización global, recargando chats...");
-            fetchUserChats(); // ✅ Refresca contactos completos
+            fetchUserChats();
           }
         } catch (err) {
           console.error("❌ Error al parsear mensaje del WebSocket global:", err);
@@ -234,7 +231,7 @@ export function ContactsSidebar({
     contact.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // ✅ Función segura para seleccionar contacto
+
   const handleContactClick = (name: string) => {
     const contact = enhancedContacts.find(c => c.name === name);
     if (!contact) {
@@ -246,6 +243,31 @@ export function ContactsSidebar({
 
   return (
     <div className="w-80 bg-[#0f0f0f] border-r border-gray-700 flex flex-col">
+      {/* Estilos personalizados para la barra de scroll */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #1a1a1a;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #656565;
+          border-radius: 4px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #e0e0e0;
+        }
+
+        /* Eliminar las flechas de arriba y abajo */
+        .custom-scrollbar::-webkit-scrollbar-button {
+          display: none;
+        }
+      `}</style>
+
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between mb-4">
@@ -309,7 +331,7 @@ export function ContactsSidebar({
       </div>
 
       {/* Contacts List */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto custom-scrollbar"> {/* <-- Clase añadida aquí */}
         {loadingChats ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500 text-sm p-4">
             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"></div>
@@ -353,7 +375,7 @@ export function ContactsSidebar({
           <div className="p-2">
             {filteredContacts.map((contact) => (
               <div
-                key={contact.id} // ✅ Usar ID como key
+                key={contact.id} // Usar ID como key
                 onClick={() => handleContactClick(contact.name)}
                 className={`p-3 rounded-xl mb-2 cursor-pointer transition-all duration-200 relative ${
                   currentContact === contact.name
@@ -429,7 +451,7 @@ export function ContactsSidebar({
         )}
       </div>
 
-      {/* ✅ NUEVO FOOTER CON 3 BOTONES */}
+      {/*FOOTER CON 3 BOTONES */}
       <div className="p-4 border-t border-gray-700">
         <div className="flex gap-2 justify-center">
           {/* Botón Llamada */}
