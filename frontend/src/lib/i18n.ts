@@ -763,6 +763,11 @@ profile_edit: "profile edit",
   review: "Reviews",
   back_to_dashboard: "Back to dashboard",
   loading_contacts: "Loading contacts...",
+volver: "Back",
+report_context_info_prefix: "Exchange ID",
+report_context_info_suffix: "will be included in your report.",
+content_saved_success: "Content saved successfully!",
+error_saving_content: "Error saving content. Please try again.",
   },
 } as const;
 
