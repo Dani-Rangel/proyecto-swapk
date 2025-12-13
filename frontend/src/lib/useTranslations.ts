@@ -1,24 +1,36 @@
 import { useLanguage } from "../components/state/language_change"
-import { translations } from "./i18n"  // Importación estática
+import { translations } from "./i18n"
 
+// Idiomas disponibles
 export type Locale = keyof typeof translations
 
-// Hook para traducciones
-export function useTranslation() {
-  // ✅ El hook useLanguage se usa correctamente dentro de otro hook
-  const { lang } = useLanguage()
+// Todas las claves válidas (basadas en español)
+export type TranslationKey = keyof typeof translations["es"]
 
-  // Función para traducir textos
-  function t(key: keyof (typeof translations)["es"]): string {
-    const translation = translations[lang]?.[key]
-    
+// 🔐 Traducciones tipadas de forma segura
+const typedTranslations = translations as Record<
+  Locale,
+  Record<TranslationKey, string>
+>
+
+// Hook de traducción
+export function useTranslation() {
+  const { lang } = useLanguage()
+  const locale = lang as Locale
+
+  function t(key: TranslationKey): string {
+    const translation =
+      typedTranslations[locale][key] ?? typedTranslations.es[key]
+
     if (!translation) {
-      console.warn(`Missing translation for key: ${key}`)
-      return key // Devuelve la clave como fallback
+      console.warn(
+        `No se ha encontrado la traducción de: "${key}" en el idioma "${locale}"`
+      )
+      return key
     }
 
     return translation
   }
 
   return { t, lang }
-}
+}}
