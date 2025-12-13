@@ -1,23 +1,15 @@
 // frontend/eslint.config.mjs
-import { defineConfig, globalIgnores } from 'eslint/config';
-import nextVitals from 'eslint-config-next/core-web-vitals.js';
-import nextTs from 'eslint-config-next/typescript.js';
+// frontend/eslint.config.mjs
+import nextCoreWebVitals from 'eslint-config-next/core-web-vitals.js'; // ✅ .js obligatorio
+import nextTypeScript from 'eslint-config-next/typescript.js';          // ✅ .js obligatorio
 
-export default defineConfig([
-  ...nextVitals,
-  ...nextTs,
+export default [
+  ...nextCoreWebVitals,
+  ...nextTypeScript,
   {
     rules: {
-      // 👇 Desactiva reglas problemáticas con Railway (opcional, pero ayuda)
       '@next/next/no-html-link-for-pages': 'off',
       'react/no-unescaped-entities': 'off',
     },
   },
-  // Ignorar archivos generados
-  globalIgnores([
-    '.next/**',
-    'out/**',
-    'build/**',
-    'dist/**',
-  ]),
-]);
+];
