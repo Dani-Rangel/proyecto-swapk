@@ -4,25 +4,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.db.database import Base, engine, get_db 
 from sqlalchemy.orm import Session
-from alembic.config import Config
-from alembic import command
-import os
-import sys
-
-def run_migrations():
-    try:
-        # Ruta al directorio actual (donde está main.py)
-        base_dir = Path(__file__).resolve().parent
-        alembic_cfg = Config(str(base_dir / "alembic.ini"))
-        command.upgrade(alembic_cfg, "head")
-        print("✅ Migraciones de Alembic aplicadas correctamente.")
-    except Exception as e:
-        print(f"❌ Error al ejecutar migraciones: {e}", file=sys.stderr)
-        sys.exit(1)
-
-# Solo ejecutar migraciones en producción (Railway)
-if os.getenv("RAILWAY_ENVIRONMENT") == "production":
-    run_migrations()
 
 # Controladores
 
@@ -179,3 +160,26 @@ def get_all_public_profiles(
 
 # Servir archivos estáticos
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
+if __name__ == "__main__":
+    # Ejecuta las migraciones al iniciar
+    from alembic.config import Config
+    from alembic import command
+    import os
+    import sys
+
+    def run_migrations():
+        try:
+            base_dir = Path(__file__).resolve().parent
+            alembic_cfg = Config(str(base_dir / "alembic.ini"))
+            command.upgrade(alembic_cfg, "head")
+            print("✅ Migraciones aplicadas.")
+        except Exception as e:
+            print(f"❌ Error al ejecutar migraciones: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    if os.getenv("RAILWAY_ENVIRONMENT") == "production":
+        run_migrations()
+
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000)
