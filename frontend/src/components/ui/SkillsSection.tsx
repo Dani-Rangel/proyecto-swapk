@@ -1,7 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
 import { AddSkillForm } from "./AddSkillForm"
-import { CreateSkillForm } from "./CreateSkillForm"
 import { addUserSkill } from "@/services/api_Skills"
 
 export default function SkillsSection() {
