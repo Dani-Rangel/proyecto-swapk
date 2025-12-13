@@ -11,4 +11,5 @@ env = { NODE_ENV = "production", PORT = "3000" }
 name = "swapk-backend"
 build = { root = "backend", command = "pip install -r requirements.txt" }
 start = "uvicorn main:app --host 0.0.0.0 --port $PORT"
+working_directory = "backend"  # ✅ Clave: esto hace que se ejecute dentro de /app/backend
 env = { PYTHONUNBUFFERED = "1" }
