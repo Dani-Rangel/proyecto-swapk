@@ -5,11 +5,10 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # 🔗 Añadir la raíz del proyecto al path (para imports)
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-# 🧩 Importar Base y modelos
+# 🧩 Importar Base (sin * para evitar overhead)
 from db.database import Base
-from models import *  # Asegúrate de tener __init__.py en /models
 
 # 🔧 Configuración de Alembic
 config = context.config
@@ -25,17 +24,21 @@ password = os.getenv("MYSQLPASSWORD", "")
 database = os.getenv("MYSQLDATABASE", "railway")
 port = os.getenv("MYSQLPORT", "3306")
 
-MARIADB_URL = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+# ✅ URL segura (escapa caracteres especiales)
+from urllib.parse import quote_plus
+safe_password = quote_plus(password)
+MARIADB_URL = f"mysql+pymysql://{user}:{safe_password}@{host}:{port}/{database}"
 
-# ✅ Inyectar la URL en Alembic
-config.set_main_option("sqlalchemy.url", MARIADB_URL)
+# ✅ Inyectar la URL en Alembic — con fallback si config ya la tiene
+if not config.get_main_option("sqlalchemy.url"):
+    config.set_main_option("sqlalchemy.url", MARIADB_URL)
 
 # 🗂 Metadatos de los modelos
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    """Migraciones en modo offline (sin conexión real)."""
+    """Migraciones en modo offline."""
     context.configure(
         url=MARIADB_URL,
         target_metadata=target_metadata,
@@ -48,7 +51,8 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Migraciones en modo online (con conexión real)."""
+    """Migraciones en modo online."""
+    # ✅ Usa la URL ya inyectada (más robusto)
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",
@@ -65,7 +69,7 @@ def run_migrations_online() -> None:
             context.run_migrations()
 
 
-# 🚀 Ejecutar según modo
+# 🚀 Ejecutar
 if context.is_offline_mode():
     run_migrations_offline()
 else:
