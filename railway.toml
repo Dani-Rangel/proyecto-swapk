@@ -1,5 +1,5 @@
 [build]
-builder = "NODE"
+builder = "NIXPACKS"
 
 [[services]]
 name = "swapk-frontend"
