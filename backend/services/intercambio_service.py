@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
-from backend.models import Intercambio, IntercambioHabilidad, Habilidad, PropuestaIntercambio, Resena
-from backend.schemas.intercambio_schema import (
+from models import Intercambio, IntercambioHabilidad, Habilidad, PropuestaIntercambio, Resena
+from schemas.intercambio_schema import (
     IntercambioCreate,
     IntercambioConHabilidadesSeparadas,
     UsuarioBase,
