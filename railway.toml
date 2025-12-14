@@ -1,4 +1,5 @@
-# railway.toml (en la raíz del repositorio)
+# railway.toml
+
 [[services]]
 name = "backend"
 source = "./backend"
