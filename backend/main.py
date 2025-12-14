@@ -127,7 +127,7 @@ def startup_event():
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     try:
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         tables = list(Base.metadata.tables.keys())[:5]
         return {
             "status": "ok",
