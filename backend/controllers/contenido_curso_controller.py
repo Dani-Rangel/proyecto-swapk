@@ -1,21 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
-from backend.db.database import get_db
-from backend.schemas.contenido_curso_schema import (
+from db.database import get_db
+from schemas.contenido_curso_schema import (
     ContenidoCursoCreate,
     ContenidoCursoUpdate,
     ContenidoCursoResponse,
     CursoContenidoConUsuario
 )
-from backend.services.contenido_curso_service import (
+from services.contenido_curso_service import (
     crear_contenido,
     actualizar_contenido,
     eliminar_contenido,
 )
-from backend.services.oauth2 import get_current_user
-from backend.models.usuarios import Usuario
-from backend.models.cursos import Curso
-from backend.models.contenido_curso import ContenidoCurso
+from services.oauth2 import get_current_user
+from models.usuarios import Usuario
+from models.cursos import Curso
+from models.contenido_curso import ContenidoCurso
 
 router = APIRouter(prefix="/contenido", tags=["Contenido del Curso"])
 

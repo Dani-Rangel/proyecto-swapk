@@ -4,11 +4,11 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.models.perfil import Perfil
-from backend.models.usuarios import Usuario
-from backend.services.oauth2 import get_current_user
-from backend.services.auth_service import hash_password
+from db.database import get_db
+from models.perfil import Perfil
+from models.usuarios import Usuario
+from services.oauth2 import get_current_user
+from services.auth_service import hash_password
 
 # 👇 Instala con: pip install Pillow
 from PIL import Image as PILImage
@@ -41,8 +41,8 @@ def get_perfil_by_user_id(id: int, db: Session = Depends(get_db)):
     if not perfil:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
-    from backend.models.perfil_habilidad import perfilHabilidad
-    from backend.models.habilidad import Habilidad
+    from models.perfil_habilidad import perfilHabilidad
+    from models.habilidad import Habilidad
 
     habilidades_query = (
         db.query(perfilHabilidad, Habilidad.nombre)

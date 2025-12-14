@@ -1,12 +1,12 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPException, Query, Body
 from typing import List
-from backend.services.chats.ws_manager import ws_manager, Connection
-from backend.services.chats.firebase_client_services import firestore_db
-from backend.services.chats.auth_ws import get_user_from_token_sync
-from backend.services.oauth2 import get_current_user
-from backend.models.chats import Chat, ChatUsuario, TipoChat
-from backend.models.mensaje import Mensaje
-from backend.db.database import get_db
+from services.chats.ws_manager import ws_manager, Connection
+from services.chats.firebase_client_services import firestore_db
+from services.chats.auth_ws import get_user_from_token_sync
+from services.oauth2 import get_current_user
+from models.chats import Chat, ChatUsuario, TipoChat
+from models.mensaje import Mensaje
+from db.database import get_db
 
 from google.cloud import firestore
 

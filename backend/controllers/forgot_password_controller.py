@@ -1,14 +1,14 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import JSONResponse
-from backend.schemas.forgot_password_schema import ForgotPasswordRequest, ResetPasswordRequest, PasswordResetOut
+from schemas.forgot_password_schema import ForgotPasswordRequest, ResetPasswordRequest, PasswordResetOut
 from pydantic import BaseModel, EmailStr
 import asyncio
 from email.mime.text import MIMEText
 import aiosmtplib
 import random
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.models.usuarios import Usuario
+from db.database import get_db
+from models.usuarios import Usuario
 from passlib.hash import argon2  # usar solo Argon2
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])

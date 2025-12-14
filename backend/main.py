@@ -8,41 +8,41 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
 # Controladores
-from backend.controllers.auth_controller import router as auth_router
-from backend.controllers.habilidad_controller import router as habilidad_router
-from backend.controllers.forgot_password_controller import router as forgot_password_router
-from backend.controllers import google_auth_controller 
-from backend.controllers.user_controller import router as user_router
-from backend.controllers.profile_controller import router as perfil_router
-from backend.controllers.perfil_habilidad_controller import router as perfil_habilidad_router
-from backend.controllers import curso_controller
-from backend.controllers.attachments_controller import router as attachments_router
-from backend.controllers.publicaciones_controller import router as publicaciones_router
-from backend.controllers import curso_habilidad_controller
-from backend.controllers.expediente_controller import router as expediente_router 
-from backend.controllers.moderador_controller import router as moderador_router
-from backend.controllers.intercambio_controller import router as intercambio_router
-from backend.controllers import intercambio_habilidad_controller
-from backend.controllers.chat_controller import router as chat_router 
-from backend.controllers.call_controller import router as call_router
-from backend.controllers.user_admin_controller import router as userA_router
-from backend.controllers import intercambio_admin_controller
-from backend.controllers import perfil_admin_controller
-from backend.controllers import publicaciones_admin_controller
-from backend.controllers import notificacion_controller
-from backend.controllers import help_controller
-from backend.controllers import inscripcion_curso_controller
-from backend.controllers import reporte_controller as reportes_api
-from backend.controllers.resena_general_controller import router as resena_general_router
-from backend.controllers.contenido_curso_controller import router as contenido_router
-from backend.controllers.bloque_contenido_controller import router as bloque_contenido_router
+from controllers.auth_controller import router as auth_router
+from controllers.habilidad_controller import router as habilidad_router
+from controllers.forgot_password_controller import router as forgot_password_router
+from controllers import google_auth_controller 
+from controllers.user_controller import router as user_router
+from controllers.profile_controller import router as perfil_router
+from controllers.perfil_habilidad_controller import router as perfil_habilidad_router
+from controllers import curso_controller
+from controllers.attachments_controller import router as attachments_router
+from controllers.publicaciones_controller import router as publicaciones_router
+from controllers import curso_habilidad_controller
+from controllers.expediente_controller import router as expediente_router 
+from controllers.moderador_controller import router as moderador_router
+from controllers.intercambio_controller import router as intercambio_router
+from controllers import intercambio_habilidad_controller
+from controllers.chat_controller import router as chat_router 
+from controllers.call_controller import router as call_router
+from controllers.user_admin_controller import router as userA_router
+from controllers import intercambio_admin_controller
+from controllers import perfil_admin_controller
+from controllers import publicaciones_admin_controller
+from controllers import notificacion_controller
+from controllers import help_controller
+from controllers import inscripcion_curso_controller
+from controllers import reporte_controller as reportes_api
+from controllers.resena_general_controller import router as resena_general_router
+from controllers.contenido_curso_controller import router as contenido_router
+from controllers.bloque_contenido_controller import router as bloque_contenido_router
 
 # Servicios
-from backend.services.oauth2 import get_current_user
+from services.oauth2 import get_current_user
 
 # Modelos
-from backend.models.perfil import Perfil
-from backend.models.usuarios import Usuario
+from models.perfil import Perfil
+from models.usuarios import Usuario
 
 from sqlalchemy.orm import Session
 

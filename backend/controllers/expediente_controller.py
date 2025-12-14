@@ -1,20 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.schemas.expediente_schema import  (
+from db.database import get_db
+from schemas.expediente_schema import  (
     ExpedienteCreate,
     ExpedienteResponse,
     ExpedienteUpdate,
     ArchivoExpedienteResponse
 )
-from backend.services.expediente_service import (
+from services.expediente_service import (
     crear_expediente,
     obtener_expediente_por_usuario,
     obtener_expediente,
     actualizar_expediente,
     eliminar_expediente
 )
-from backend.services.expediente_service import guardar_archivo_expediente
+from services.expediente_service import guardar_archivo_expediente
 from fastapi import Request
 
 router = APIRouter(

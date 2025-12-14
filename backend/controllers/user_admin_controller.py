@@ -2,9 +2,9 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.models.usuarios import Usuario, RolUsuario
-from backend.models import Like, Comentario, Publicacion
+from db.database import get_db
+from models.usuarios import Usuario, RolUsuario
+from models import Like, Comentario, Publicacion
 from pydantic import BaseModel
 from typing import List, Optional
 from passlib.context import CryptContext

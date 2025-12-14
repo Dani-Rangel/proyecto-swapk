@@ -6,12 +6,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from backend.db.database import get_db
-from backend.models.usuarios import Usuario
-from backend.models.perfil import Perfil
-from backend.schemas.auth_schema import RegisterRequest, LoginRequest
-from backend.services.auth_service import hash_password, verify_password, user_exists
-from backend.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_HOURS
+from db.database import get_db
+from models.usuarios import Usuario
+from models.perfil import Perfil
+from schemas.auth_schema import RegisterRequest, LoginRequest
+from services.auth_service import hash_password, verify_password, user_exists
+from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_HOURS
 from datetime import datetime, timedelta
 
 router = APIRouter()

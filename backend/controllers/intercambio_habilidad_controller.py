@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
-from backend.db.database import get_db
-from backend.schemas.intercambio_habilidad_schema import IntercambioHabilidadCreate, IntercambioHabilidadResponse
-from backend.services import intercambio_habilidad_service
+from db.database import get_db
+from schemas.intercambio_habilidad_schema import IntercambioHabilidadCreate, IntercambioHabilidadResponse
+from services import intercambio_habilidad_service
 
 router = APIRouter(
     prefix="/intercambio_habilidades",

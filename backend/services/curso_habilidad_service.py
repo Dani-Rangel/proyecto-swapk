@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from backend.models.Curso_Habilidad import CursoHabilidad
-from backend.models.habilidad import Habilidad
-from backend.schemas.curso_habilidad_schema import CursoHabilidadCreate
+from models.Curso_Habilidad import CursoHabilidad
+from models.habilidad import Habilidad
+from schemas.curso_habilidad_schema import CursoHabilidadCreate
 
 
 def get_habilidades_by_curso(db: Session, curso_id: int):

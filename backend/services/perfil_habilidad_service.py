@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from backend.models.perfil_habilidad import perfilHabilidad
-from backend.models.habilidad import Habilidad
-from backend.schemas.perfil_habilidad_schema import PerfilHabilidadCreate, PerfilHabilidadResponse
+from models.perfil_habilidad import perfilHabilidad
+from models.habilidad import Habilidad
+from schemas.perfil_habilidad_schema import PerfilHabilidadCreate, PerfilHabilidadResponse
 
 def get_habilidades_by_perfil(db: Session, perfil_id: int):
     asociaciones = (

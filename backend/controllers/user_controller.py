@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from backend.db.database import get_db
-from backend.models.usuarios import Usuario
-from backend.schemas.user_schema import UserResponse, UserUpdate, PasswordUpdate, PasswordConfirm, UserForChatResponse 
-from backend.services.oauth2 import get_current_user
-from backend.models.perfil import Perfil
+from db.database import get_db
+from models.usuarios import Usuario
+from schemas.user_schema import UserResponse, UserUpdate, PasswordUpdate, PasswordConfirm, UserForChatResponse 
+from services.oauth2 import get_current_user
+from models.perfil import Perfil
 from passlib.context import CryptContext
 
 
@@ -18,7 +18,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ph = PasswordHasher()
 
 # Obtener perfil del usuario autenticado
-from backend.models.usuarios import Usuario  # Asegúrate de importar tu modelo
+from models.usuarios import Usuario  # Asegúrate de importar tu modelo
 
 @router.get("/me", response_model=UserResponse)
 def get_my_profile(current_user: Usuario = Depends(get_current_user)):

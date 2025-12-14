@@ -5,11 +5,11 @@ from google.auth.transport import requests
 from jose import jwt
 from datetime import datetime, timedelta
 
-from backend.db.database import get_db
-from backend.models.usuarios import Usuario, RolUsuario
-from backend.models.perfil import Perfil
-from backend.schemas.google_auth_schema import TokenSchema
-from backend.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_HOURS
+from db.database import get_db
+from models.usuarios import Usuario, RolUsuario
+from models.perfil import Perfil
+from schemas.google_auth_schema import TokenSchema
+from config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_HOURS
 
 router = APIRouter()
 

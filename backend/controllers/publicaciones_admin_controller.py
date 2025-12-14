@@ -3,11 +3,11 @@ print("✅ Router de publicaciones_admin_controller cargado")
 
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.models import Publicacion
-from backend.models.usuarios import Usuario
-from backend.models.perfil import Perfil
-from backend.schemas.publicacion_admin_schema import (
+from db.database import get_db
+from models import Publicacion
+from models.usuarios import Usuario
+from models.perfil import Perfil
+from schemas.publicacion_admin_schema import (
     PublicacionCreate,
     PublicacionUpdate,
     PublicacionOut,

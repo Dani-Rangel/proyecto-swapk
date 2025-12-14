@@ -8,8 +8,8 @@ from alembic import context
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # Importa tus modelos (ajusta si la ruta es diferente)
-from backend.db.base import Base
-from backend.models import *  # Asegúrate de que esto importe todos tus modelos
+from db.base import Base
+from models import *  # Asegúrate de que esto importe todos tus modelos
 
 # Configuración de Alembic
 config = context.config

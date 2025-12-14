@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.schemas.perfil_habilidad_schema import PerfilHabilidadCreate, PerfilHabilidadResponse
-from backend.services import perfil_habilidad_service
-from backend.models.habilidad import Habilidad
+from db.database import get_db
+from schemas.perfil_habilidad_schema import PerfilHabilidadCreate, PerfilHabilidadResponse
+from services import perfil_habilidad_service
+from models.habilidad import Habilidad
 from typing import List
-from backend.models.perfil_habilidad import perfilHabilidad
+from models.perfil_habilidad import perfilHabilidad
 
 router = APIRouter()
 

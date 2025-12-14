@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from backend.models import IntercambioHabilidad
-from backend.schemas.intercambio_habilidad_schema import IntercambioHabilidadCreate
+from models import IntercambioHabilidad
+from schemas.intercambio_habilidad_schema import IntercambioHabilidadCreate
 from typing import List, Optional
 
 def crear_intercambio_habilidad(db: Session, intercambio_habilidad: IntercambioHabilidadCreate):

@@ -3,8 +3,8 @@ from uuid import uuid4
 from datetime import datetime
 from sqlalchemy.orm import Session
 from fastapi import UploadFile
-from backend.models import Expediente, Archivo_Expediente
-from backend.schemas.expediente_schema import ExpedienteCreate, ExpedienteUpdate
+from models import Expediente, Archivo_Expediente
+from schemas.expediente_schema import ExpedienteCreate, ExpedienteUpdate
 from sqlalchemy.orm import joinedload
 
 UPLOAD_DIR = "uploads"
