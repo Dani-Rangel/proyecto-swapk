@@ -1,11 +1,11 @@
 # backend/routes/inscripcion_curso_controller.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
+from db.database import get_db
 from sqlalchemy.orm import joinedload
-from backend.models.Inscripciones_Cursos import InscripcionCurso as InscripcionCursoModel, EstadoInscripcion
-from backend.models.cursos import Curso
-from backend.models.usuarios import Usuario
+from models.Inscripciones_Cursos import InscripcionCurso as InscripcionCursoModel, EstadoInscripcion
+from models.cursos import Curso
+from models.usuarios import Usuario
 from pydantic import BaseModel
 from typing import List
 from datetime import datetime
