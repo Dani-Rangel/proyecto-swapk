@@ -20,11 +20,15 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Obtener DATABASE_URL desde variables de entorno
-‎MARIADB_URL = os.getenv("MARIADB_URL")
+# Obtener las variables de entorno para la conexión a MySQL
+host = os.getenv("MYSQLHOST", "mysql.railway.internal")
+user = os.getenv("MYSQLUSER", "root")
+password = os.getenv("MYSQLPASSWORD", "")
+database = os.getenv("MYSQLDATABASE", "railway")
+port = os.getenv("MYSQLPORT", "3306")
 
-if not ‎MARIADB_URL:
-    raise RuntimeError("❌ ‎MARIADB_URL no está definida en las variables de entorno")
+# Construir la URL de conexión
+MARIADB_URL = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
 
 # Inyectar la URL en Alembic
 config.set_main_option("sqlalchemy.url", ‎MARIADB_URL)
