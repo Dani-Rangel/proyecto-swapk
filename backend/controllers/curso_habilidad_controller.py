@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List  # ✅ NECESARIO
 
-from backend.db.database import get_db
-from backend.services.curso_service import delete_all_habilidades_por_curso
-from backend.schemas.curso_habilidad_schema import CursoHabilidadCreate, CursoHabilidadResponse
-from backend.services.curso_habilidad_service import get_habilidades_by_curso, create_curso_habilidad
-from backend.models.habilidad import Habilidad
+from db.database import get_db
+from services.curso_service import delete_all_habilidades_por_curso
+from schemas.curso_habilidad_schema import CursoHabilidadCreate, CursoHabilidadResponse
+from services.curso_habilidad_service import get_habilidades_by_curso, create_curso_habilidad
+from models.habilidad import Habilidad
 
 router = APIRouter(prefix="/curso_habilidad", tags=["Curso-Habilidad"])
 
