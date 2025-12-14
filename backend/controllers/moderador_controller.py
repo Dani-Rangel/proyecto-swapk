@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.models import Expediente, Usuario
-from backend.schemas.expediente_schema import EstadoUpdate
-from backend.services.expediente_service import actualizar_expediente
+from db.database import get_db
+from models import Expediente, Usuario
+from schemas.expediente_schema import EstadoUpdate
+from services.expediente_service import actualizar_expediente
 
 router = APIRouter(
     prefix="/moderador",
