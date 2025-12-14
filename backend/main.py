@@ -49,21 +49,17 @@ from models.perfil import Perfil
 from models.usuarios import Usuario
 
 # =====================
-# DATABASE
+# DATABASE (Railway-ready)
 # =====================
-DATABASE_URL = os.getenv("DATABASE_URL")
+host = os.getenv("MYSQLHOST", "mysql.railway.internal")
+user = os.getenv("MYSQLUSER", "root")
+password = os.getenv("MYSQLPASSWORD", "")
+database = os.getenv("MYSQLDATABASE", "railway")
+port = os.getenv("MYSQLPORT", "3306")
 
-if not DATABASE_URL:
-    MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
-    MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
-    MYSQL_USER = os.getenv("MYSQL_USER", "root")
-    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
-    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "railway")
-    safe_password = quote_plus(MYSQL_PASSWORD)
-    DATABASE_URL = (
-        f"mysql+pymysql://{MYSQL_USER}:{safe_password}"
-        f"@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
-    )
+# Construir URL segura
+safe_password = quote_plus(password)
+DATABASE_URL = f"mysql+pymysql://{user}:{safe_password}@{host}:{port}/{database}"
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
