@@ -7,17 +7,17 @@ build = { root = "frontend", command = "npm install && npm run build --no-lint" 
 start = "npm start"
 working_directory = "frontend"
 env = { 
-  NODE_ENV = "production", 
-  PORT = "3000" 
+  NODE_ENV = "production",
+  PORT = "3000"
 }
-resources = { cpu = "500m", memory = "1024Mi" }
+resources = { cpu = "500m", memory = "1024Mi" }  # ✅ 1GB RAM — IMPRESCINDIBLE
 
 [[services]]
 name = "swapk-backend"
 build = { root = "backend", command = "pip install -r requirements.txt" }
 start = "uvicorn main:app --host 0.0.0.0 --port $PORT"
 working_directory = "backend"
-env = { 
+env = {
   PYTHONUNBUFFERED = "1",
   RAILWAY_ENVIRONMENT = "production",
   MYSQLHOST = "mysql.railway.internal",
@@ -26,4 +26,4 @@ env = {
   MYSQLDATABASE = "railway",
   MYSQLPORT = "3306"
 }
-resources = { cpu = "500m", memory = "1024Mi" }
+# resources = { cpu = "500m", memory = "512Mi" }  # ❌ deja backend en 512MB si solo tienes 1GB total (gratis)
