@@ -107,7 +107,14 @@ def startup_event():
         try:
             from alembic.config import Config
             from alembic import command
-            alembic_cfg = Config("/app/backend/alembic.ini")
+            from pathlib import Path
+
+            # ✅ Ruta relativa y segura
+            alembic_ini_path = Path(__file__).parent / "alembic.ini"
+            if not alembic_ini_path.exists():
+                raise FileNotFoundError(f"❌ alembic.ini no encontrado en {alembic_ini_path}")
+
+            alembic_cfg = Config(str(alembic_ini_path))
             command.upgrade(alembic_cfg, "head")
             print("✅ Migraciones aplicadas.")
         except Exception as e:
