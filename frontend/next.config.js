@@ -1,7 +1,6 @@
-// frontend/next.config.ts
-import type { NextConfig } from 'next';
-
-const nextConfig: NextConfig = {
+// frontend/next.config.js
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   // Ignora errores de TypeScript en el build
   typescript: {
     ignoreBuildErrors: true,
@@ -12,4 +11,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = nextConfig;
