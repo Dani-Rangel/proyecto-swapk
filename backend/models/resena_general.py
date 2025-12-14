@@ -2,7 +2,7 @@
 from sqlalchemy import Column, Integer, Float, Text, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from backend.db import Base
+from db import Base
 from .usuarios import Usuario
 
 class ResenaGeneral(Base):
