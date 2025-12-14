@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from backend.db.database import get_db
-from backend.models import Usuario, Publicacion, Comentario, Like
-from backend.services.oauth2 import get_current_user
-from backend.schemas.publicaciones_schema import ComentarioCreate, PublicacionCreate, ComentarioUpdate
+from db.database import get_db
+from models import Usuario, Publicacion, Comentario, Like
+from services.oauth2 import get_current_user
+from schemas.publicaciones_schema import ComentarioCreate, PublicacionCreate, ComentarioUpdate
 
 router = APIRouter(prefix="/api/publicaciones", tags=["Publicaciones"])
 
