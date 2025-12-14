@@ -4,6 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.db.database import Base, engine, get_db
 from sqlalchemy.orm import Session
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Controladores
 from backend.controllers.auth_controller import router as auth_router
