@@ -101,7 +101,21 @@ app.add_middleware(
 # =====================
 @app.on_event("startup")
 def startup_event():
-    Base.metadata.create_all(bind=engine)
+    import os
+    if os.getenv("RAILWAY_ENVIRONMENT") == "production":
+        print("🚀 Ejecutando migraciones (Alembic)...")
+        try:
+            from alembic.config import Config
+            from alembic import command
+            alembic_cfg = Config("/app/backend/alembic.ini")
+            command.upgrade(alembic_cfg, "head")
+            print("✅ Migraciones aplicadas.")
+        except Exception as e:
+            print(f"❌ Error en migraciones: {e}")
+            import sys
+            sys.exit(1)
+    else:
+        Base.metadata.create_all(bind=engine)
 
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
