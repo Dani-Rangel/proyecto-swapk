@@ -8,8 +8,8 @@ from alembic import context
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Importa tus modelos
-from backend.db.base import Base
-from backend.models import *
+from db.base import Base
+from models import *
 
 # Configuración de Alembic
 config = context.config
@@ -58,3 +58,4 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+
