@@ -10,8 +10,8 @@ sys.path.append(
 )
 
 # Importar Base y modelos
-from backend.db.database import Base
-from backend.models import *
+from db.database import Base
+from models import *
 
 # Configuración de Alembic
 config = context.config
