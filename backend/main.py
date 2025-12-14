@@ -8,7 +8,6 @@ import sys
 import os
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-# Si main.py está en swapk_proyecto/backend/, subimos un nivel para llegar a swapk_proyecto/
 project_root = os.path.abspath(os.path.join(current_dir, os.pardir)) 
 sys.path.append(project_root)
 
