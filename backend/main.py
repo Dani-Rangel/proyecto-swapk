@@ -95,7 +95,29 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup_event():
-    Base.metadata.create_all(bind=engine)
+    import os
+    if os.getenv("RAILWAY_ENVIRONMENT") == "production":
+        print("🚀 Ejecutando migraciones (Alembic) en Railway...")
+        try:
+            from alembic.config import Config
+            from alembic import command
+            from pathlib import Path
+
+            # Ruta al archivo alembic.ini
+            alembic_ini_path = Path(__file__).parent / "alembic.ini"
+            if not alembic_ini_path.exists():
+                raise FileNotFoundError(f"❌ alembic.ini no encontrado en {alembic_ini_path}")
+
+            alembic_cfg = Config(str(alembic_ini_path))
+            command.upgrade(alembic_cfg, "head")
+            print("✅ Migraciones aplicadas.")
+        except Exception as e:
+            print(f"❌ Error en migraciones: {e}")
+            import sys
+            sys.exit(1)  # Detiene la app si fallan las migraciones
+    else:
+        # Local: crea tablas directamente (sin Alembic)
+        Base.metadata.create_all(bind=engine)
 
 # === RUTAS ===
 app.include_router(auth_router, prefix="/auth")
