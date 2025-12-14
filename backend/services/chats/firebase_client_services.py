@@ -1,16 +1,23 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
-from pathlib import Path
 import os
+import json
 
-# Como no queremos hardcodear la ruta, usamos una variable de entorno FIREBASE_CRED_PATH
-cred_path = os.getenv("FIREBASE_CRED_PATH", str(Path(__file__).resolve().parents[1] / "firebase" / "firebase_credentials.json"))
+# Cargar credenciales desde variable de entorno
+cred_json_str = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
-print("Ruta final credenciales Firebase:", cred_path)
-print("¿El archivo existe?:", os.path.exists(cred_path))
+if not cred_json_str:
+    raise ValueError("La variable de entorno FIREBASE_CREDENTIALS_JSON no está definida.")
 
+try:
+    cred_dict = json.loads(cred_json_str)
+except json.JSONDecodeError as e:
+    raise ValueError(f"El valor de FIREBASE_CREDENTIALS_JSON no es un JSON válido: {e}")
+
+# Inicializar Firebase si no se ha hecho antes
 if not firebase_admin._apps:
-    cred = credentials.Certificate(cred_path)
+    cred = credentials.Certificate(cred_dict)
     firebase_admin.initialize_app(cred)
 
+# Crear cliente de Firestore
 firestore_db = firestore.client()
