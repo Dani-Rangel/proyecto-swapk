@@ -4,7 +4,7 @@ builder = "NODE"
 [[services]]
 name = "swapk-frontend"
 build = { root = "frontend", command = "npm install && npm run build --no-lint" }
-start = start = "cd .next/standalone && node server.js --port 3000"
+start = "cd .next/standalone && node server.js --port 8080"
 working_directory = "frontend"
 env = { 
   NODE_ENV = "production",
