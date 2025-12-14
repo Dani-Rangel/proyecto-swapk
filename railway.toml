@@ -6,7 +6,10 @@ name = "swapk-frontend"
 build = { root = "frontend", command = "npm install && npm run build --no-lint" }
 start = "npm start"
 working_directory = "frontend"
-env = { NODE_ENV = "production", PORT = "3000" }
+env = { 
+  NODE_ENV = "production", 
+  PORT = "3000" 
+}
 resources = { cpu = "500m", memory = "1024Mi" }
 
 [[services]]
@@ -17,10 +20,10 @@ working_directory = "backend"
 env = { 
   PYTHONUNBUFFERED = "1",
   RAILWAY_ENVIRONMENT = "production",
-  MYSQLHOST = "mysql.railway.internal",
-  MYSQLUSER = "root",
-  MYSQLPASSWORD = "dvKqHQaXILWfqTpClbgbMvXUhOdXLEfn",
-  MYSQLDATABASE = "railway",
-  MYSQLPORT = "3306"
+  MYSQLHOST = "mysql.railway.internal",      # ✅ Host correcto
+  MYSQLUSER = "root",                        # ✅ Usuario
+  MYSQLPASSWORD = "dvKqHQaXILWfqTpClbgbMvXUhOdXLEfn",  # ✅ Contraseña
+  MYSQLDATABASE = "railway",                 # ✅ Base de datos
+  MYSQLPORT = "3306"                         # ✅ Puerto
 }
 resources = { cpu = "500m", memory = "1024Mi" }
