@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from backend.models.contenido_curso import ContenidoCurso
-from backend.schemas.contenido_curso_schema import ContenidoCursoCreate, ContenidoCursoUpdate
+from models.contenido_curso import ContenidoCurso
+from schemas.contenido_curso_schema import ContenidoCursoCreate, ContenidoCursoUpdate
 
 def crear_contenido(db: Session, contenido: ContenidoCursoCreate) -> ContenidoCurso:
     db_contenido = ContenidoCurso(**contenido.model_dump())
