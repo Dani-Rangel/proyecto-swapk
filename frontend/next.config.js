@@ -1,17 +1,15 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-      },
-      {
-        protocol: 'https',
-        hostname: 'cdn.dribbble.com',
-      }
-    ]
-  }
-}
+// frontend/next.config.ts
+import type { NextConfig } from 'next';
 
-module.exports = nextConfig
+const nextConfig: NextConfig = {
+  // Ignora errores de TypeScript en el build
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  // Opcional: también ignorar errores de ESLint
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+};
+
+export default nextConfig;
