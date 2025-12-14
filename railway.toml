@@ -20,10 +20,10 @@ working_directory = "backend"
 env = { 
   PYTHONUNBUFFERED = "1",
   RAILWAY_ENVIRONMENT = "production",
-  MYSQLHOST = "mysql.railway.internal",      # ✅ Host correcto
-  MYSQLUSER = "root",                        # ✅ Usuario
-  MYSQLPASSWORD = "dvKqHQaXILWfqTpClbgbMvXUhOdXLEfn",  # ✅ Contraseña
-  MYSQLDATABASE = "railway",                 # ✅ Base de datos
-  MYSQLPORT = "3306"                         # ✅ Puerto
+  MYSQLHOST = "mysql.railway.internal",
+  MYSQLUSER = "root",
+  MYSQLPASSWORD = "dvKqHQaXILWfqTpClbgbMvXUhOdXLEfn",
+  MYSQLDATABASE = "railway",
+  MYSQLPORT = "3306"
 }
 resources = { cpu = "500m", memory = "1024Mi" }
