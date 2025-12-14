@@ -1,7 +1,7 @@
 # models/propuesta.py
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
-from backend.db import Base
+from db import Base
 from datetime import datetime
 
 class PropuestaIntercambio(Base):
