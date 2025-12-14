@@ -109,7 +109,7 @@ def startup_event():
                 raise FileNotFoundError(f"❌ alembic.ini no encontrado en {alembic_ini_path}")
 
             alembic_cfg = Config(str(alembic_ini_path))
-            command.upgrade(alembic_cfg, "head")
+            command.upgrade(alembic_cfg, "heads")
             print("✅ Migraciones aplicadas.")
         except Exception as e:
             print(f"❌ Error en migraciones: {e}")
