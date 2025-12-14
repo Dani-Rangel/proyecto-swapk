@@ -1,7 +1,7 @@
 # models/bloque_contenido.py
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, Enum
 from sqlalchemy.orm import relationship
-from backend.db import Base
+from db import Base
 import enum
 
 class TipoBloque(str, enum.Enum):
