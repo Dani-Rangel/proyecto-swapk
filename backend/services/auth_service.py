@@ -1,8 +1,8 @@
-from backend.db.database import SessionLocal
-from backend.models.usuarios import Usuario
+from db.database import SessionLocal
+from models.usuarios import Usuario
 from fastapi import HTTPException
 from passlib.hash import argon2
-from backend.schemas.auth_schema import RegisterRequest, LoginRequest
+from schemas.auth_schema import RegisterRequest, LoginRequest
 
 def hash_password(password: str) -> str:
     return argon2.hash(password)
