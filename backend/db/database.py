@@ -1,20 +1,21 @@
-import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import os
 
-DB_SWAPK_URL = os.getenv("DB_SWAPK_URL")
+# Obtener las variables de entorno
+host = os.getenv("MYSQLHOST", "localhost")  # ✅ Esto está bien, pero solo si la variable está definida
+user = os.getenv("MYSQLUSER", "root")
+password = os.getenv("MYSQLPASSWORD", "")
+database = os.getenv("MYSQLDATABASE", "swapk")
+port = os.getenv("MYSQLPORT", "3306")
 
-engine = create_engine(
-    DB_SWAPK_URL,
-    pool_pre_ping=True
-)
+# Construir la URL de conexión
+MARIADB_URL = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
-
+# Crear el objeto de conexión
+engine = create_engine(MARIADB_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 def get_db():
