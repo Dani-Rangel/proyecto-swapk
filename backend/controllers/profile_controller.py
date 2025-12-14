@@ -4,20 +4,20 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile, Form
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.models.perfil import Perfil
-from backend.models.usuarios import Usuario
-from backend.services.oauth2 import get_current_user
-from backend.services.auth_service import hash_password
+from db.database import get_db
+from models.perfil import Perfil
+from models.usuarios import Usuario
+from services.oauth2 import get_current_user
+from services.auth_service import hash_password
 from sqlalchemy.orm import joinedload
 # Modelos necesarios para intercambios
-from backend.models.intercambio import Intercambio
-from backend.models.Propuesta_Intercambio import PropuestaIntercambio
-from backend.models.resena import Resena
-from backend.models.Intercambio_Habilidad import IntercambioHabilidad  # ← Asegúrate de que exista
+from models.intercambio import Intercambio
+from models.Propuesta_Intercambio import PropuestaIntercambio
+from models.resena import Resena
+from models.Intercambio_Habilidad import IntercambioHabilidad  # ← Asegúrate de que exista
 
 # Esquemas Pydantic (usamos los que ya tienes)
-from backend.schemas.intercambio_schema import (
+from schemas.intercambio_schema import (
     IntercambioConHabilidadesSeparadas,
     ResenaResponse,
     PropuestaAceptada,
