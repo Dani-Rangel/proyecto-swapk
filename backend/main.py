@@ -195,3 +195,16 @@ app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    try:
+        db.execute("SELECT 1")
+        tables = list(Base.metadata.tables.keys())[:5]
+        return {
+            "status": "ok",
+            "database": "connected",
+            "tables": tables
+        }
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
