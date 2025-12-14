@@ -5,9 +5,9 @@ import os
 import shutil
 from typing import List
 
-from backend.db.database import get_db
-from backend.models.cursos import Curso
-from backend.models.attachments import Attachment
+from db.database import get_db
+from models.cursos import Curso
+from models.attachments import Attachment
 
 router = APIRouter(prefix="/attachments", tags=["Attachments"])
 
