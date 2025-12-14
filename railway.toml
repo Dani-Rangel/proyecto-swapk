@@ -4,7 +4,7 @@ builder = "NIXPACKS"
 [[services]]
 name = "swapk-frontend"
 build = { root = "frontend", command = "npm install && npm run build --no-lint" }
-start = "npm start"
+start = "node .next/standalone/server.js"
 working_directory = "frontend"
 env = { 
   NODE_ENV = "production",
