@@ -1,36 +1,42 @@
 from logging.config import fileConfig
 import sys
 import os
-from sqlalchemy import create_engine
-from sqlalchemy import pool
+from sqlalchemy import create_engine, pool
 from alembic import context
 
-# Agrega el directorio raíz del proyecto al sys.path
+# Agrega el directorio raíz al sys.path para que Alembic encuentre tus modelos
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-# Importa configuración y modelos
-from backend.db.database import MARIADB_URL
+# Importa tus modelos (ajusta si la ruta es diferente)
 from backend.db.base import Base
-from backend.models import * 
-
-print("Modelos cargados:", [mapper.class_.__name__ for mapper in Base.registry.mappers])
-print("Tablas detectadas:", list(Base.metadata.tables.keys()))
+from backend.models import *  # Asegúrate de que esto importe todos tus modelos
 
 # Configuración de Alembic
 config = context.config
 
-# Habilita el logging
+# Habilita logging si hay archivo de configuración
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Target metadata de todos los modelos
 target_metadata = Base.metadata
 
 
-def run_migrations_offline() -> None:
-    """Ejecución en modo 'offline'."""
+def get_database_url():
+    """Obtiene la URL de la base de datos desde Railway o usa MySQL local...."""
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        # Railway usa PostgreSQL → la URL ya es válida
+        return database_url
+    else:
+        # Desarrollo local con MySQL
+        return "mysql+pymysql://root:@localhost/swapk"
+
+
+def run_migrations_offline():
+    """Ejecuta migraciones en modo offline (sin conexión real)."""
+    url = get_database_url()
     context.configure(
-        url=MARIADB_URL,
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -40,9 +46,10 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def run_migrations_online() -> None:
-    """Ejecución en modo 'online'."""
-    connectable = create_engine(MARIADB_URL, poolclass=pool.NullPool)
+def run_migrations_online():
+    """Ejecuta migraciones en modo online (con conexión real a la BD)."""
+    url = get_database_url()
+    connectable = create_engine(url, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(
