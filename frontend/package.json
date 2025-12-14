@@ -2,13 +2,13 @@
   "name": "learning-dashboard",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build --no-lint",
-    "start": "next start"
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
-  },
+ "scripts": {
+  "dev": "next dev",
+  "build": "next build --no-lint",
+  "start": "next start",
+  "lint": "eslint .",
+  "lint:fix": "eslint . --fix"
+},
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
