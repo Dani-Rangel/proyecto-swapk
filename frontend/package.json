@@ -1,6 +1,6 @@
 {
   "name": "learning-dashboard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -49,6 +49,7 @@
     "@types/react": "^19.1.9",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.33.0",
+    "eslint-config-next": "^15.5.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^5.2.0",
