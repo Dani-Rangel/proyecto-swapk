@@ -5,7 +5,7 @@ import { Eye, EyeOff, Sun, Moon, X } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/router"
 import { GoogleLogin } from "@react-oauth/google"
-import axios from "axios"
+import { fetchApi } from "@/services/api" // ✅ Importamos fetchApi
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -13,7 +13,7 @@ export default function RegisterPage() {
     correo: "",
     password: "",
     acceptTerms: false,
-    showPassword: false, //  para la contraseña
+    showPassword: false,
   })
   const [darkMode, setDarkMode] = useState(true)
   const [error, setError] = useState<string[]>([])
@@ -74,7 +74,8 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
     }
 
     try {
-      const res = await fetch("http://localhost:8000/auth/register", {
+      // ✅ Usa fetchApi en lugar de fetch con localhost
+      const res = await fetchApi("/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -87,7 +88,6 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
       const data = await res.json()
 
       if (res.ok) {
-        //  CORREGIDO: usamos data.user (no data.usuario)
         const userData = {
           token: data.token,
           id: data.user.id,
@@ -284,10 +284,18 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
                     return
                   }
                   try {
-                    const res = await axios.post("http://localhost:8000/auth/google/login", { token })
-                    const data = res.data
+                    // ✅ Usa la URL de la variable de entorno
+                    const url = `${process.env.NEXT_PUBLIC_API_URL}/auth/google/login`;
+                    const res = await fetch(url, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ token }),
+                      credentials: "include",
+                    });
+                    const data = await res.json();
 
-                    //  CORREGIDO: usar data.user.id, etc.
+                    if (!res.ok) throw new Error(data.detail || "Error en Google");
+
                     const userData = {
                       token: data.token,
                       id: data.user.id,
@@ -301,8 +309,8 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
                     document.cookie = `token=${data.token}; path=/; max-age=3600; secure; samesite=strict`
                     router.push("/dashboard/index_dashboard")
                   } catch (err: any) {
-                    console.error(err.response || err)
-                    setError([err.response?.data?.detail || "Error al registrarse con Google ❌"])
+                    console.error(err)
+                    setError([err.message || "Error al registrarse con Google ❌"])
                   }
                 }}
                 onError={() => setError(["Error en Google Register ❌"])}
