@@ -1,23 +1,26 @@
-# Usa una imagen base de Node.js (versión 20 o superior)
+# Usa Node 20 (compatible con Next.js 15)
 FROM node:20-alpine
 
 # Directorio de trabajo
 WORKDIR /app
 
-# Copia package.json y package-lock.json del frontend
+# Copia solo package.json y lock
 COPY frontend/package*.json ./
 
-# Instala dependencias
-RUN npm install
+# Instala dependencias SIN caché
+RUN npm ci --no-cache --prefer-offline
 
-# Copia todo el código del frontend
+# Copia el resto del código
 COPY frontend/ .
+
+# Verifica que eslint-config-next esté instalado
+RUN ls node_modules/eslint-config-next || echo "eslint-config-next NOT FOUND"
 
 # Construye la app
 RUN npm run build
 
-# Expone el puerto (Next.js por defecto usa 3000)
+# Puerto
 EXPOSE 3000
 
-# Inicia la app
+# Inicia
 CMD ["npm", "start"]
