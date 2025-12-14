@@ -1,0 +1,23 @@
+# Usa una imagen base de Node.js (versión 20 o superior)
+FROM node:20-alpine
+
+# Directorio de trabajo
+WORKDIR /app
+
+# Copia package.json y package-lock.json del frontend
+COPY frontend/package*.json ./
+
+# Instala dependencias
+RUN npm install
+
+# Copia todo el código del frontend
+COPY frontend/ .
+
+# Construye la app
+RUN npm run build
+
+# Expone el puerto (Next.js por defecto usa 3000)
+EXPOSE 3000
+
+# Inicia la app
+CMD ["npm", "start"]
