@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from backend.models import Notificacion, Usuario
-from backend.schemas.notificacion_schema import NotificacionCreate
+from models import Notificacion, Usuario
+from schemas.notificacion_schema import NotificacionCreate
 from datetime import datetime
 
 def crear_notificacion(db: Session, notificacion_data: NotificacionCreate):
