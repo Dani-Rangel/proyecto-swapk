@@ -2,8 +2,8 @@ from fastapi import FastAPI, Depends
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from backend.db.database import Base, engine, get_db
 from sqlalchemy.orm import Session
+from pathlib import Path
 import sys
 import os
 
@@ -11,6 +11,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 # Si main.py está en swapk_proyecto/backend/, subimos un nivel para llegar a swapk_proyecto/
 project_root = os.path.abspath(os.path.join(current_dir, os.pardir)) 
 sys.path.append(project_root)
+
+from backend.db.database import Base, engine, get_db
 
 # Controladores
 from backend.controllers.auth_controller import router as auth_router
