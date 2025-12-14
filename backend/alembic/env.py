@@ -21,13 +21,13 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Obtener DATABASE_URL desde variables de entorno
-DB_SWAPK_URL = os.getenv("DB_SWAPK_URL")
+‎MARIADB_URL = os.getenv("DB_SWAPK_URL")
 
-if not DB_SWAPK_URL:
-    raise RuntimeError("❌ DB_SWAPK_URL no está definida en las variables de entorno")
+if not ‎MARIADB_URL:
+    raise RuntimeError("❌ ‎MARIADB_URL no está definida en las variables de entorno")
 
 # Inyectar la URL en Alembic
-config.set_main_option("sqlalchemy.url", DB_SWAPK_URL)
+config.set_main_option("sqlalchemy.url", ‎MARIADB_URL)
 
 # Metadata de los modelos
 target_metadata = Base.metadata
@@ -36,7 +36,7 @@ target_metadata = Base.metadata
 def run_migrations_offline() -> None:
     """Migraciones en modo offline."""
     context.configure(
-        url=DB_SWAPK_URL,
+        url=‎MARIADB_URL,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
