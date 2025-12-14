@@ -1,7 +1,7 @@
 # models/contenido_curso.py
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime,Enum, func
 from sqlalchemy.orm import relationship
-from backend.db import Base
+from db import Base
 import enum
 
 
