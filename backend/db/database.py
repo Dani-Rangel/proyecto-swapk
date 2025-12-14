@@ -1,13 +1,13 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
 
 # Obtener las variables de entorno
-host = os.getenv("MYSQLHOST", "localhost")  # ✅ Esto está bien, pero solo si la variable está definida
+host = os.getenv("MYSQLHOST", "mysql.railway.internal")  # ✅ Por defecto, el correcto
 user = os.getenv("MYSQLUSER", "root")
 password = os.getenv("MYSQLPASSWORD", "")
-database = os.getenv("MYSQLDATABASE", "swapk")
+database = os.getenv("MYSQLDATABASE", "railway")
 port = os.getenv("MYSQLPORT", "3306")
 
 # Construir la URL de conexión
@@ -23,4 +23,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close()
+        db.close()close()
