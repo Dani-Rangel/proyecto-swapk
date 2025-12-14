@@ -1,5 +1,3 @@
-# railway.toml
-
 [[services]]
 name = "backend"
 source = "./backend"
