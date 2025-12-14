@@ -1,11 +1,11 @@
 from sqlalchemy.orm import Session 
 from fastapi import HTTPException
-from backend.models.cursos import Curso
-from backend.models.Curso_Habilidad import CursoHabilidad
-from backend.models.habilidad import Habilidad
-from backend.models.usuarios import Usuario
-from backend.models.attachments import Attachment
-from backend.schemas.curso_schema import CursoCreate, CursoUpdate
+from models.cursos import Curso
+from models.Curso_Habilidad import CursoHabilidad
+from models.habilidad import Habilidad
+from models.usuarios import Usuario
+from models.attachments import Attachment
+from schemas.curso_schema import CursoCreate, CursoUpdate
 import base64
 import uuid
 import os
