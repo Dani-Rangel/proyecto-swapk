@@ -21,7 +21,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Obtener DATABASE_URL desde variables de entorno
-‎MARIADB_URL = os.getenv("DB_SWAPK_URL")
+‎MARIADB_URL = os.getenv("MARIADB_URL")
 
 if not ‎MARIADB_URL:
     raise RuntimeError("❌ ‎MARIADB_URL no está definida en las variables de entorno")
