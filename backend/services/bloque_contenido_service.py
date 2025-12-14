@@ -1,7 +1,7 @@
 # services/bloque_contenido_service.py
 from sqlalchemy.orm import Session
-from backend.models.bloque_contenido import BloqueContenido
-from backend.schemas.bloque_contenido_schema import BloqueContenidoCreate, BloqueContenidoUpdate
+from models.bloque_contenido import BloqueContenido
+from schemas.bloque_contenido_schema import BloqueContenidoCreate, BloqueContenidoUpdate
 
 def crear_bloque(db: Session, bloque: BloqueContenidoCreate, leccion_id: int) -> BloqueContenido:
     db_bloque = BloqueContenido(**bloque.model_dump(), leccion_id=leccion_id)
