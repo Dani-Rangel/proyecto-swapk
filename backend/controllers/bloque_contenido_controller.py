@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.schemas.bloque_contenido_schema import BloqueContenidoCreate, BloqueContenidoUpdate, BloqueContenidoResponse
-from backend.services.bloque_contenido_service import (
+from db.database import get_db
+from schemas.bloque_contenido_schema import BloqueContenidoCreate, BloqueContenidoUpdate, BloqueContenidoResponse
+from services.bloque_contenido_service import (
     crear_bloque,
     obtener_bloques_por_leccion,
     actualizar_bloque,
     eliminar_bloque,
 )
-from backend.services.oauth2 import get_current_user
-from backend.models.usuarios import Usuario
-from backend.models.contenido_curso import ContenidoCurso
-from backend.models.cursos import Curso
+from services.oauth2 import get_current_user
+from models.usuarios import Usuario
+from models.contenido_curso import ContenidoCurso
+from models.cursos import Curso
 
 router = APIRouter(prefix="/bloques", tags=["Bloques de Contenido"])
 
