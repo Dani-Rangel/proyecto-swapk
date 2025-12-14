@@ -8,7 +8,8 @@ start = "npm start"
 working_directory = "frontend"
 env = { 
   NODE_ENV = "production",
-  PORT = "3000"
+  PORT = "3000",
+  VITE_API_BASE = "https://swapk-backend-production.up.railway.app"
 }
 resources = { cpu = "500m", memory = "1024Mi" }  # ✅ 1GB RAM — IMPRESCINDIBLE
 
@@ -26,4 +27,4 @@ env = {
   MYSQLDATABASE = "railway",
   MYSQLPORT = "3306"
 }
-# resources = { cpu = "500m", memory = "512Mi" }  # ❌ deja backend en 512MB si solo tienes 1GB total (gratis)
+# resources = { cpu = "500m", memory = "512Mi" }  # ❌ Deja backend en 512MB si solo tienes 1GB total (gratis)
