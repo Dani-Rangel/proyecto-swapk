@@ -1,10 +1,8 @@
 // frontend/eslint.config.mjs
-import nextVitals from 'eslint-config-next/core-web-vitals'
-import nextTs from 'eslint-config-next/typescript'
+import nextConfig from 'eslint-config-next'
 
 export default [
-  ...nextVitals,
-  ...nextTs,
+  ...nextConfig,
   {
     ignores: ['.next/**', 'out/**', 'build/**', 'next-env.d.ts'],
   },
