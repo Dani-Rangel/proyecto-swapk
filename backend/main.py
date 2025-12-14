@@ -2,11 +2,12 @@ from fastapi import FastAPI, Depends
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from backend.db.database import Base, engine, get_db 
-from sqlalchemy.orm import Session
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
 # Controladores
-
 from backend.controllers.auth_controller import router as auth_router
 from backend.controllers.habilidad_controller import router as habilidad_router
 from backend.controllers.forgot_password_controller import router as forgot_password_router
@@ -37,24 +38,53 @@ from backend.controllers.contenido_curso_controller import router as contenido_r
 from backend.controllers.bloque_contenido_controller import router as bloque_contenido_router
 
 # Servicios
-
 from backend.services.oauth2 import get_current_user
 
 # Modelos
-
 from backend.models.perfil import Perfil
 from backend.models.usuarios import Usuario
 
-from math import ceil
+from sqlalchemy.orm import Session
 
+from math import ceil
+import os
+from urllib.parse import quote_plus
+
+# Railway inyecta DATABASE_URL (PostgreSQL). Si no está, usamos MySQL local.
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    # Configuración para desarrollo local con MySQL
+    MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
+    MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
+    MYSQL_USER = os.getenv("MYSQL_USER", "root")
+    MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+    MYSQL_DATABASE = os.getenv("MYSQL_DATABASE", "railway")
+    safe_password = quote_plus(MYSQL_PASSWORD)
+    DATABASE_URL = f"mysql+pymysql://{MYSQL_USER}:{safe_password}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"
+
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# === INICIO DE LA APP a ===
 app = FastAPI()
 
-# Configuración CORS
+# === CORS (permitir Vercel + local) ===
 origins = [
     "http://localhost:3000",
-    "http://127.0.0.1:3000",# tu frontend
+    "http://127.0.0.1:3000",
+    "https://swapk-frontend.vercel.app",
+    "https://learning-dashboard.vercel.app",
+    "https://*.up.railway.app",
 ]
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -63,14 +93,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Ruta absoluta a la carpeta 'uploads' dentro de backend
-BASE_DIR = Path(__file__).resolve().parent
-UPLOADS_DIR = BASE_DIR / "uploads"
+@app.on_event("startup")
+def startup_event():
+    Base.metadata.create_all(bind=engine)
 
-# Base de datos
-Base.metadata.create_all(bind=engine)
-
-# Rutas
+# === RUTAS ===
 app.include_router(auth_router, prefix="/auth")
 app.include_router(habilidad_router)
 app.include_router(forgot_password_router)
@@ -101,8 +128,7 @@ app.include_router(resena_general_router)
 app.include_router(contenido_router)
 app.include_router(bloque_contenido_router)
 
-# Creamos un "ENDPOINT" aca para traer los usuarios, este sera cambiado de lugar en unas proximas versiones
-
+# === ENDPOINT PÚBLICO DE PERFILES ===
 @app.get("/public/perfiles")
 def get_all_public_profiles(
     page: int = 1,
@@ -149,6 +175,14 @@ def get_all_public_profiles(
         "limit": limit
     }
 
-
-# Servir archivos estáticos
+# === SERVIR ARCHIVOS ESTÁTICOS ===
+BASE_DIR = Path(__file__).resolve().parent
+UPLOADS_DIR = BASE_DIR / "uploads"
+if not UPLOADS_DIR.exists():
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
