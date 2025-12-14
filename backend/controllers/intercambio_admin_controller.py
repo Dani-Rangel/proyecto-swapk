@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.models import Intercambio, IntercambioHabilidad
-from backend.models.usuarios import Usuario
-from backend.models.perfil import Perfil
+from db.database import get_db
+from models import Intercambio, IntercambioHabilidad
+from models.usuarios import Usuario
+from models.perfil import Perfil
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
