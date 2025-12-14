@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List
-from backend.models.Propuesta_Intercambio import PropuestaIntercambio
-from backend.models import Intercambio, Usuario, Resena, Habilidad, IntercambioHabilidad
-from backend.db.database import get_db
-from backend.services.oauth2 import get_current_user
-from backend.services import intercambio_service
-from backend.schemas.intercambio_schema import (
+from models.Propuesta_Intercambio import PropuestaIntercambio
+from models import Intercambio, Usuario, Resena, Habilidad, IntercambioHabilidad
+from db.database import get_db
+from services.oauth2 import get_current_user
+from services import intercambio_service
+from schemas.intercambio_schema import (
     IntercambioCreate,
     IntercambioConHabilidadesSeparadas,
     EstadoIntercambioEnum,
