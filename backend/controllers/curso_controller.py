@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List
 from backend.models.Inscripciones_Cursos import InscripcionCurso as InscripcionCursoModel
 
-from backend.db.database import get_db
-from backend.schemas.curso_schema import CursoCreate, CursoUpdate, CursoResponse
-from backend.services.curso_service import (
+from db.database import get_db
+from schemas.curso_schema import CursoCreate, CursoUpdate, CursoResponse
+from services.curso_service import (
     create_curso_service,
     get_cursos_service,
     get_curso_service,
