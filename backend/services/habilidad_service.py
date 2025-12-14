@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from backend.models.habilidad import Habilidad
-from backend.schemas.habilidad_schema import HabilidadCreateDTO
+from models.habilidad import Habilidad
+from schemas.habilidad_schema import HabilidadCreateDTO
 
 def get_all_habilidades(db: Session):
     return db.query(Habilidad).all()
