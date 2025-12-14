@@ -15,10 +15,13 @@ resources = { cpu = "500m", memory = "1024Mi" }  # ✅ 1GB RAM evita "Killed"
 [[services]]
 name = "swapk-backend"
 build = { root = "backend", command = "pip install -r requirements.txt" }
-start = "python -m main"  # ✅ usa python -m para evitar ModuleNotFoundError
-working_directory = "backend"
+# 🚨 CAMBIA ESTA LÍNEA por la correcta:
+start = "/app/.venv/bin/uvicorn main:app --host 0.0.0.0 --port $PORT"
+working_directory = "backend" 
 env = { 
   PYTHONUNBUFFERED = "1",
-  RAILWAY_ENVIRONMENT = "production"
+  RAILWAY_ENVIRONMENT = "production",
+  # 💡 Opcional: Si usas el TOML, puedes mover tus variables aquí.
+  # DB_SWAPK_URL = "mysql+pymysql://root:dvKqHQaXILWfqTpClbgbMvXUhOdXLEfn@mysql.railway.internal:3306/railway"
 }
 resources = { cpu = "500m", memory = "1024Mi" }
