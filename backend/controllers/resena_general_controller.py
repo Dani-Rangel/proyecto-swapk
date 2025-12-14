@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from backend.db.database import get_db
-from backend.services.oauth2 import get_current_user
-from backend.models import ResenaGeneral, Usuario
+from db.database import get_db
+from services.oauth2 import get_current_user
+from models import ResenaGeneral, Usuario
 from pydantic import BaseModel
 from typing import List
-from backend.schemas.resena_schema import UsuarioResena, ResenaGeneralResponse
+from schemas.resena_schema import UsuarioResena, ResenaGeneralResponse
 
 router = APIRouter(prefix="/resenas", tags=["Reseñas Generales"])
 
