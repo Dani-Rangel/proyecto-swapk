@@ -25,7 +25,7 @@ import { Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Configuración de API
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000",
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend-production-fc5e.up.railway.app",
 });
 
 api.interceptors.request.use((config) => {
