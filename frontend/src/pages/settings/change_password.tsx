@@ -61,7 +61,7 @@ function ChangePasswordComponent() {
       const token = savedUser.token
 
       // 1️⃣ Actualizar solo nombre de usuario
-      await fetch(`http://localhost:8000/perfil/me`, {
+      await fetch(`https://backend-production-fc5e.up.railway.app/perfil/me`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -72,7 +72,7 @@ function ChangePasswordComponent() {
 
       // 2️⃣ Actualizar contraseña solo si hay nueva
       if (newPassword) {
-        const res = await fetch("http://localhost:8000/users/me/change-password", {
+        const res = await fetch("https://backend-production-fc5e.up.railway.app/users/me/change-password", {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
