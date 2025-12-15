@@ -112,12 +112,12 @@ function ForumLayoutComponent() {
     return tab === "Todo" ? "all" : tabToApiSlug[tab] || "all"
   }
 
-  // 🔥 Nueva función para obtener la URL base
+  // 🔥 Helper para obtener la API_URL
   const getApiUrl = () => {
     if (typeof window !== "undefined") {
-      return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      return process.env.NEXT_PUBLIC_API_URL || "https://proyecto-swapk-production.up.railway.app";
     }
-    return "http://localhost:8000";
+    return "https://proyecto-swapk-production.up.railway.app";
   };
 
   useEffect(() => {
@@ -133,11 +133,11 @@ function ForumLayoutComponent() {
           rol: parsed.rol || "Usuario"
         };
         const perfilData: Perfil | null = parsed.perfil || null;
-        setUser((prev: Usuario | null) => {
+        setUser((prev) => {
           if (prev?.id === usuario.id && prev?.rol === usuario.rol) return prev;
           return usuario;
         });
-        setPerfil((prev: Perfil | null) => {
+        setPerfil((prev) => {
           if (JSON.stringify(prev) === JSON.stringify(perfilData)) return prev;
           return perfilData;
         });
@@ -197,14 +197,14 @@ function ForumLayoutComponent() {
   }, [t])
 
   useEffect(() => {
-    const fetchCursos = async () => {
-      try {
-        const data = await getCursos();
-        setCursos(data);
-      } catch (error) {
-        console.error("Error al cargar cursos:", error);
-      }
-    };
+  const fetchCursos = async () => {
+    try {
+      const data = await getCursos();
+      setCursos(data);
+    } catch (error) {
+      console.error("Error al cargar cursos:", error);
+    }
+  };
     fetchCursos();
   }, []);
 
