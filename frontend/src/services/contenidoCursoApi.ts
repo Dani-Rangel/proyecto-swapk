@@ -1,7 +1,7 @@
 // src/services/contenidoCursoApi.ts
 import { getCurrentUser } from "@/lib/auth"
 
-const API_BASE = "http://localhost:8000"
+const API_BASE = "https://backend-production-fc5e.up.railway.app"
 
 const getAuthToken = () => {
   const user = getCurrentUser()
