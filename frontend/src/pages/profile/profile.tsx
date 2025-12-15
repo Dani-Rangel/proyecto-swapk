@@ -87,7 +87,7 @@ function ProfilePageComponent() {
   const getProfileImageUrl = (foto_perfil?: string): string => {
     if (!foto_perfil) return "/img/user.png";
     if (foto_perfil.startsWith("http")) return foto_perfil;
-    if (foto_perfil.startsWith("/")) return `http://localhost:8000${foto_perfil}`;
+    if (foto_perfil.startsWith("/")) return `https://backend-production-fc5e.up.railway.app${foto_perfil}`;
     return "/img/user.png";
   };
 
@@ -120,7 +120,7 @@ function ProfilePageComponent() {
     console.log("✅ Usuario cargado:", currentUser);
     setUser(currentUser);
 
-    axios.get(`http://localhost:8000/perfil/usuario/${currentUser.id}`, {
+    axios.get(`https://backend-production-fc5e.up.railway.app/perfil/usuario/${currentUser.id}`, {
       headers: {
         Authorization: `Bearer ${currentUser.token}`
       }
