@@ -81,20 +81,19 @@ app = FastAPI()
 # =====================
 # CORS
 # =====================
-origins = [
-    "https://frontend-production-7dc1.up.railway.app",
-    "http://127.0.0.1:3000",
-    "https://swapk-frontend.vercel.app",
-    "https://learning-dashboard.vercel.app",
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=[
+        "https://frontend-production-7dc1.up.railway.app",
+        "https://swapk-frontend.vercel.app",
+        "https://learning-dashboard.vercel.app",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # =====================
 # STARTUP
