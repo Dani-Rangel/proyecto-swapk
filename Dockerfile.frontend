@@ -1,1 +1,23 @@
+# Usa Node 20 (compatible con Next.js 15)
+FROM node:20-alpine
 
+# Directorio de trabajo
+WORKDIR /app
+
+# Copia solo package.json y lock
+COPY frontend/package*.json ./
+
+# Instala dependencias
+RUN npm install
+
+# Copia el resto del código
+COPY frontend/ .
+
+# Construye la app
+RUN npm run build
+
+# Puerto
+EXPOSE 3000
+
+# Inicia
+CMD ["npm", "start"]
