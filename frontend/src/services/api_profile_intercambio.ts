@@ -90,7 +90,7 @@ export interface IntercambioConResena {
 // -------------------------
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000',
+  baseURL: 'https://backend-production-fc5e.up.railway.app',
   headers: {
     'Content-Type': 'application/json',
   },
