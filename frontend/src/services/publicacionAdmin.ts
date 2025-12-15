@@ -47,7 +47,7 @@ export interface UpdatePublicacionData {
 
 // --- Servicio ---
 class PublicacionService {
-  private static BASE_URL = "http://localhost:8000/admin"; // ✅ Cambiado: ahora incluye /admin
+  private static BASE_URL = "https://backend-production-fc5e.up.railway.app/admin"; // ✅ Cambiado: ahora incluye /admin
 
   // LISTAR todas las publicaciones
   static async listar(): Promise<Publicacion[]> {
