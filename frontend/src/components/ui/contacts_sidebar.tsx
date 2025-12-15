@@ -91,7 +91,7 @@ export function ContactsSidebar({
     }
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-fc5e.up.railway.app";
       const res = await fetch(`${API_URL}/chats`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -181,7 +181,7 @@ export function ContactsSidebar({
         return;
       }
 
-      const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'}/chats/ws/0?token=${encodeURIComponent(token)}`;
+      const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || 'ws://backend-production-fc5e.up.railway.app'}/chats/ws/0?token=${encodeURIComponent(token)}`;
       websocket = new WebSocket(wsUrl);
 
       websocket.onopen = () => {
