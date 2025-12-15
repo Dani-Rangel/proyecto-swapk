@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Enviar datos tal cual al backend FastAPI
-    const backendRes = await fetch('http://localhost:8000/auth/reset-password', {
+    const backendRes = await fetch('https://backend-production-fc5e.up.railway.app/auth/reset-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, new_password, confirm_password }),
