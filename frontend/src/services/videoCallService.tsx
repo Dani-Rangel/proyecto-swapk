@@ -43,7 +43,7 @@ export function useVideoCall() {
   // --- Conectar WebSocket ---
   useEffect(() => {
     if (!userId) return
-    const wsUrl = `ws://localhost:8000/ws/call/${userId}`
+    const wsUrl = `ws://backend-production-fc5e.up.railway.app/ws/call/${userId}`
     const ws = new WebSocket(wsUrl)
     socket.current = ws
 
