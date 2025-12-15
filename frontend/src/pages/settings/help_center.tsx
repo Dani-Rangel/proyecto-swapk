@@ -32,7 +32,7 @@ function HelpCenterComponent() {
     }
 
     try {
-      const res = await fetch("http://localhost:8000/help/send", {
+      const res = await fetch("https://backend-production-fc5e.up.railway.app/help/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre, email, tipo, mensaje: message })
