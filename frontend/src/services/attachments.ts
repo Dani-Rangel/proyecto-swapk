@@ -1,7 +1,7 @@
 import axios from "axios"
 
 const attachmentsApi = axios.create({
-  baseURL: "http://localhost:8000/attachments",
+  baseURL: "https://backend-production-fc5e.up.railway.app/attachments",
   timeout: 60000,
 })
 
