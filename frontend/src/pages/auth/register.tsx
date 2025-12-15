@@ -74,7 +74,7 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
     }
 
     try {
-      const res = await fetch("http://localhost:8000/auth/register", {
+      const res = await fetch("https://backend-production-fc5e.up.railway.app/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
