@@ -215,7 +215,7 @@ function ForumLayoutComponent() {
     const cargarPublicaciones = async () => {
       try {
         const tipo = "all";
-        const res = await fetch(`http://localhost:8000/api/publicaciones/${tipo}`, {
+        const res = await fetch(`https://backend-production-fc5e.up.railway.app/api/publicaciones/${tipo}`, {
           signal: controller.signal,
         });
         if (!res.ok) throw new Error("Error al cargar publicaciones");
@@ -259,7 +259,7 @@ const handleLike = async (postId: number) => {
     return;
   }
   try {
-    const res = await fetch(`http://localhost:8000/api/publicaciones/${postId}/like`, {
+    const res = await fetch(`https://backend-production-fc5e.up.railway.app/api/publicaciones/${postId}/like`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -294,7 +294,7 @@ const handleLike = async (postId: number) => {
     } else {
       setComentariosAbiertos(postId)
       try {
-        const res = await fetch(`http://localhost:8000/api/publicaciones/${postId}/comentarios`)
+        const res = await fetch(`https://backend-production-fc5e.up.railway.app/api/publicaciones/${postId}/comentarios`)
         const data = await res.json()
         setComentarios((prev) => ({
           ...prev,
@@ -320,7 +320,7 @@ const handleLike = async (postId: number) => {
     return;
   }
   try {
-    const res = await fetch(`http://localhost:8000/api/publicaciones/comentarios`, {
+    const res = await fetch(`https://backend-production-fc5e.up.railway.app/api/publicaciones/comentarios`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -332,7 +332,7 @@ const handleLike = async (postId: number) => {
       }),
     })
     if (res.ok) {
-      const updatedRes = await fetch(`http://localhost:8000/api/publicaciones/${postId}/comentarios`)
+      const updatedRes = await fetch(`https://backend-production-fc5e.up.railway.app/api/publicaciones/${postId}/comentarios`)
       const updatedComments = await updatedRes.json()
       setComentarios((prev) => ({
         ...prev,
@@ -382,8 +382,8 @@ const handleLike = async (postId: number) => {
     const token = parsedUser.token;
     try {
       const url = editingPost 
-        ? `http://localhost:8000/api/publicaciones/${editingPost.id}` 
-        : "http://localhost:8000/api/publicaciones";
+        ? `https://backend-production-fc5e.up.railway.app/api/publicaciones/${editingPost.id}` 
+        : "https://backend-production-fc5e.up.railway.app/api/publicaciones";
       const method = editingPost ? "PUT" : "POST";
       const res = await fetch(url, {
         method,
@@ -446,7 +446,7 @@ const handleLike = async (postId: number) => {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:8000/api/publicaciones/${postId}`, {
+      const res = await fetch(`https://backend-production-fc5e.up.railway.app/api/publicaciones/${postId}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -479,7 +479,7 @@ const handleLike = async (postId: number) => {
   }
   try {
     const res = await fetch(
-      `http://localhost:8000/api/publicaciones/comentarios/${editingComment.id}`,
+      `https://backend-production-fc5e.up.railway.app/api/publicaciones/comentarios/${editingComment.id}`,
       {
         method: "PUT",
         headers: {
@@ -525,7 +525,7 @@ const handleLike = async (postId: number) => {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:8000/api/publicaciones/comentarios/${commentId}`, {
+      const res = await fetch(`https://backend-production-fc5e.up.railway.app/api/publicaciones/comentarios/${commentId}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -552,7 +552,7 @@ const handleEditComment = (comment: any) => {
 };
   const cargarPerfiles = async (page: number = 1) => {
     try {
-      const res = await fetch(`http://localhost:8000/public/perfiles?page=${page}&limit=${perfilesPerPage}`);
+      const res = await fetch(`https://backend-production-fc5e.up.railway.app/public/perfiles?page=${page}&limit=${perfilesPerPage}`);
       if (!res.ok) throw new Error("Error al cargar perfiles");
       const data = await res.json();
       // Asume que tu backend ahora devuelve { items: [...], total, page, pages }
@@ -586,7 +586,7 @@ const handleVerLikes = async (postId: number) => {
     return;
   }
   try {
-    const res = await fetch(`http://localhost:8000/api/publicaciones/${postId}/likes`, {
+    const res = await fetch(`https://backend-production-fc5e.up.railway.app/api/publicaciones/${postId}/likes`, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${token}`
