@@ -104,7 +104,7 @@ export function ChatArea({
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-fc5e.up.railway.app";
 
   let token: string | null = null;
   let myUserId: string | null = null;
@@ -321,7 +321,7 @@ export function ChatArea({
           setCurrentChatId(chatId);
         }
 
-        const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"}/chats/ws/${chatId}?token=${token}`;
+        const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || "ws://backend-production-fc5e.up.railway.app"}/chats/ws/${chatId}?token=${token}`;
         const websocket = new WebSocket(wsUrl);
 
         websocket.onopen = () => {
