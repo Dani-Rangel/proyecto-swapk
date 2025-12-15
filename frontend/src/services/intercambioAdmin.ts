@@ -2,7 +2,7 @@
 import axios from "axios";
 
 /** API Base **/
-const API_URL = "http://localhost:8000";
+const API_URL = "https://backend-production-fc5e.up.railway.app";
 const API_BASE = `${API_URL}/admin/intercambios`;
 
 /** Enums (igual que en backend) **/
