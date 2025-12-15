@@ -29,7 +29,7 @@ export interface UpdateUsuarioData {
 }
 
 // URL base
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://backend-production-fc5e.up.railway.app"
 
 // === Obtener todos los usuarios ===
 export const getUsers = async (): Promise<Usuario[]> => {
