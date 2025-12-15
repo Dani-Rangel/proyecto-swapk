@@ -284,7 +284,7 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
                     return
                   }
                   try {
-                    const res = await axios.post("http://localhost:8000/auth/google/login", { token })
+                    const res = await axios.post("https://backend-production-fc5e.up.railway.app/auth/google/login", { token })
                     const data = res.data
 
                     // ✅ CORREGIDO: usar data.user.id, etc.
