@@ -38,7 +38,7 @@ export default function SwapkLanding() {
   const [loading, setLoading] = useState<boolean>(true)
 
   const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000",
+    baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || "https://backend-production-fc5e.up.railway.app",
   })
 
   // 🔹 Cargar y procesar reseñas
