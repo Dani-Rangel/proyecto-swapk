@@ -1,7 +1,7 @@
 import axios from "axios"
 
 // Base URL de tu API FastAPI
-const API_BASE_URL = "http://localhost:8000/cursos"
+const API_BASE_URL = "https://backend-production-fc5e.up.railway.app/cursos"
 
 // =============================
 // Tipos de datos (match con schemas de FastAPI)
