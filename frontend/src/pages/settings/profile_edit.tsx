@@ -38,7 +38,7 @@ function ProfileEditComponent() {
 
         if (!token || !userId) throw new Error("Token o ID faltante");
 
-        const response = await fetch("http://localhost:8000/perfil/me", {
+        const response = await fetch("https://backend-production-fc5e.up.railway.app/perfil/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -103,7 +103,7 @@ function ProfileEditComponent() {
         formData.append("foto_perfil", fileInputRef.current.files[0]);
       }
 
-      const response = await fetch(`http://localhost:8000/perfil/${userId}`, {
+      const response = await fetch(`https://backend-production-fc5e.up.railway.app/perfil/${userId}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
