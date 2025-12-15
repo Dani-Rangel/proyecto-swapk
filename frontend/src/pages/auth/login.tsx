@@ -44,7 +44,7 @@ const Login: React.FC = () => {
     if (isLocked) return
 
     try {
-      const res = await fetch("http://localhost:8000/auth/login", {
+      const res = await fetch("https://backend-production-fc5e.up.railway.app/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -155,7 +155,7 @@ const Login: React.FC = () => {
                   return
                 }
                 try {
-                  const res = await axios.post("http://localhost:8000/auth/google/login", { token })
+                  const res = await axios.post("https://backend-production-fc5e.up.railway.app/auth/google/login", { token })
                   const data = res.data
                  const userData = {
                     token: data.token,
