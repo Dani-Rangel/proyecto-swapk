@@ -68,7 +68,7 @@ export interface ExpedienteUpdate {
   fecha_fin?: string;
 }
 
-const API_BASE_URL = 'http://localhost:8000/expedientes';
+const API_BASE_URL = 'https://backend-production-fc5e.up.railway.app/expedientes';
 
 export const expedienteService = {
   listarPorUsuario: async (usuarioId: number): Promise<Expediente[]> => {
