@@ -86,7 +86,6 @@ origins = [
     "http://127.0.0.1:3000",
     "https://swapk-frontend.vercel.app",
     "https://learning-dashboard.vercel.app",
-    "https://*.up.railway.app",
 ]
 
 app.add_middleware(
