@@ -5,7 +5,6 @@ import { Eye, EyeOff, Sun, Moon, X } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/router"
 import { GoogleLogin } from "@react-oauth/google"
-import { fetchApi } from "@/services/api" // ✅ Importamos fetchApi
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -73,9 +72,15 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
       return
     }
 
+    // ✅ Usar directamente la variable de entorno
+    const API_URL = process.env.NEXT_PUBLIC_API_URL
+    if (!API_URL) {
+      setError(["Error: API_URL no configurada. Verifica las variables en Railway."])
+      return
+    }
+
     try {
-      // ✅ Usa fetchApi en lugar de fetch con localhost
-      const res = await fetchApi("/auth/register", {
+      const res = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -205,7 +210,6 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
               }`}
             />
 
-            {/* Campo de contraseña con ojo 👁️ */}
             <div className="relative">
               <input
                 type={formData.showPassword ? "text" : "password"}
@@ -230,7 +234,6 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
               </button>
             </div>
 
-            {/* Checkbox de términos */}
             <label className="flex items-start gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -264,7 +267,6 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
             </button>
           </form>
 
-          {/* Link a login */}
           <div className="text-center text-sm">
             ¿Ya tienes una cuenta?{' '}
             <a href="./login" className="text-blue-600 hover:text-blue-700 font-medium">
@@ -283,18 +285,23 @@ Bienvenido a Swapk. Al registrarte y utilizar la plataforma aceptas estos térmi
                     setError(["No se obtuvo el token de Google ❌"])
                     return
                   }
+
+                  const API_URL = process.env.NEXT_PUBLIC_API_URL
+                  if (!API_URL) {
+                    setError(["Error: API_URL no configurada."])
+                    return
+                  }
+
                   try {
-                    // ✅ Usa la URL de la variable de entorno
-                    const url = `${process.env.NEXT_PUBLIC_API_URL}/auth/google/login`;
-                    const res = await fetch(url, {
+                    const res = await fetch(`${API_URL}/auth/google/login`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({ token }),
                       credentials: "include",
-                    });
-                    const data = await res.json();
+                    })
+                    const data = await res.json()
 
-                    if (!res.ok) throw new Error(data.detail || "Error en Google");
+                    if (!res.ok) throw new Error(data.detail || "Error en Google")
 
                     const userData = {
                       token: data.token,
