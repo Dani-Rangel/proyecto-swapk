@@ -32,7 +32,7 @@ useEffect(() => {
       if (!token) throw new Error("No hay token de autenticación")
 
       // USAR /perfil/me (el endpoint que dijiste que funciona)
-      const res = await fetch("http://localhost:8000/perfil/me", {
+      const res = await fetch("https://backend-production-fc5e.up.railway.app/perfil/me", {
         headers: {
           "Authorization": `Bearer ${token}`
         }
@@ -93,7 +93,7 @@ useEffect(() => {
       if (!token) throw new Error("No hay token de autenticación")
 
       // 🔹 PUT al endpoint
-      const res = await fetch("http://localhost:8000/users/me", {
+      const res = await fetch("https://backend-production-fc5e.up.railway.app/users/me", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
