@@ -7,14 +7,11 @@ WORKDIR /app
 # Copia solo package.json y lock
 COPY frontend/package*.json ./
 
-# Instala dependencias SIN caché
-RUN npm install
+# Instala dependencias
+RUN npm ci --no-cache --prefer-offline
 
 # Copia el resto del código
 COPY frontend/ .
-
-# Verifica que eslint-config-next esté instalado
-RUN ls node_modules/eslint-config-next || echo "eslint-config-next NOT FOUND"
 
 # Construye la app
 RUN npm run build
