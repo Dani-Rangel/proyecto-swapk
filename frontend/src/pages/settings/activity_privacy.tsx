@@ -42,7 +42,7 @@ export default function ActivityPrivacy() {
         const token = JSON.parse(localStorage.getItem("user") || "{}")?.token
         if (!token) return
 
-        const res = await fetch("http://localhost:8000/users/me", {
+        const res = await fetch("https://backend-production-fc5e.up.railway.app/users/me", {
           headers: {
             "Authorization": `Bearer ${token}`
           }
@@ -82,7 +82,7 @@ export default function ActivityPrivacy() {
       const token = savedUser.token
 
       // ✅ Guarda en backend
-      const res = await fetch("http://localhost:8000/users/me", {
+      const res = await fetch("https://backend-production-fc5e.up.railway.app/users/me", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
