@@ -82,7 +82,7 @@ app = FastAPI()
 # CORS
 # =====================
 origins = [
-    "http://localhost:3000",
+    "https://frontend-production-7dc1.up.railway.app",
     "http://127.0.0.1:3000",
     "https://swapk-frontend.vercel.app",
     "https://learning-dashboard.vercel.app",
