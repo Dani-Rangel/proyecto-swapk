@@ -107,7 +107,7 @@ export interface IntercambioConResena {
 export const publicProfileService = {
   getIntercambiosByUserId: async (userId: number): Promise<IntercambioConResena[]> => {
     const response = await axios.get<IntercambioConResena[]>(
-      `http://localhost:8000/perfil/intercambios/${userId}`
+      `https://backend-production-fc5e.up.railway.app/perfil/intercambios/${userId}`
     );
     return response.data;
   }
@@ -144,7 +144,7 @@ function ProfilePageComponent() {
   const getProfileImageUrl = (foto_perfil?: string): string => {
     if (!foto_perfil) return "/img/user.png";
     if (foto_perfil.startsWith("http")) return foto_perfil;
-    if (foto_perfil.startsWith("/")) return `http://localhost:8000${foto_perfil}`;
+    if (foto_perfil.startsWith("/")) return `https://backend-production-fc5e.up.railway.app${foto_perfil}`;
     return "/img/user.png";
   };
 
@@ -183,7 +183,7 @@ function ProfilePageComponent() {
 
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:8000/perfil/usuario/${userId}`, {
+      const response = await axios.get(`https://backend-production-fc5e.up.railway.app/perfil/usuario/${userId}`, {
         headers: { Authorization: `Bearer ${currentUser.token}` }
       });
       setPerfil(response.data);
