@@ -22,7 +22,7 @@ export default async function handler(
 
   try {
     // Enviar la solicitud a tu backend FastAPI
-    const backendRes = await fetch("http://localhost:8000/auth/verify-code", {
+    const backendRes = await fetch("https://backend-production-fc5e.up.railway.app/auth/verify-code", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, code }),
