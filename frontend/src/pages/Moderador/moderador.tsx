@@ -40,7 +40,7 @@ export default function ModeradorDashboard() {
   useEffect(() => {
     async function fetchExpedientes() {
       try {
-        const res = await fetch("http://localhost:8000/moderador/expedientes")
+        const res = await fetch("https://backend-production-fc5e.up.railway.app/moderador/expedientes")
         if (!res.ok) throw new Error("No se pudieron cargar expedientes")
         const data = await res.json()
         setExpedientes(data)
@@ -59,7 +59,7 @@ export default function ModeradorDashboard() {
   const actualizarEstado = async (id: number, nuevoEstado: string) => {
     setActualizando(id)
     try {
-      const res = await fetch(`http://localhost:8000/moderador/expediente/${id}/estado`, {
+      const res = await fetch(`https://backend-production-fc5e.up.railway.app/moderador/expediente/${id}/estado`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ estado: nuevoEstado }),
@@ -123,7 +123,7 @@ export default function ModeradorDashboard() {
 
     const archivo = selectedExpediente.archivos[0]
     const filename = archivo.ruta.split('/').pop() || archivo.nombre
-    const url = `http://localhost:8000/uploads/${filename}`
+    const url = `https://backend-production-fc5e.up.railway.app/uploads/${filename}`
     const ext = archivo.nombre.split('.').pop()?.toLowerCase()
 
     const pdfUrl = ext === 'pdf' ? `${url}#toolbar=0&navpanes=0&scrollbar=1&zoom=80` : url
@@ -389,7 +389,7 @@ export default function ModeradorDashboard() {
                       onClick={() => {
                         const archivo = selectedExpediente.archivos![0]
                         const filename = archivo.ruta.split('/').pop() || archivo.nombre
-                        const url = `http://localhost:8000/uploads/${filename}`
+                        const url = `https://backend-production-fc5e.up.railway.app/uploads/${filename}`
                         const link = document.createElement("a")
                         link.href = url
                         link.download = archivo.nombre
