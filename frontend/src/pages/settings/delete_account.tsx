@@ -76,7 +76,7 @@ function DeleteAccountComponent() {
       const savedUser = JSON.parse(savedUserStr)
       const token = savedUser.token
 
-      const res = await fetch("http://localhost:8000/users/me", {
+      const res = await fetch("https://backend-production-fc5e.up.railway.app/users/me", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
