@@ -67,7 +67,7 @@ export function IntercambioManagementTable() {
   /** Cargar usuarios **/
   const cargarUsuarios = async () => {
     try {
-      const res = await fetch("http://localhost:8000/admin/intercambios/usuarios")
+      const res = await fetch("https://backend-production-fc5e.up.railway.app/admin/intercambios/usuarios")
       const usuariosData = await res.json()
       setUsuarios(Array.isArray(usuariosData) ? usuariosData : [])
     } catch (error) {
@@ -78,7 +78,7 @@ export function IntercambioManagementTable() {
 
   const cargarPerfiles = async () => {
     try {
-      const res = await fetch("http://localhost:8000/admin/perfiles")
+      const res = await fetch("https://backend-production-fc5e.up.railway.app/admin/perfiles")
       const perfilesData = await res.json()
       setPerfiles(Array.isArray(perfilesData) ? perfilesData : [])
     } catch (error) {
