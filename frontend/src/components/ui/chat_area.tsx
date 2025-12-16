@@ -321,7 +321,7 @@ export function ChatArea({
           setCurrentChatId(chatId);
         }
 
-        const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || "ws://backend-production-fc5e.up.railway.app"}/chats/ws/${chatId}?token=${token}`;
+        const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || "ws://backend-production-fc5e.up.railway.app"/chats/ws/${chatId}?token=${token}`;
         const websocket = new WebSocket(wsUrl);
 
         websocket.onopen = () => {
