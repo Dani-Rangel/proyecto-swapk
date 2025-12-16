@@ -84,7 +84,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://frontend-production-7dc1.up.railway.app",
+        "https://frontend-production-7dc1.up.railway.app",  # ← sin espacios
         "https://swapk-frontend.vercel.app",
         "https://learning-dashboard.vercel.app",
         "http://localhost:3000",
