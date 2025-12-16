@@ -206,7 +206,11 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const wsUrl = `ws:backend-production-fc5e.up.railway.app/ws/call/${userId}?token=${token}`;
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = window.location.hostname === "localhost"
+        ? "localhost:8000"
+        : "backend-production-fc5e.up.railway.app";
+      const wsUrl = `${protocol}//${host}/ws/call/${userId}?token=${encodeURIComponent(token)}`;
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
